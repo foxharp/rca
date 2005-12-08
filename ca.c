@@ -1,0 +1,646 @@
+
+/* 
+ *	This program is a mediocre but practical stack-based floating
+ *	point calculator.  It resembles the UNIX 'dc' command in usage,
+ *	but is not as full-featured (no variables or arrays) and is not
+ *	infinite precision -- all arithmetic is done as "double".
+ *	Commands resembling some of the commands common to HP scientific
+ *	calculators have been added as well.
+ *		- Paul G. Fox, Wed Dec 29 1993
+ */
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <math.h>
+
+/* #define DEBUG */
+#ifdef DEBUG
+#define debug(a) printf a 
+#else
+#define debug(a)
+#endif
+
+typedef int boolean;
+#define TRUE 1
+#define FALSE 0
+
+typedef int opreturn;
+#define GOODOP 1
+#define BADOP 0
+
+double pi = 0.0;
+
+/* internal representation of numbers */
+struct num {
+	double val;
+	struct num *next;
+};
+
+/* tokens are typed objects -- currently numbers, operators, line-ends */
+struct token {
+	union {
+		double val;
+		opreturn (*opfunc)(struct token *);
+		char *str;
+	} val;
+	int type;
+};
+
+typedef struct token token;
+
+/* values for token.type */
+#define FLOAT 0
+#define OP 1
+#define EOL 2
+#define UNKNOWN -1
+
+/* all user input is either a number or a command operator --
+	this is how the operators are looked up, by name */
+struct oper {
+	char *name;
+	opreturn (*func)(token *);
+	char *help;
+};
+
+/* prototypes */
+void errexit(char *s);
+void push(double n);
+boolean pop(double *f);
+opreturn enter(token *t);
+opreturn add(token *t);
+opreturn subtract(token *t);
+opreturn multiply(token *t);
+opreturn divide(token *t);
+opreturn y_to_the_x(token *t);
+opreturn modulus(token *t);
+opreturn chsign(token *t);
+opreturn recip(token *t);
+opreturn squarert(token *t);
+opreturn sine(token *t);
+opreturn cosine(token *t);
+opreturn tangent(token *t);
+void printtop(void);
+void printstack(void);
+opreturn printall(token *t);
+opreturn printone(token *t);
+opreturn clear(token *t);
+opreturn rolldown(token *t);
+opreturn repush(token *t);
+opreturn exchange(token *t);
+opreturn autop(token *t);
+opreturn quit(token *t);
+opreturn help(token *t);
+token *gettoken(FILE *f);
+void options(int argc, char *argv[]);
+
+/* the operand stack */
+struct num *stack;
+
+/* if true, print the top of stack after every user newline */
+boolean autoprint = TRUE;
+
+/* suppress "empty stack" messages */
+boolean silent = FALSE;
+
+/* the most recent top-of-stack */
+double lastx;
+
+char *progname = "";
+
+struct oper opers[] = {
+	{"+", add, 		"add top two numbers" },
+	{"-", subtract, 	"subtract top two numbers" },
+	{"*", multiply,		"multiply top two numbers" },
+	{"/", divide, 		"divide top two numbers" },
+	{"%", modulus, 		"take modulo of top two numbers" },
+	{"changesign", chsign,	"negate top number" },
+	{"chs", chsign,		" \" \"" },
+	{"reciprocal", recip,	"take reciprocal of top number" },
+	{"squareroot", squarert,"take square root of top number" },
+	{"sqrt", squarert,	" \" \"" },
+	{"sin", sine,		"take sine of angle (in degrees)" },
+	{"cos", cosine,		"take cosine of angle (in degrees)" },
+	{"tan", tangent,	"take tangent of angle (in degrees)" },
+	{"^", y_to_the_x, 	"raise next-to-top to power of top" },
+	{"raise", y_to_the_x, 	" \" \"" },
+	{"print", printone, 	"print top of stack" },
+	{"Print", printall, 	"print whole stack" },
+	{"clear", clear, 	"clear whole stack" },
+	{"pop", rolldown, 	"pop (and discard) top of stack" },
+	{"push", enter, 	"push (duplicate) top of stack" },
+	{"enter", enter, 	" \" \"" },
+	{"lastx", repush, 	"re-push most recent previous top of stack" },
+	{"lx", repush, 		" \" \"" },
+	{"repush", repush, 	" \" \"" },
+	{"xchange", exchange, 	"exchange top two numbers" },
+	{"exchange", exchange, 	" \" \"" },
+	{"autoprint", autop,	"toggle autoprinting" },
+	{"quit", quit, 		"leave" },
+	{"exit", quit, 		" \" \"" },
+	{"help", help, 		NULL },
+	{"?", help, 		NULL },
+	{NULL, NULL}
+};
+
+
+int
+main(argc,argv)
+int argc;
+char *argv[];
+{
+	token *t;
+	static int lasttoktype;
+
+	options(argc,argv);
+
+	pi = 4 * atan(1.0);
+
+	/* we simply loop forever, either pushing operands or executing
+		operators.  the special end-of-line token lets us do
+		reasonable autoprinting, the last thing on the line was
+		an operator */
+	while ((t = gettoken(stdin)) != NULL) {
+		debug(("got token\n"));
+		switch(t->type) {
+		case FLOAT:
+			debug(("pushing %g\n", t->val.val));
+			push(t->val.val);
+			break;
+		case OP:
+			debug(("calling op\n"));
+			(void)(t->val.opfunc)(t);
+			break;
+		case EOL:
+			if (autoprint && lasttoktype == OP) {
+				silent = TRUE;
+				printtop();
+				silent = FALSE;
+			}
+			break;
+		default:
+		case UNKNOWN:
+			printf("unrecognized input '%s'\n",t->val.str);
+			break;
+
+		}
+		lasttoktype = t->type;
+	}
+	exit(1);
+	return (1);
+}
+
+void
+options(argc,argv)
+int argc;
+char *argv[];
+{
+	progname = strrchr(argv[0],'/');
+	if (!progname) progname = argv[0];
+	if (argc > 1) {
+		if (!strcmp(argv[1], "-p"))
+			autoprint = !autoprint;
+		else {
+			fprintf(stderr, "usage: %s [-p] (to turn off autoprinting)\n",
+					progname);
+			exit(1);
+		}
+	}
+}
+
+token *
+gettoken(FILE *f)
+{
+	static char inputline[1024];
+	static struct token tok;
+	double n;
+	static char *p = NULL;
+	static char *t = NULL;
+
+	if (p == NULL) {
+		if (fgets(inputline, 1024, f) == NULL)
+			return NULL;
+		p = inputline;
+	}
+	while (isspace(*p))
+		p++;
+
+	debug(("gettoken string is %s\n", p));
+
+	if (*p == '\0') { /* out of input */
+		tok.type = EOL;
+		p = NULL;
+		return &tok;
+	}
+
+	/* find end of token */
+	t = p;
+	while (!isspace(*p))
+		p++;
+
+	/* if we're on whitespace, null terminate and increment */
+	if (*p) 
+		*p++ = '\0';
+
+
+	/* is it a number? */
+	if (isdigit(*t) || (*t == '.') || (*t == '-' && isdigit(*(t+1)))) {
+		if (sscanf(t,"%lg",&n) == 1) {
+			tok.type = FLOAT;
+			tok.val.val = n;
+			debug(("gettoken value is %g\n", n));
+			return &tok;
+		}
+	} else { /* is it a command? */
+		struct oper *op;
+		op = opers;
+		while (op->name) {
+			if (!strncmp(t, op->name, strlen(t))) {
+				tok.type = OP;
+				tok.val.opfunc = op->func;
+				debug(("gettoken op is %s\n", op->name));
+				return &tok;
+			}
+			op++;
+		}
+	}
+	tok.val.str = t;
+	tok.type = UNKNOWN;
+	debug(("gettoken unknown: %s\n", t));
+	p = NULL;
+	fflush(stdin);
+	return &tok;
+}
+
+void
+push(double n)
+{
+	struct num *p = (struct num *)calloc(1, sizeof (struct num));
+	if (!p) errexit("no memory for push");
+	p->val = n;
+	p->next = stack;
+	stack = p;
+}
+
+boolean
+pop(double *f)
+{
+	struct num *p;
+	p = stack;
+	if (!p) {
+		if (!silent)
+			printf("empty stack\n");
+		return FALSE;
+	}
+	*f = p->val;
+	stack = p->next;
+	free (p);
+	return TRUE;
+}
+
+opreturn
+enter( token *t )
+{
+	double a;
+	if (pop(&a)) {
+		push(a);
+		push(a);
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
+add( token *t )
+{
+	double a, b;
+	if (pop(&b)) {
+		if (pop(&a)) {
+			push(a + b);
+			lastx = b;
+			return GOODOP;
+		}
+		push(b);
+	}
+	return BADOP;
+}
+
+opreturn
+subtract( token *t )
+{
+	double a, b;
+	if (pop(&b)) {
+		if (pop(&a)) {
+			push(a - b);
+			lastx = b;
+			return GOODOP;
+		}
+		push(b);
+	}
+	return BADOP;
+}
+
+opreturn
+multiply( token *t )
+{
+	double a, b;
+	if (pop(&b)) {
+		if (pop(&a)) {
+			push(a * b);
+			lastx = b;
+			return GOODOP;
+		}
+		push(b);
+	}
+	return BADOP;
+}
+
+opreturn
+divide( token *t )
+{
+	double a, b;
+	if (pop(&b)) {
+		if (pop(&a)) {
+			if (b != 0.0) {
+				push(a / b);
+			} else {
+				push(a);
+				push(b);
+				printf("would divide by zero\n");
+				return BADOP;
+			}
+			lastx = b;
+			return GOODOP;
+		}
+		push(b);
+	}
+	return BADOP;
+}
+
+opreturn
+modulus( token *t )
+{
+	double a, b;
+	if (pop(&b)) {
+		if (pop(&a)) {
+			int i, j;
+			i = (long)a;
+			j = (long)b;
+			if (j != 0) {
+				push(i / j);
+			} else {
+				push(a);
+				push(b);
+				printf("would divide by zero\n");
+				return BADOP;
+			}
+			lastx = b;
+			return GOODOP;
+		}
+		push(b);
+	}
+	return BADOP;
+}
+
+opreturn
+chsign( token *t )
+{
+	double a;
+	if (pop(&a)) {
+		push( -a );
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
+recip ( token *t )
+{
+	double a;
+	if (pop(&a)) {
+		if (a != 0.0) {
+			push( 1.0 / a );
+			lastx = a;
+			return GOODOP;
+		} else {
+			push(a);
+			printf("would divide by zero\n");
+			return BADOP;
+		}
+	}
+	return BADOP;
+}
+
+opreturn
+squarert ( token *t )
+{
+	double a;
+	if (pop(&a)) {
+		if (a >= 0.0) {
+			push( sqrt(a) );
+			lastx = a;
+			return GOODOP;
+		} else {
+			push(a);
+			printf("can't take root of negative\n");
+			return BADOP;
+		}
+	}
+	return BADOP;
+}
+
+opreturn
+sine ( token *t )
+{
+	double a;
+
+
+	if (pop(&a)) {
+		push( sin((a * 2 * pi) / 360.0 ) );
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
+cosine ( token *t )
+{
+	double a;
+
+	if (pop(&a)) {
+		push( cos((a * 2 * pi) / 360.0 ) );
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
+tangent ( token *t )
+{
+	double a;
+
+	if (pop(&a)) {
+#if LATER
+		if (((a + 90) % 180) == 0) {
+			push(a);
+			printf("can't take tan of +/90\n");
+			return BADOP;
+		} else
+#endif
+		{
+			push( tan((a * 2 * pi) / 360.0 ) );
+			lastx = a;
+			return GOODOP;
+		}
+	}
+	return BADOP;
+}
+
+opreturn
+y_to_the_x ( token *t )
+{
+	double a, b;
+	if (pop(&b)) {
+		if (pop(&a)) {
+			if (a >= 0 || floor(b) == b) {
+				push(pow(a, b));
+			} else {
+				push(a);
+				push(b);
+				printf("result would be complex\n");
+				return BADOP;
+			}
+			lastx = b;
+			return GOODOP;
+		}
+		push(b);
+	}
+	return BADOP;
+}
+
+void
+printtop (void)
+{
+	double n;
+	if (pop(&n)) {
+		printf(" %g\n",n);
+		push(n);
+	}
+}
+
+void
+printstack (void)
+{
+	double n;
+	if (pop(&n)) {
+		(void)printstack();
+		printf(" %g\n",n);
+		push(n);
+	}
+}
+
+opreturn
+printall ( token *t )
+{
+	double hold;
+	silent = TRUE;
+	if (autoprint) {
+		if (pop(&hold))
+			printstack();
+		push(hold);
+	} else {
+		printstack();
+	}
+	silent = FALSE;
+	return GOODOP;
+}
+
+opreturn
+printone ( token *t )
+{
+	if (!autoprint) {
+		silent = TRUE;
+		printtop();
+		silent = FALSE;
+	}
+	return GOODOP;
+}
+
+opreturn
+clear ( token *t )
+{
+	double scrap;
+	if (pop(&lastx)) {
+		while (pop(&scrap))
+			;
+	}
+	return GOODOP;
+}
+
+opreturn
+rolldown ( token *t )
+{
+	(void) pop(&lastx);
+	return GOODOP;
+}
+
+opreturn
+repush ( token *t )
+{
+	push(lastx);
+	return GOODOP;
+}
+
+opreturn
+exchange( token *t )
+{
+	double a, b;
+	if (pop(&b)) {
+		if (pop(&a)) {
+			push(b);
+			push(a);
+			return GOODOP;
+		}
+		push(b);
+	}
+	return BADOP;
+}
+
+opreturn
+autop ( token *t )
+{
+	autoprint = !autoprint;
+	printf("autoprinting is now %s\n", autoprint ? "on" : "off");
+	return GOODOP;
+}
+
+opreturn
+quit ( token *t )
+{
+	exit(0);
+}
+
+opreturn
+help ( token *t )
+{
+	struct oper *op;
+	extern struct oper opers[];
+	op = opers;
+	while (op->name && op->help) {
+		printf("%-20s%s\n", op->name, op->help);
+		op++;
+	}
+	return GOODOP;
+}
+
+void
+errexit(char *s)
+{
+	fprintf(stderr, "%s: %s\n", progname, s);
+	exit(1);
+}
+
