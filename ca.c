@@ -7,6 +7,8 @@
  *	Commands resembling some of the commands common to HP scientific
  *	calculators have been added as well.
  *		- Paul G. Fox, Wed Dec 29 1993
+ *
+ *	[Math is done in "long double", as of 2012.]
  */
 #include <stdlib.h>
 #include <unistd.h>
@@ -32,18 +34,20 @@ typedef int opreturn;
 #define GOODOP 1
 #define BADOP 0
 
-double pi;
+typedef long double ldouble;
+
+ldouble pi;
 
 /* internal representation of numbers */
 struct num {
-	double val;
+	ldouble val;
 	struct num *next;
 };
 
 /* tokens are typed objects -- currently numbers, operators, line-ends */
 struct token {
 	union {
-		double val;
+		ldouble val;
 		opreturn (*opfunc)(struct token *);
 		char *str;
 	} val;
@@ -68,8 +72,8 @@ struct oper {
 
 /* prototypes */
 void errexit(char *s);
-void push(double n);
-boolean pop(double *f);
+void push(ldouble n);
+boolean pop(ldouble *f);
 opreturn enter(token *t);
 opreturn add(token *t);
 opreturn subtract(token *t);
@@ -129,7 +133,7 @@ int math = 'f';
 boolean silent = FALSE;
 
 /* the most recent top-of-stack */
-double lastx;
+ldouble lastx;
 
 char *progname = "";
 
@@ -143,7 +147,7 @@ struct oper opers[] = {
 	{"<<", lshift, 		"left shift" },
 	{"&", and, 		"bitwise and" },
 	{"|", or, 		"bitwise or" },
-	{"^", xor, 		"bitwise xor" },
+	{"xor", xor, 		"bitwise xor" },
 	{"~", not, 		"bitwise not" },
 	{"", 0, 0},
 	{"changesign", chsign,	"negate top number" },
@@ -212,7 +216,7 @@ char *argv[];
 		debug(("got token\n"));
 		switch(t->type) {
 		case FLOAT:
-			debug(("pushing %g\n", t->val.val));
+			debug(("pushing %Lg\n", t->val.val));
 			push(t->val.val);
 			break;
 		case OP:
@@ -261,7 +265,7 @@ gettoken(FILE *f)
 {
 	static char inputline[1024];
 	static struct token tok;
-	double n;
+	ldouble n;
 	static char *p = NULL;
 	static char *t = NULL;
 	static char *c = NULL;
@@ -301,26 +305,26 @@ gettoken(FILE *f)
 
 	/* is it a number? */
 	if (*t == '0' && (*(t+1) == 'x' || *(t+1) == 'X')) {
-		long ln = strtol(t, 0, 16);
+		long long ln = strtoll(t, 0, 16);
 		tok.type = FLOAT;
 		tok.val.val = ln;
-		debug(("gettoken hex value is %g decimal\n", n));
+		debug(("gettoken hex value is %Lg decimal\n", n));
 		return &tok;
 
 	} else if (*t == '0' && ('0' <= *(t+1) && *(t+1) <= '7')) {
-		long ln = strtol(t, 0, 8);
+		long long ln = strtoll(t, 0, 8);
 		tok.type = FLOAT;
 		tok.val.val = ln;
-		debug(("gettoken octal value is %g decimal\n", n));
+		debug(("gettoken octal value is %Lg decimal\n", n));
 		return &tok;
 
 	} else if (isdigit(*t) || (*t == '.') ||
 			(*t == '-' && isdigit(*(t+1)))) {
 	debug(("x postcomma %s\n", t));
-		if (sscanf(t,"%lg",&n) == 1) {
+		if (sscanf(t,"%Lg",&n) == 1) {
 			tok.type = FLOAT;
 			tok.val.val = n;
-			debug(("gettoken value is %g\n", n));
+			debug(("gettoken value is %Lg\n", n));
 			return &tok;
 		}
 	} else { /* is it a command? */
@@ -345,12 +349,12 @@ gettoken(FILE *f)
 }
 
 void
-push(double n)
+push(ldouble n)
 {
 	struct num *p = (struct num *)calloc(1, sizeof (struct num));
 	if (!p) errexit("no memory for push");
 	if (math == 'i')
-	    p->val = (long)n;
+	    p->val = (long long)n;
 	else
 	    p->val = n;
 	p->next = stack;
@@ -358,7 +362,7 @@ push(double n)
 }
 
 boolean
-pop(double *f)
+pop(ldouble *f)
 {
 	struct num *p;
 	p = stack;
@@ -376,7 +380,7 @@ pop(double *f)
 opreturn
 enter( token *t )
 {
-	double a;
+	ldouble a;
 	if (pop(&a)) {
 		push(a);
 		push(a);
@@ -388,7 +392,7 @@ enter( token *t )
 opreturn
 add( token *t )
 {
-	double a, b;
+	ldouble a, b;
 	if (pop(&b)) {
 		if (pop(&a)) {
 			push(a + b);
@@ -403,7 +407,7 @@ add( token *t )
 opreturn
 subtract( token *t )
 {
-	double a, b;
+	ldouble a, b;
 	if (pop(&b)) {
 		if (pop(&a)) {
 			push(a - b);
@@ -418,7 +422,7 @@ subtract( token *t )
 opreturn
 multiply( token *t )
 {
-	double a, b;
+	ldouble a, b;
 	if (pop(&b)) {
 		if (pop(&a)) {
 			push(a * b);
@@ -433,7 +437,7 @@ multiply( token *t )
 opreturn
 divide( token *t )
 {
-	double a, b;
+	ldouble a, b;
 	if (pop(&b)) {
 		if (pop(&a)) {
 			if (b != 0.0) {
@@ -455,12 +459,12 @@ divide( token *t )
 opreturn
 modulus( token *t )
 {
-	double a, b;
+	ldouble a, b;
 	if (pop(&b)) {
 		if (pop(&a)) {
 			int i, j;
-			i = (long)a;
-			j = (long)b;
+			i = (long long)a;
+			j = (long long)b;
 			if (j != 0) {
 				push(i / j);
 			} else {
@@ -480,12 +484,12 @@ modulus( token *t )
 opreturn
 rshift( token *t )
 {
-	double a, b;
+	ldouble a, b;
 	if (pop(&b)) {
 		if (pop(&a)) {
 			int i, j;
-			i = (long)a;
-			j = (long)b;
+			i = (long long)a;
+			j = (long long)b;
 			push(i >> j);
 			lastx = b;
 			return GOODOP;
@@ -498,12 +502,12 @@ rshift( token *t )
 opreturn
 lshift( token *t )
 {
-	double a, b;
+	ldouble a, b;
 	if (pop(&b)) {
 		if (pop(&a)) {
 			int i, j;
-			i = (long)a;
-			j = (long)b;
+			i = (long long)a;
+			j = (long long)b;
 			push(i << j);
 			lastx = b;
 			return GOODOP;
@@ -516,12 +520,12 @@ lshift( token *t )
 opreturn
 and( token *t )
 {
-	double a, b;
+	ldouble a, b;
 	if (pop(&b)) {
 		if (pop(&a)) {
 			int i, j;
-			i = (long)a;
-			j = (long)b;
+			i = (long long)a;
+			j = (long long)b;
 			push(i & j);
 			lastx = b;
 			return GOODOP;
@@ -534,12 +538,12 @@ and( token *t )
 opreturn
 or( token *t )
 {
-	double a, b;
+	ldouble a, b;
 	if (pop(&b)) {
 		if (pop(&a)) {
 			int i, j;
-			i = (long)a;
-			j = (long)b;
+			i = (long long)a;
+			j = (long long)b;
 			push(i | j);
 			lastx = b;
 			return GOODOP;
@@ -552,12 +556,12 @@ or( token *t )
 opreturn
 xor( token *t )
 {
-	double a, b;
+	ldouble a, b;
 	if (pop(&b)) {
 		if (pop(&a)) {
 			int i, j;
-			i = (long)a;
-			j = (long)b;
+			i = (long long)a;
+			j = (long long)b;
 			push(i ^ j);
 			lastx = b;
 			return GOODOP;
@@ -570,9 +574,9 @@ xor( token *t )
 opreturn
 not( token *t )
 {
-	double a;
+	ldouble a;
 	if (pop(&a)) {
-		push( ~(long)a );
+		push( ~(long long)a );
 		lastx = a;
 		return GOODOP;
 	}
@@ -582,7 +586,7 @@ not( token *t )
 opreturn
 chsign( token *t )
 {
-	double a;
+	ldouble a;
 	if (pop(&a)) {
 		push( -a );
 		lastx = a;
@@ -594,7 +598,7 @@ chsign( token *t )
 opreturn
 recip ( token *t )
 {
-	double a;
+	ldouble a;
 	if (pop(&a)) {
 		if (a != 0.0) {
 			push( 1.0 / a );
@@ -612,7 +616,7 @@ recip ( token *t )
 opreturn
 squarert ( token *t )
 {
-	double a;
+	ldouble a;
 	if (pop(&a)) {
 		if (a >= 0.0) {
 			push( sqrt(a) );
@@ -630,7 +634,7 @@ squarert ( token *t )
 opreturn
 sine ( token *t )
 {
-	double a;
+	ldouble a;
 
 
 	if (pop(&a)) {
@@ -644,7 +648,7 @@ sine ( token *t )
 opreturn
 cosine ( token *t )
 {
-	double a;
+	ldouble a;
 
 	if (pop(&a)) {
 		push( cos((a * 2 * pi) / 360.0 ) );
@@ -657,7 +661,7 @@ cosine ( token *t )
 opreturn
 tangent ( token *t )
 {
-	double a;
+	ldouble a;
 
 	if (pop(&a)) {
 #if LATER
@@ -679,7 +683,7 @@ tangent ( token *t )
 opreturn
 y_to_the_x ( token *t )
 {
-	double a, b;
+	ldouble a, b;
 	if (pop(&b)) {
 		if (pop(&a)) {
 			if (a >= 0 || floor(b) == b) {
@@ -701,20 +705,20 @@ y_to_the_x ( token *t )
 void
 printtop (void)
 {
-	double n;
-	long ln;
+	ldouble n;
+	long long ln;
 	if (pop(&n)) {
 		switch (pformat) {
 		case 'x':
 		    ln = n;
-		    printf(" 0x%lx\n",ln);
+		    printf(" 0x%Lx\n",ln);
 		    break;
 		case 'o':
 		    ln = n;
-		    printf(" 0%lo\n",ln);
+		    printf(" 0%Lo\n",ln);
 		    break;
 		default:
-		    printf(" %.10g\n",n);
+		    printf(" %Lg\n",n);
 		}
 		push(n);
 	}
@@ -724,7 +728,7 @@ printtop (void)
 void
 printstack (void)
 {
-	double n;
+	ldouble n;
 	if (pop(&n)) {
 		(void)printstack();
 		push(n);
@@ -735,7 +739,7 @@ printstack (void)
 opreturn
 printall ( token *t )
 {
-	double hold;
+	ldouble hold;
 	silent = TRUE;
 	if (autoprint) {
 		if (pop(&hold))
@@ -833,7 +837,7 @@ modefloat ( token *t )
 opreturn
 clear ( token *t )
 {
-	double scrap;
+	ldouble scrap;
 	if (pop(&lastx)) {
 		while (pop(&scrap))
 			;
@@ -858,7 +862,7 @@ repush ( token *t )
 opreturn
 exchange( token *t )
 {
-	double a, b;
+	ldouble a, b;
 	if (pop(&b)) {
 		if (pop(&a)) {
 			push(b);
