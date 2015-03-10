@@ -70,52 +70,6 @@ struct oper {
 	char *help;
 };
 
-/* prototypes */
-void errexit(char *s);
-void push(ldouble n);
-boolean pop(ldouble *f);
-opreturn enter(token *t);
-opreturn add(token *t);
-opreturn subtract(token *t);
-opreturn multiply(token *t);
-opreturn divide(token *t);
-opreturn y_to_the_x(token *t);
-opreturn modulus(token *t);
-opreturn rshift(token *t);
-opreturn lshift(token *t);
-opreturn and(token *t);
-opreturn or(token *t);
-opreturn xor(token *t);
-opreturn not(token *t);
-opreturn chsign(token *t);
-opreturn recip(token *t);
-opreturn squarert(token *t);
-opreturn sine(token *t);
-opreturn cosine(token *t);
-opreturn tangent(token *t);
-void printtop(void);
-void printstack(void);
-opreturn printall(token *t);
-opreturn printone(token *t);
-opreturn printhex(token *t);
-opreturn printoct(token *t);
-opreturn printdec(token *t);
-opreturn modehex(token *t);
-opreturn modeoct(token *t);
-opreturn modedec(token *t);
-opreturn modeinteger(token *t);
-opreturn modefloat(token *t);
-opreturn clear(token *t);
-opreturn rolldown(token *t);
-opreturn repush(token *t);
-opreturn exchange(token *t);
-opreturn push_pi(token *t);
-opreturn autop(token *t);
-opreturn quit(token *t);
-opreturn help(token *t);
-token *gettoken(FILE *f);
-void options(int argc, char *argv[]);
-
 /* the operand stack */
 struct num *stack;
 
@@ -135,217 +89,19 @@ boolean silent = FALSE;
 /* the most recent top-of-stack */
 ldouble lastx;
 
+/* for store/recall */
+ldouble offstack;
+
+/* operator table */
+struct oper opers[];
+
 char *progname = "";
 
-struct oper opers[] = {
-	{"+", add, 		"add top two numbers" },
-	{"-", subtract, 	"subtract top two numbers" },
-	{"*", multiply,		"multiply top two numbers" },
-	{"/", divide, 		"divide top two numbers" },
-	{"%", modulus, 		"take modulo of top two numbers" },
-	{">>", rshift, 		"right shift" },
-	{"<<", lshift, 		"left shift" },
-	{"&", and, 		"bitwise and" },
-	{"|", or, 		"bitwise or" },
-	{"xor", xor, 		"bitwise xor" },
-	{"~", not, 		"bitwise not" },
-	{"", 0, 0},
-	{"changesign", chsign,	"negate top number" },
-	{"chs", chsign,		" \" \"" },
-	{"reciprocal", recip,	"take reciprocal of top number" },
-	{"squareroot", squarert,"take square root of top number" },
-	{"sqrt", squarert,	" \" \"" },
-	{"sin", sine,		"take sine of angle (in degrees)" },
-	{"cos", cosine,		"take cosine of angle (in degrees)" },
-	{"tan", tangent,	"take tangent of angle (in degrees)" },
-	{"^", y_to_the_x, 	"raise next-to-top to power of top" },
-	{"raise", y_to_the_x, 	" \" \"" },
-	{"", 0, 0},
-	{"Print", printall, 	"print whole stack" },
-	{"print", printone, 	"print top of stack" },
-	{"dprint", printdec, 	"print top of stack in decimal" },
-	{"oprint", printoct, 	"print top of stack in octal" },
-	{"hprint", printhex, 	"print top of stack in hex" },
-	{"xprint", printhex, 	" \" \"" },
-	{"", 0, 0},
-	{"clear", clear, 	"clear whole stack" },
-	{"pop", rolldown, 	"pop (and discard) top of stack" },
-	{"push", enter, 	"push (duplicate) top of stack" },
-	{"enter", enter, 	" \" \"" },
-	{"lastx", repush, 	"re-push most recent previous top of stack" },
-	{"lx", repush, 		" \" \"" },
-	{"repush", repush, 	" \" \"" },
-	{"xchange", exchange, 	"exchange top two numbers" },
-	{"exchange", exchange, 	" \" \"" },
-	{"pi", push_pi, 	"push constant pi" },
-	{"", 0, 0},
-	{"Autoprint", autop,	"toggle autoprinting" },
-	{"Hex", modehex, 	"switch to hex output" },
-	{"X", modehex, 		" \" \"" },
-	{"Octal", modeoct, 	"switch to octal output" },
-	{"Decimal", modedec, 	"switch to decimal output" },
-	{"Integer", modeinteger,"switch to integer arithmetic" },
-	{"Float", modefloat, 	"switch to float arithmetic" },
-	{"", 0, 0},
-	{"quit", quit, 		"leave" },
-	{"exit", quit, 		" \" \"" },
-	{"", 0, 0},
-	{"help", help, 		NULL },
-	{"?", help, 		NULL },
-	{NULL, NULL}
-};
-
-
-int
-main(argc,argv)
-int argc;
-char *argv[];
-{
-	token *t;
-	static int lasttoktype;
-
-	options(argc,argv);
-
-	pi = 4 * atan(1.0);
-
-	/* we simply loop forever, either pushing operands or executing
-		operators.  the special end-of-line token lets us do
-		reasonable autoprinting, the last thing on the line was
-		an operator */
-	while ((t = gettoken(stdin)) != NULL) {
-		debug(("got token\n"));
-		switch(t->type) {
-		case FLOAT:
-			debug(("pushing %Lg\n", t->val.val));
-			push(t->val.val);
-			break;
-		case OP:
-			debug(("calling op\n"));
-			(void)(t->val.opfunc)(t);
-			break;
-		case EOL:
-			if (autoprint && lasttoktype == OP) {
-				silent = TRUE;
-				printtop();
-				silent = FALSE;
-			}
-			break;
-		default:
-		case UNKNOWN:
-			printf("unrecognized input '%s'\n",t->val.str);
-			break;
-
-		}
-		lasttoktype = t->type;
-	}
-	exit(1);
-	return (1);
-}
-
 void
-options(argc,argv)
-int argc;
-char *argv[];
+errexit(char *s)
 {
-	progname = strrchr(argv[0],'/');
-	if (!progname) progname = argv[0];
-	if (argc > 1) {
-		if (!strcmp(argv[1], "-p"))
-			autoprint = !autoprint;
-		else {
-			fprintf(stderr, "usage: %s [-p] (to turn off autoprinting)\n",
-					progname);
-			exit(1);
-		}
-	}
-}
-
-token *
-gettoken(FILE *f)
-{
-	static char inputline[1024];
-	static struct token tok;
-	ldouble n;
-	static char *p = NULL;
-	static char *t = NULL;
-	static char *c = NULL;
-
-	if (p == NULL) {
-		if (fgets(inputline, 1024, f) == NULL)
-			return NULL;
-		p = inputline;
-	}
-	while (isspace(*p))
-		p++;
-
-	debug(("gettoken string is %s\n", p));
-
-	if (*p == '\0') { /* out of input */
-		tok.type = EOL;
-		p = NULL;
-		return &tok;
-	}
-
-	/* find end of token */
-	t = p;
-	while (!isspace(*p))
-		p++;
-
-	/* if we're on whitespace, null terminate and increment */
-	if (*p) 
-		*p++ = '\0';
-
-	/* eliminate commas */
-	debug(("precomma %s\n", t));
-	while ((c = strchr(t, ',')) != NULL) {
-	    memmove(c, c+1, strlen(c));
-	}
-	debug(("postcomma %s\n", t));
-
-
-	/* is it a number? */
-	if (*t == '0' && (*(t+1) == 'x' || *(t+1) == 'X')) {
-		long long ln = strtoll(t, 0, 16);
-		tok.type = FLOAT;
-		tok.val.val = ln;
-		debug(("gettoken hex value is %Lg decimal\n", n));
-		return &tok;
-
-	} else if (*t == '0' && ('0' <= *(t+1) && *(t+1) <= '7')) {
-		long long ln = strtoll(t, 0, 8);
-		tok.type = FLOAT;
-		tok.val.val = ln;
-		debug(("gettoken octal value is %Lg decimal\n", n));
-		return &tok;
-
-	} else if (isdigit(*t) || (*t == '.') ||
-			(*t == '-' && isdigit(*(t+1)))) {
-	debug(("x postcomma %s\n", t));
-		if (sscanf(t,"%Lg",&n) == 1) {
-			tok.type = FLOAT;
-			tok.val.val = n;
-			debug(("gettoken value is %Lg\n", n));
-			return &tok;
-		}
-	} else { /* is it a command? */
-		struct oper *op;
-		op = opers;
-		while (op->name) {
-			if (*op->name && !strncmp(t, op->name, strlen(t))) {
-				tok.type = OP;
-				tok.val.opfunc = op->func;
-				debug(("gettoken op is %s\n", op->name));
-				return &tok;
-			}
-			op++;
-		}
-	}
-	tok.val.str = t;
-	tok.type = UNKNOWN;
-	debug(("gettoken unknown: %s\n", t));
-	p = NULL;
-	fflush(stdin);
-	return &tok;
+	fprintf(stderr, "%s: %s\n", progname, s);
+	exit(1);
 }
 
 void
@@ -875,9 +631,109 @@ exchange( token *t )
 }
 
 opreturn
+store ( token *t )
+{
+	ldouble a;
+
+	if (pop(&a)) {
+		push(a);
+		offstack = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
+recall ( token *t )
+{
+	push(offstack);
+	return GOODOP;
+}
+
+opreturn
 push_pi ( token *t )
 {
 	push(pi);
+}
+
+opreturn
+units_in_mm( token *t )
+{
+	ldouble a;
+	if (pop(&a)) {
+	    	a *= 25.4;
+		push( a );
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
+units_mm_in( token *t )
+{
+	ldouble a;
+	if (pop(&a)) {
+		a /= 25.4;
+		push( a );
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
+units_F_C( token *t )
+{
+	ldouble a;
+	if (pop(&a)) {
+		a -= 32.0;
+		a /= 1.8;
+		push( a );
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
+units_C_F( token *t )
+{
+	ldouble a;
+	if (pop(&a)) {
+		a *= 1.8;
+		a += 32.0;
+		push( a );
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
+units_l_qt( token *t )
+{
+	ldouble a;
+	if (pop(&a)) {
+		a *= 1.05669;
+		push( a );
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
+units_qt_l( token *t )
+{
+	ldouble a;
+	if (pop(&a)) {
+		a /= 1.05669;
+		push( a );
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
 }
 
 opreturn
@@ -898,7 +754,6 @@ opreturn
 help ( token *t )
 {
 	struct oper *op;
-	extern struct oper opers[];
 	op = opers;
 	while (op->name) {
 		if (!*op->name)
@@ -910,10 +765,258 @@ help ( token *t )
 	return GOODOP;
 }
 
-void
-errexit(char *s)
+
+struct oper opers[] = {
+	{"+", add, 		"add top two numbers" },
+	{"-", subtract, 	"subtract top two numbers" },
+	{"*", multiply,		"multiply top two numbers" },
+	{"/", divide, 		"divide top two numbers" },
+	{"%", modulus, 		"take modulo of top two numbers" },
+	{">>", rshift, 		"right shift" },
+	{"<<", lshift, 		"left shift" },
+	{"&", and, 		"bitwise and" },
+	{"|", or, 		"bitwise or" },
+	{"xor", xor, 		"bitwise xor" },
+	{"~", not, 		"bitwise not" },
+	{"", 0, 0},
+	{"changesign", chsign,	"negate top number" },
+	{"chs", chsign,		" \" \"" },
+	{"reciprocal", recip,	"take reciprocal of top number" },
+	{"squareroot", squarert,"take square root of top number" },
+	{"sqrt", squarert,	" \" \"" },
+	{"sin", sine,		"take sine of angle (in degrees)" },
+	{"cos", cosine,		"take cosine of angle (in degrees)" },
+	{"tan", tangent,	"take tangent of angle (in degrees)" },
+	{"^", y_to_the_x, 	"raise next-to-top to power of top" },
+	{"raise", y_to_the_x, 	" \" \"" },
+	{"", 0, 0},
+	{"Print", printall, 	"print whole stack" },
+	{"print", printone, 	"print top of stack" },
+	{"dprint", printdec, 	"print top of stack in decimal" },
+	{"oprint", printoct, 	"print top of stack in octal" },
+	{"hprint", printhex, 	"print top of stack in hex" },
+	{"xprint", printhex, 	" \" \"" },
+	{"", 0, 0},
+	{"clear", clear, 	"clear whole stack" },
+	{"pop", rolldown, 	"pop (and discard) top of stack" },
+	{"push", enter, 	"push (duplicate) top of stack" },
+	{"enter", enter, 	" \" \"" },
+	{"lastx", repush, 	"re-push most recent previous top of stack" },
+	{"lx", repush, 		" \" \"" },
+	{"repush", repush, 	" \" \"" },
+	{"xchange", exchange, 	"exchange top two numbers" },
+	{"exchange", exchange, 	" \" \"" },
+	{"store", store, 	"store to offstack memory" },
+	{"sto", store,		" \" \"" },
+	{"recall", recall, 	"recall from offstack memory" },
+	{"", 0, 0},
+	{"pi", push_pi, 	"push constant pi" },
+	{"in2mm", units_in_mm, 	"convert inches to mm" },
+	{"mm2in", units_mm_in, 	"convert mm to inches" },
+	{"c2f", units_C_F,	"convert degrees C to F" },
+	{"f2c", units_F_C,	"convert degrees F to C" },
+	{"l2q", units_l_qt,	"convert liters to quarts" },
+	{"q2l", units_qt_l,	"convert quarts to liters" },
+	{"", 0, 0},
+	{"Autoprint", autop,	"toggle autoprinting" },
+	{"Hex", modehex, 	"switch to hex output" },
+	{"X", modehex, 		" \" \"" },
+	{"Octal", modeoct, 	"switch to octal output" },
+	{"Decimal", modedec, 	"switch to decimal output" },
+	{"Integer", modeinteger,"switch to integer arithmetic" },
+	{"Float", modefloat, 	"switch to float arithmetic" },
+	{"", 0, 0},
+	{"quit", quit, 		"leave" },
+	{"exit", quit, 		" \" \"" },
+	{"", 0, 0},
+	{"help", help, 		NULL },
+	{"?", help, 		NULL },
+	{NULL, NULL}
+};
+
+void parse_tok(char *p, token *t)
 {
-	fprintf(stderr, "%s: %s\n", progname, s);
+	ldouble n;
+
+	/* is it a number? */
+	if (*p == '0' && (*(p+1) == 'x' || *(p+1) == 'X')) {
+		long long ln = strtoll(p, 0, 16);
+		t->type = FLOAT;
+		t->val.val = ln;
+		debug(("parse_tok hex value is %Lg decimal\n", n));
+		return;
+
+	} else if (*p == '0' && ('0' <= *(p+1) && *(p+1) <= '7')) {
+		long long ln = strtoll(p, 0, 8);
+		t->type = FLOAT;
+		t->val.val = ln;
+		debug(("parse_tok octal value is %Lg decimal\n", n));
+		return;
+
+	} else if (isdigit(*p) || (*p == '.') ||
+			(*p == '-' && isdigit(*(p+1)))) {
+		debug(("digit %s\n", p));
+		if (sscanf(p,"%Lg",&n) == 1) {
+			t->type = FLOAT;
+			t->val.val = n;
+			debug(("parse_tok value is %Lg\n", n));
+			return;
+		}
+	} else { /* is it a command? */
+		struct oper *op;
+		op = opers;
+		while (op->name) {
+			if (*op->name && !strncmp(p, op->name, strlen(p))) {
+				t->type = OP;
+				t->val.opfunc = op->func;
+				debug(("parse_tok op is %s\n", op->name));
+				return;
+			}
+			op++;
+		}
+	}
+	t->val.str = p;
+	t->type = UNKNOWN;
+	debug(("parse_tok unknown: %s\n", p));
+	return;
+}
+
+int
+gettoken(FILE *f, struct token *t)
+{
+	static char inputline[1024];
+	static char *p = NULL;
+	static char *tp = NULL;
+	static char *c = NULL;
+
+	if (p == NULL) {
+		if (fgets(inputline, 1024, f) == NULL)
+			return 0;
+		p = inputline;
+	}
+	while (isspace(*p))
+		p++;
+
+	debug(("gettoken string is %s\n", p));
+
+	if (*p == '\0') { /* out of input */
+		t->type = EOL;
+		p = NULL;
+		debug(("gettoken returning EOL\n"));
+		return 1;
+	}
+
+	/* find end of token */
+	tp = p;
+	while (!isspace(*p))
+		p++;
+
+	/* if we're on whitespace, null terminate and increment */
+	if (*p) 
+		*p++ = '\0';
+
+	/* eliminate commas, i.e. from numbers: 45,001 */
+	while ((c = strchr(tp, ',')) != NULL) {
+	    memmove(c, c+1, strlen(c));
+	}
+
+	parse_tok(tp, t);
+
+	fflush(stdin);
+	return 1;
+}
+
+int
+options(argc,argv)
+int argc;
+char *argv[];
+{
+	int opt;
+	progname = strrchr(argv[0],'/');
+	if (!progname) progname = argv[0];
+#if BEFORE
+	if (argc > 1) {
+		if (!strcmp(argv[1], "-p"))
+			autoprint = !autoprint;
+		else {
+			fprintf(stderr, "usage: %s [-p] (to turn off autoprinting)\n",
+					progname);
+			exit(1);
+		}
+	}
+#else
+	while ((opt = getopt(argc, argv, "p")) != -1) {
+	    switch (opt) {
+	    case 'p':
+		autoprint = !autoprint;
+		break;
+	    default:
+		fprintf(stderr, "usage: %s [-p ] expression ... \n", argv[0]);
+		exit(1);
+	    }
+	}
+
+	return optind;
+#endif
+}
+
+int
+main(argc,argv)
+int argc;
+char *argv[];
+{
+	struct token tok;
+	token *t;
+	static int lasttoktype;
+	int exparg, hadargs = 0;
+
+	t = &tok;
+
+	exparg = options(argc,argv);
+
+	pi = 4 * atan(1.0);
+
+	/* we simply loop forever, either pushing operands or executing
+		operators.  the special end-of-line token lets us do
+		reasonable autoprinting, the last thing on the line was
+		an operator */
+	while (1) {
+		if (exparg < argc) {
+		    parse_tok(argv[exparg++], t);
+		    hadargs = 1;
+		} else if (hadargs) {
+		    t->type = EOL;
+		    hadargs = 0;
+		} else {
+		    if (!gettoken(stdin, t))
+			break;
+		}
+		debug(("got token\n"));
+		switch(t->type) {
+		case FLOAT:
+			debug(("pushing %Lg\n", t->val.val));
+			push(t->val.val);
+			break;
+		case OP:
+			debug(("calling op\n"));
+			(void)(t->val.opfunc)(t);
+			break;
+		case EOL:
+			if (autoprint && lasttoktype == OP) {
+				silent = TRUE;
+				printtop();
+				silent = FALSE;
+			}
+			break;
+		default:
+		case UNKNOWN:
+			printf("unrecognized input '%s'\n",t->val.str);
+			break;
+
+		}
+		lasttoktype = t->type;
+	}
 	exit(1);
+	return (1);
 }
 
