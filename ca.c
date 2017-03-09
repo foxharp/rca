@@ -402,12 +402,40 @@ sine ( token *t )
 }
 
 opreturn
+asine ( token *t )
+{
+	ldouble a;
+
+
+	if (pop(&a)) {
+		push( 360.0 * asin(a) / (pi * 2) );
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
 cosine ( token *t )
 {
 	ldouble a;
 
 	if (pop(&a)) {
 		push( cos((a * 2 * pi) / 360.0 ) );
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
+acosine ( token *t )
+{
+	ldouble a;
+
+
+	if (pop(&a)) {
+		push( 360.0 * acos(a) / (pi * 2) );
 		lastx = a;
 		return GOODOP;
 	}
@@ -432,6 +460,20 @@ tangent ( token *t )
 			lastx = a;
 			return GOODOP;
 		}
+	}
+	return BADOP;
+}
+
+opreturn
+atangent ( token *t )
+{
+	ldouble a;
+
+
+	if (pop(&a)) {
+		push( 360.0 * atan(a) / (pi * 2) );
+		lastx = a;
+		return GOODOP;
 	}
 	return BADOP;
 }
@@ -737,6 +779,32 @@ units_qt_l( token *t )
 }
 
 opreturn
+units_mi_km( token *t )
+{
+	ldouble a;
+	if (pop(&a)) {
+		a *= 1.60934;
+		push( a );
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
+units_km_mi( token *t )
+{
+	ldouble a;
+	if (pop(&a)) {
+		a /= 1.60934;
+		push( a );
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
 autop ( token *t )
 {
 	autoprint = !autoprint;
@@ -785,8 +853,11 @@ struct oper opers[] = {
 	{"squareroot", squarert,"take square root of top number" },
 	{"sqrt", squarert,	" \" \"" },
 	{"sin", sine,		"take sine of angle (in degrees)" },
+	{"asin", asine,		"find the arcsine (result in degrees)" },
 	{"cos", cosine,		"take cosine of angle (in degrees)" },
+	{"acos", acosine,	"find the arccosine (result in degrees)" },
 	{"tan", tangent,	"take tangent of angle (in degrees)" },
+	{"atan", atangent,	"find arctangent (result in degrees)" },
 	{"^", y_to_the_x, 	"raise next-to-top to power of top" },
 	{"raise", y_to_the_x, 	" \" \"" },
 	{"", 0, 0},
@@ -812,11 +883,16 @@ struct oper opers[] = {
 	{"", 0, 0},
 	{"pi", push_pi, 	"push constant pi" },
 	{"in2mm", units_in_mm, 	"convert inches to mm" },
+	{"i2mm", units_in_mm, 	"convert inches to mm" },
 	{"mm2in", units_mm_in, 	"convert mm to inches" },
 	{"c2f", units_C_F,	"convert degrees C to F" },
 	{"f2c", units_F_C,	"convert degrees F to C" },
 	{"l2q", units_l_qt,	"convert liters to quarts" },
 	{"q2l", units_qt_l,	"convert quarts to liters" },
+	{"mi2km", units_mi_km,	"convert quarts to liters" },
+	{"m2km", units_mi_km,	"convert miles to kilometers" },
+	{"km2mi", units_km_mi,	"convert kilometers to miles" },
+
 	{"", 0, 0},
 	{"Autoprint", autop,	"toggle autoprinting" },
 	{"Hex", modehex, 	"switch to hex output" },
@@ -934,17 +1010,6 @@ char *argv[];
 	int opt;
 	progname = strrchr(argv[0],'/');
 	if (!progname) progname = argv[0];
-#if BEFORE
-	if (argc > 1) {
-		if (!strcmp(argv[1], "-p"))
-			autoprint = !autoprint;
-		else {
-			fprintf(stderr, "usage: %s [-p] (to turn off autoprinting)\n",
-					progname);
-			exit(1);
-		}
-	}
-#else
 	while ((opt = getopt(argc, argv, "p")) != -1) {
 	    switch (opt) {
 	    case 'p':
@@ -957,7 +1022,6 @@ char *argv[];
 	}
 
 	return optind;
-#endif
 }
 
 int
