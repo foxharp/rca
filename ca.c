@@ -9,6 +9,10 @@
  *		- Paul G. Fox, Wed Dec 29 1993
  *
  *	[Math is done in "long double", as of 2012.]
+ *
+ *  build with:
+ *	doit: gcc -o ca ca.c -lm
+ *
  */
 #include <stdlib.h>
 #include <unistd.h>
@@ -96,6 +100,8 @@ ldouble offstack;
 struct oper opers[];
 
 char *progname = "";
+
+void parse_tok(char *p, token *t, char **nextp);
 
 void
 errexit(char *s)
@@ -696,6 +702,7 @@ opreturn
 push_pi ( token *t )
 {
 	push(pi);
+	return GOODOP;
 }
 
 opreturn
@@ -850,6 +857,7 @@ struct oper opers[] = {
 	{"changesign", chsign,	"negate top number" },
 	{"chs", chsign,		" \" \"" },
 	{"reciprocal", recip,	"take reciprocal of top number" },
+	{"recip", recip,	" \" \"" },
 	{"squareroot", squarert,"take square root of top number" },
 	{"sqrt", squarert,	" \" \"" },
 	{"sin", sine,		"take sine of angle (in degrees)" },
@@ -862,11 +870,17 @@ struct oper opers[] = {
 	{"raise", y_to_the_x, 	" \" \"" },
 	{"", 0, 0},
 	{"Print", printall, 	"print whole stack" },
+	{"P", printall, 	" \" \"" },
 	{"print", printone, 	"print top of stack" },
+	{"p", printone, 	" \" \"" },
 	{"dprint", printdec, 	"print top of stack in decimal" },
+	{"dp", printdec, 	" \" \"" },
 	{"oprint", printoct, 	"print top of stack in octal" },
+	{"op", printoct, 	" \" \"" },
 	{"hprint", printhex, 	"print top of stack in hex" },
+	{"hp", printhex, 	" \" \"" },
 	{"xprint", printhex, 	" \" \"" },
+	{"xp", printhex, 	" \" \"" },
 	{"", 0, 0},
 	{"clear", clear, 	"clear whole stack" },
 	{"pop", rolldown, 	"pop (and discard) top of stack" },
@@ -878,31 +892,41 @@ struct oper opers[] = {
 	{"xchange", exchange, 	"exchange top two numbers" },
 	{"exchange", exchange, 	" \" \"" },
 	{"store", store, 	"store to offstack memory" },
-	{"sto", store,		" \" \"" },
+	// {"sto", store,		" \" \"" },
 	{"recall", recall, 	"recall from offstack memory" },
+	{"rcl", recall, 	" \" \"" },
 	{"", 0, 0},
 	{"pi", push_pi, 	"push constant pi" },
+	{"", 0, 0},
 	{"in2mm", units_in_mm, 	"convert inches to mm" },
-	{"i2mm", units_in_mm, 	"convert inches to mm" },
+	{"i2mm", units_in_mm, 	" \" \"" },
 	{"mm2in", units_mm_in, 	"convert mm to inches" },
+	{"mm2i", units_mm_in, 	" \" \"" },
 	{"c2f", units_C_F,	"convert degrees C to F" },
 	{"f2c", units_F_C,	"convert degrees F to C" },
 	{"l2q", units_l_qt,	"convert liters to quarts" },
 	{"q2l", units_qt_l,	"convert quarts to liters" },
-	{"mi2km", units_mi_km,	"convert quarts to liters" },
-	{"m2km", units_mi_km,	"convert miles to kilometers" },
+	{"mi2km", units_mi_km,	"convert miles to kilometers" },
+	{"m2km", units_mi_km,	" \" \"" },
 	{"km2mi", units_km_mi,	"convert kilometers to miles" },
+	{"km2mi", units_km_mi,	" \" \"" },
 
 	{"", 0, 0},
 	{"Autoprint", autop,	"toggle autoprinting" },
 	{"Hex", modehex, 	"switch to hex output" },
+	{"H", modehex, 		"switch to hex output" },
 	{"X", modehex, 		" \" \"" },
 	{"Octal", modeoct, 	"switch to octal output" },
+	{"O", modeoct, 		" \" \"" },
 	{"Decimal", modedec, 	"switch to decimal output" },
+	{"D", modedec, 		" \" \"" },
 	{"Integer", modeinteger,"switch to integer arithmetic" },
+	{"I", modeinteger,	" \" \"" },
 	{"Float", modefloat, 	"switch to float arithmetic" },
+	{"F", modefloat, 	" \" \"" },
 	{"", 0, 0},
 	{"quit", quit, 		"leave" },
+	{"q", quit, 		" \" \"" },
 	{"exit", quit, 		" \" \"" },
 	{"", 0, 0},
 	{"help", help, 		NULL },
@@ -910,93 +934,115 @@ struct oper opers[] = {
 	{NULL, NULL}
 };
 
-void parse_tok(char *p, token *t)
+int is_numerical(int c)
 {
-	ldouble n;
+    return isdigit(c) || c == '.' || c == '-';
+}
 
-	/* is it a number? */
+void parse_tok(char *p, token *t, char **nextp)
+{
+	// ldouble n;
+
 	if (*p == '0' && (*(p+1) == 'x' || *(p+1) == 'X')) {
-		long long ln = strtoll(p, 0, 16);
+		// octal
+		long long ln = strtoll(p, nextp, 16);
 		t->type = FLOAT;
 		t->val.val = ln;
-		debug(("parse_tok hex value is %Lg decimal\n", n));
+		// debug(("parse_tok hex value is %Lg decimal\n", n));
 		return;
 
 	} else if (*p == '0' && ('0' <= *(p+1) && *(p+1) <= '7')) {
-		long long ln = strtoll(p, 0, 8);
+		// hexadecimal
+		long long ln = strtoll(p, nextp, 8);
 		t->type = FLOAT;
 		t->val.val = ln;
-		debug(("parse_tok octal value is %Lg decimal\n", n));
+		// debug(("parse_tok octal value is %Lg decimal\n", n));
 		return;
 
 	} else if (isdigit(*p) || (*p == '.') ||
-			(*p == '-' && isdigit(*(p+1)))) {
+			(*p == '-' && (isdigit(*(p+1)) || (*(p+1) == '.')) )) {
+		// decimal
 		debug(("digit %s\n", p));
-		if (sscanf(p,"%Lg",&n) == 1) {
-			t->type = FLOAT;
-			t->val.val = n;
-			debug(("parse_tok value is %Lg\n", n));
-			return;
-		}
-	} else { /* is it a command? */
+		long double dd = strtod(p, nextp);
+		// used to use: sscanf(p,"%Lg",&n)
+		t->type = FLOAT;
+		t->val.val = dd;
+		// debug(("parse_tok value is %Lg\n", dd));
+		return;
+	} else {
+		// command
 		struct oper *op;
 		op = opers;
 		while (op->name) {
-			if (*op->name && !strncmp(p, op->name, strlen(p))) {
-				t->type = OP;
-				t->val.opfunc = op->func;
-				debug(("parse_tok op is %s\n", op->name));
-				return;
+		    int matchlen;
+			matchlen = strlen(op->name);
+			if (!strncmp(op->name, p, matchlen)) {
+				if (p[matchlen] == '\0' ||
+					isspace(p[matchlen]) ||
+					is_numerical(p[matchlen])) {
+				    *nextp = p + matchlen;
+				    t->type = OP;
+				    t->val.opfunc = op->func;
+				    debug(("parse_tok op is %s\n", op->name));
+				    return;
+				}
 			}
 			op++;
 		}
+		if (!op->name) {
+			t->val.str = p;
+			t->type = UNKNOWN;
+			debug(("parse_tok unknown: %s\n", p));
+			return;
+		}
 	}
-	t->val.str = p;
-	t->type = UNKNOWN;
-	debug(("parse_tok unknown: %s\n", p));
-	return;
+}
+
+static char inputline[1024];
+static char *input_ptr = NULL;
+
+void
+flushinput(void)
+{
+    input_ptr = NULL;
 }
 
 int
 gettoken(FILE *f, struct token *t)
 {
-	static char inputline[1024];
-	static char *p = NULL;
-	static char *tp = NULL;
-	static char *c = NULL;
+	char *cp;
 
-	if (p == NULL) {
+	if (input_ptr == NULL) {
 		if (fgets(inputline, 1024, f) == NULL)
 			return 0;
-		p = inputline;
+		inputline[strlen(inputline)-1] = '\0';
+		input_ptr = inputline;
+
+		/* eliminate commas, e.g., from numbers: 45,001
+		 * we eliminate from the whole line, which means there
+		 * can be no commas in commands.
+		 */
+		cp = inputline;
+		while ((cp = strchr(cp, ',')) != NULL) {
+		    memmove(cp, cp+1, strlen(cp));
+		}
+
 	}
-	while (isspace(*p))
-		p++;
+	while (isspace(*input_ptr))
+		input_ptr++;
 
-	debug(("gettoken string is %s\n", p));
+	debug(("gettoken string is '%s'\n", input_ptr));
 
-	if (*p == '\0') { /* out of input */
+	if (*input_ptr == '\0') { /* out of input */
 		t->type = EOL;
-		p = NULL;
+		input_ptr = NULL;
 		debug(("gettoken returning EOL\n"));
 		return 1;
 	}
 
-	/* find end of token */
-	tp = p;
-	while (!isspace(*p))
-		p++;
-
-	/* if we're on whitespace, null terminate and increment */
-	if (*p) 
-		*p++ = '\0';
-
-	/* eliminate commas, i.e. from numbers: 45,001 */
-	while ((c = strchr(tp, ',')) != NULL) {
-	    memmove(c, c+1, strlen(c));
-	}
-
-	parse_tok(tp, t);
+	debug(("gettoken parsing input_ptr == %s\n", input_ptr));
+	parse_tok(input_ptr, t, &input_ptr);
+	debug(("gettoken input_ptr is now %s\n", input_ptr));
 
 	fflush(stdin);
 	return 1;
@@ -1032,11 +1078,8 @@ char *argv[];
 	struct token tok;
 	token *t;
 	static int lasttoktype;
-	int exparg, hadargs = 0;
 
 	t = &tok;
-
-	exparg = options(argc,argv);
 
 	pi = 4 * atan(1.0);
 
@@ -1045,16 +1088,8 @@ char *argv[];
 		reasonable autoprinting, the last thing on the line was
 		an operator */
 	while (1) {
-		if (exparg < argc) {
-		    parse_tok(argv[exparg++], t);
-		    hadargs = 1;
-		} else if (hadargs) {
-		    t->type = EOL;
-		    hadargs = 0;
-		} else {
-		    if (!gettoken(stdin, t))
+		if (!gettoken(stdin, t))
 			break;
-		}
 		debug(("got token\n"));
 		switch(t->type) {
 		case FLOAT:
@@ -1075,6 +1110,8 @@ char *argv[];
 		default:
 		case UNKNOWN:
 			printf("unrecognized input '%s'\n",t->val.str);
+			flushinput();
+			// exit(1);  // easier debug if we exit out
 			break;
 
 		}
