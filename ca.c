@@ -294,7 +294,7 @@ modulo(token *t)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			int i, j;
+			long long i, j;
 
 			i = (long long)a;
 			j = (long long)b;
@@ -344,7 +344,7 @@ rshift(token *t)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			int i, j;
+			long long i, j;
 
 			i = (long long)a;
 			j = (long long)b;
@@ -364,7 +364,7 @@ lshift(token *t)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			int i, j;
+			long long i, j;
 
 			i = (long long)a;
 			j = (long long)b;
@@ -384,7 +384,7 @@ and(token *t)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			int i, j;
+			long long i, j;
 
 			i = (long long)a;
 			j = (long long)b;
@@ -404,7 +404,7 @@ or(token *t)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			int i, j;
+			long long i, j;
 
 			i = (long long)a;
 			j = (long long)b;
@@ -424,7 +424,7 @@ xor(token *t)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			int i, j;
+			long long i, j;
 
 			i = (long long)a;
 			j = (long long)b;
@@ -444,11 +444,11 @@ setbit(token *t)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			int i, j;
+			long long i, j;
 
 			i = (long long)a;
 			j = (long long)b;
-			push(i | (1 << j));
+			push(i | (1LL << j));
 			lastx = b;
 			return GOODOP;
 		}
@@ -464,11 +464,11 @@ clearbit(token *t)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			int i, j;
+			long long i, j;
 
 			i = (long long)a;
 			j = (long long)b;
-			push(i & ~(1 << j));
+			push(i & ~(1LL << j));
 			lastx = b;
 			return GOODOP;
 		}
