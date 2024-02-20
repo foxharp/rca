@@ -1,4 +1,4 @@
-/* 
+/*
  *	This program is a mediocre but practical stack-based floating
  *	point calculator.  It resembles the UNIX 'dc' command in usage,
  *	but is not as full-featured (no variables or arrays) and is not
@@ -54,16 +54,18 @@ usage(void)
 #undef DEBUG
 
 #ifdef DEBUG
-#define debug(a) printf a 
+#define debug(a) printf a
 #else
 #define debug(a)
 #endif
 
 typedef int boolean;
+
 #define TRUE 1
 #define FALSE 0
 
 typedef int opreturn;
+
 #define GOODOP 1
 #define BADOP 0
 
@@ -78,7 +80,7 @@ ldouble pi = 3.141592653589793238462643383279502884L;
 /* internal representation of operands on the stack.  numbers are always
  * stored as long doubles, even when we're in integer mode.  this could
  * be revisited, but since the FP mantissa is usually as big as the integer
- * word size these days (64 bits), it's probably fine. 
+ * word size these days (64 bits), it's probably fine.
  */
 struct num {
 	ldouble val;
@@ -88,7 +90,6 @@ struct num {
 /* the operand stack */
 struct num *stack;
 
-
 /* all user input is either a number or a command operator.
  * this is how operators are looked up, by name
  */
@@ -97,13 +98,12 @@ typedef struct oper oper;
 
 struct oper {
 	char *name;
-	opreturn (*func)(token *);
+	 opreturn(*func) (token *);
 	char *help;
 };
 
 /* operator table */
 struct oper opers[];
-
 
 /* tokens are typed -- currently numbers, operators, line-ends */
 struct token {
@@ -120,7 +120,6 @@ struct token {
 #define OP 1
 #define EOL 2
 #define UNKNOWN -1
-
 
 /* if true, print the top of stack after any line that ends with an operator */
 boolean autoprint = TRUE;
@@ -149,12 +148,12 @@ long long int_mask;
 /* 4 modes: float, decimal integer, hex, and octal.
  * the last 3 are integer modes.
  */
-int mode = 'f';  /* or 'd', 'x', or 'o' */
+int mode = 'f';			/* or 'd', 'x', or 'o' */
 
 /* decimal, hex, or octal output.  normally matches mode, but
  * can be changed by individual commands
  */
-int print_format = 'f';  /* 'f', 'd', 'x', or 'o' */
+int print_format = 'f';		/* 'f', 'd', 'x', or 'o' */
 
 /* used to suppress "empty stack" messages */
 boolean empty_stack_ok = FALSE;
@@ -170,17 +169,19 @@ ldouble offstack3;
 long long
 sign_extend(ldouble a)
 {
-    long long b = a;
-    if (int_width == LONGLONG_BITS)
-	    return b;
-    else
-	    return b | (0 - (b & int_sign_bit));
+	long long b = a;
+
+	if (int_width == LONGLONG_BITS)
+		return b;
+	else
+		return b | (0 - (b & int_sign_bit));
 }
 
 void
 push(ldouble n)
 {
-	struct num *p = (struct num *)calloc(1, sizeof (struct num));
+	struct num *p = (struct num *)calloc(1, sizeof(struct num));
+
 	if (!p) {
 		perror("calloc");
 		exit(1);
@@ -202,6 +203,7 @@ boolean
 pop(ldouble *f)
 {
 	struct num *p;
+
 	p = stack;
 	if (!p) {
 		if (!empty_stack_ok)
@@ -210,14 +212,15 @@ pop(ldouble *f)
 	}
 	*f = p->val;
 	stack = p->next;
-	free (p);
+	free(p);
 	return TRUE;
 }
 
 opreturn
-add( token *t )
+add(token *t)
 {
 	ldouble a, b;
+
 	if (pop(&b)) {
 		if (pop(&a)) {
 			push(a + b);
@@ -230,9 +233,10 @@ add( token *t )
 }
 
 opreturn
-subtract( token *t )
+subtract(token *t)
 {
 	ldouble a, b;
+
 	if (pop(&b)) {
 		if (pop(&a)) {
 			push(a - b);
@@ -245,9 +249,10 @@ subtract( token *t )
 }
 
 opreturn
-multiply( token *t )
+multiply(token *t)
 {
 	ldouble a, b;
+
 	if (pop(&b)) {
 		if (pop(&a)) {
 			push(a * b);
@@ -260,9 +265,10 @@ multiply( token *t )
 }
 
 opreturn
-divide( token *t )
+divide(token *t)
 {
 	ldouble a, b;
+
 	if (pop(&b)) {
 		if (pop(&a)) {
 			if (b != 0.0) {
@@ -282,12 +288,14 @@ divide( token *t )
 }
 
 opreturn
-modulo( token *t )
+modulo(token *t)
 {
 	ldouble a, b;
+
 	if (pop(&b)) {
 		if (pop(&a)) {
 			int i, j;
+
 			i = (long long)a;
 			j = (long long)b;
 			if (j != 0) {
@@ -307,9 +315,10 @@ modulo( token *t )
 }
 
 opreturn
-y_to_the_x ( token *t )
+y_to_the_x(token *t)
 {
 	ldouble a, b;
+
 	if (pop(&b)) {
 		if (pop(&a)) {
 			if (a >= 0 || floorl(b) == b) {
@@ -329,16 +338,17 @@ y_to_the_x ( token *t )
 }
 
 opreturn
-rshift( token *t )
+rshift(token *t)
 {
 	ldouble a, b;
 
 	if (pop(&b)) {
 		if (pop(&a)) {
 			int i, j;
+
 			i = (long long)a;
 			j = (long long)b;
-			push( (i >> j) & ~int_sign_bit );
+			push((i >> j) & ~int_sign_bit);
 			lastx = b;
 			return GOODOP;
 		}
@@ -348,12 +358,14 @@ rshift( token *t )
 }
 
 opreturn
-lshift( token *t )
+lshift(token *t)
 {
 	ldouble a, b;
+
 	if (pop(&b)) {
 		if (pop(&a)) {
 			int i, j;
+
 			i = (long long)a;
 			j = (long long)b;
 			push(i << j);
@@ -366,12 +378,14 @@ lshift( token *t )
 }
 
 opreturn
-and( token *t )
+and(token *t)
 {
 	ldouble a, b;
+
 	if (pop(&b)) {
 		if (pop(&a)) {
 			int i, j;
+
 			i = (long long)a;
 			j = (long long)b;
 			push(i & j);
@@ -384,12 +398,14 @@ and( token *t )
 }
 
 opreturn
-or( token *t )
+or(token *t)
 {
 	ldouble a, b;
+
 	if (pop(&b)) {
 		if (pop(&a)) {
 			int i, j;
+
 			i = (long long)a;
 			j = (long long)b;
 			push(i | j);
@@ -402,12 +418,14 @@ or( token *t )
 }
 
 opreturn
-xor( token *t )
+xor(token *t)
 {
 	ldouble a, b;
+
 	if (pop(&b)) {
 		if (pop(&a)) {
 			int i, j;
+
 			i = (long long)a;
 			j = (long long)b;
 			push(i ^ j);
@@ -420,12 +438,14 @@ xor( token *t )
 }
 
 opreturn
-setbit( token *t )
+setbit(token *t)
 {
 	ldouble a, b;
+
 	if (pop(&b)) {
 		if (pop(&a)) {
 			int i, j;
+
 			i = (long long)a;
 			j = (long long)b;
 			push(i | (1 << j));
@@ -438,12 +458,14 @@ setbit( token *t )
 }
 
 opreturn
-clearbit( token *t )
+clearbit(token *t)
 {
 	ldouble a, b;
+
 	if (pop(&b)) {
 		if (pop(&a)) {
 			int i, j;
+
 			i = (long long)a;
 			j = (long long)b;
 			push(i & ~(1 << j));
@@ -456,11 +478,12 @@ clearbit( token *t )
 }
 
 opreturn
-not( token *t )
+not(token *t)
 {
 	ldouble a;
+
 	if (pop(&a)) {
-		push( ~(long long)a );
+		push(~(long long)a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -468,11 +491,12 @@ not( token *t )
 }
 
 opreturn
-chsign( token *t )
+chsign(token *t)
 {
 	ldouble a;
+
 	if (pop(&a)) {
-		push( -a );
+		push(-a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -480,11 +504,12 @@ chsign( token *t )
 }
 
 opreturn
-absolute( token *t )
+absolute(token *t)
 {
 	ldouble a;
+
 	if (pop(&a)) {
-		push( (a < 0) ? -a : a );
+		push((a < 0) ? -a : a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -492,12 +517,13 @@ absolute( token *t )
 }
 
 opreturn
-recip ( token *t )
+recip(token *t)
 {
 	ldouble a;
+
 	if (pop(&a)) {
 		if (a != 0.0) {
-			push( 1.0 / a );
+			push(1.0 / a);
 			lastx = a;
 			return GOODOP;
 		} else {
@@ -510,12 +536,13 @@ recip ( token *t )
 }
 
 opreturn
-squarert ( token *t )
+squarert(token *t)
 {
 	ldouble a;
+
 	if (pop(&a)) {
 		if (a >= 0.0) {
-			push( sqrtl(a) );
+			push(sqrtl(a));
 			lastx = a;
 			return GOODOP;
 		} else {
@@ -530,17 +557,17 @@ squarert ( token *t )
 opreturn
 trig_no_sense(void)
 {
-    printf(" trig functions make no sense in integer mode");
-    return BADOP;
+	printf(" trig functions make no sense in integer mode");
+	return BADOP;
 }
 
 opreturn
-sine ( token *t )
+sine(token *t)
 {
 	ldouble a;
 
 	if (mode != 'f')
-	    return trig_no_sense();
+		return trig_no_sense();
 
 	if (pop(&a)) {
 		push(sinl((a * pi) / 180.0));
@@ -551,15 +578,15 @@ sine ( token *t )
 }
 
 opreturn
-asine ( token *t )
+asine(token *t)
 {
 	ldouble a;
 
 	if (mode != 'f')
-	    return trig_no_sense();
+		return trig_no_sense();
 
 	if (pop(&a)) {
-		push( (180.0 * asinl(a)) / pi  );
+		push((180.0 * asinl(a)) / pi);
 		lastx = a;
 		return GOODOP;
 	}
@@ -567,15 +594,15 @@ asine ( token *t )
 }
 
 opreturn
-cosine ( token *t )
+cosine(token *t)
 {
 	ldouble a;
 
 	if (mode != 'f')
-	    return trig_no_sense();
+		return trig_no_sense();
 
 	if (pop(&a)) {
-		push( cosl((a * pi) / 180.0 ) );
+		push(cosl((a * pi) / 180.0));
 		lastx = a;
 		return GOODOP;
 	}
@@ -583,15 +610,15 @@ cosine ( token *t )
 }
 
 opreturn
-acosine ( token *t )
+acosine(token *t)
 {
 	ldouble a;
 
 	if (mode != 'f')
-	    return trig_no_sense();
+		return trig_no_sense();
 
 	if (pop(&a)) {
-		push( 180.0 * acosl(a) / pi );
+		push(180.0 * acosl(a) / pi);
 		lastx = a;
 		return GOODOP;
 	}
@@ -599,16 +626,16 @@ acosine ( token *t )
 }
 
 opreturn
-tangent ( token *t )
+tangent(token *t)
 {
 	ldouble a, ta;
 
 	if (mode != 'f')
-	    return trig_no_sense();
+		return trig_no_sense();
 
 	if (pop(&a)) {
-		// FIXME:  tan() goes infinite at +/-90 
-		push( tanl(a * pi / 180.0 ) );
+		// FIXME:  tan() goes infinite at +/-90
+		push(tanl(a * pi / 180.0));
 		lastx = a;
 		return GOODOP;
 	}
@@ -616,15 +643,15 @@ tangent ( token *t )
 }
 
 opreturn
-atangent ( token *t )
+atangent(token *t)
 {
 	ldouble a;
 
 	if (mode != 'f')
-	    return trig_no_sense();
+		return trig_no_sense();
 
 	if (pop(&a)) {
-		push( (180.0 * atanl(a)) / pi );
+		push((180.0 * atanl(a)) / pi);
 		lastx = a;
 		return GOODOP;
 	}
@@ -632,7 +659,7 @@ atangent ( token *t )
 }
 
 opreturn
-fraction ( token *t )
+fraction(token *t)
 {
 	ldouble a;
 
@@ -648,7 +675,7 @@ fraction ( token *t )
 }
 
 opreturn
-integer ( token *t )
+integer(token *t)
 {
 	ldouble a;
 
@@ -664,27 +691,28 @@ integer ( token *t )
 }
 
 opreturn
-clear ( token *t )
+clear(token *t)
 {
 	ldouble scrap;
+
 	if (pop(&lastx)) {
-		while (pop(&scrap))
-			;
+		while (pop(&scrap));
 	}
 	return GOODOP;
 }
 
 opreturn
-rolldown ( token *t ) // "pop"
+rolldown(token *t)		// "pop"
 {
-	(void) pop(&lastx);
+	(void)pop(&lastx);
 	return GOODOP;
 }
 
 opreturn
-enter( token *t )
+enter(token *t)
 {
 	ldouble a;
+
 	if (pop(&a)) {
 		push(a);
 		push(a);
@@ -694,16 +722,17 @@ enter( token *t )
 }
 
 opreturn
-repush ( token *t ) // "lastx"
+repush(token *t)		// "lastx"
 {
 	push(lastx);
 	return GOODOP;
 }
 
 opreturn
-exchange( token *t )
+exchange(token *t)
 {
 	ldouble a, b;
+
 	if (pop(&b)) {
 		if (pop(&a)) {
 			push(b);
@@ -715,60 +744,62 @@ exchange( token *t )
 	return BADOP;
 }
 
-void printbinarybyte (long long mask, unsigned long long n)
+void
+printbinarybyte(long long mask, unsigned long long n)
 {
 	int i;
 
 	n &= 0xff;
 	mask &= 0xff;
 
-	for (i=0x80; i != 0; i >>= 1) {
+	for (i = 0x80; i != 0; i >>= 1) {
 		if (mask & i)
-			putchar(n & i ? '1':'0');
+			putchar(n & i ? '1' : '0');
 	}
 }
 
-void printbinary2 (int width, long long mask, unsigned long long n)
+void
+printbinary2(int width, long long mask, unsigned long long n)
 {
-    int i, bytes = (width + 7) / 8;
-    for (i = bytes-1; i >= 0; i--) {
-	    printbinarybyte(mask >> (8 * i), n >> (8 * i));
-	    if (punct && i >= 1)
-		    putchar(',');
-    }
+	int i, bytes = (width + 7) / 8;
+
+	for (i = bytes - 1; i >= 0; i--) {
+		printbinarybyte(mask >> (8 * i), n >> (8 * i));
+		if (punct && i >= 1)
+			putchar(',');
+	}
 }
-
-void printbinary (long long n)
-{
-	printf("0b");
-	if (mode == 'f') // no masking in float mode
-		printbinary2 (max_int_width, ~0, (unsigned long long)n);
-	else
-		printbinary2 (int_width, int_mask, (unsigned long long)n);
-}
-
-
 
 void
-printtop (void)
+printbinary(long long n)
+{
+	printf("0b");
+	if (mode == 'f')	// no masking in float mode
+		printbinary2(max_int_width, ~0, (unsigned long long)n);
+	else
+		printbinary2(int_width, int_mask, (unsigned long long)n);
+}
+
+void
+printtop(void)
 {
 	ldouble n;
 	long long ln;
 	long long mask = int_mask;
 	long long signbit;
-	
-	if (mode == 'f') // no masking in float mode
+
+	if (mode == 'f')	// no masking in float mode
 		mask = ~0;
 
 	if (pop(&n)) {
 		switch (print_format) {
 		case 'x':
 			ln = (long long)n & mask;
-			printf(" 0x%Lx\n",ln);
+			printf(" 0x%Lx\n", ln);
 			break;
 		case 'o':
 			ln = (long long)n & mask;
-			printf(" 0%Lo\n",ln);
+			printf(" 0%Lo\n", ln);
 			break;
 		case 'b':
 			ln = (long long)n & mask;
@@ -785,9 +816,10 @@ printtop (void)
 				 * appear properly.
 				 */
 				long long t;
+
 				signbit = 1LL << (int_width - 1);
 				mask = (long long)int_mask & ~signbit;
-				if (ln & signbit) { // negative
+				if (ln & signbit) {	// negative
 					t = signbit - (ln & mask);
 					printf(" -");
 				} else {
@@ -797,8 +829,9 @@ printtop (void)
 				printf(punct ? "%'Ld\n" : "%Ld\n", t);
 			}
 			break;
-		default: // 'f'
-			printf(" %.*Lg\n",float_digits,n);
+		default:	// 'f'
+			printf(punct ? " %'.*Lg\n" : " %.*Lg\n", float_digits,
+			       n);
 			break;
 		}
 		push(n);
@@ -806,9 +839,10 @@ printtop (void)
 }
 
 void
-printstack (void)
+printstack(void)
 {
 	ldouble n;
+
 	if (pop(&n)) {
 		(void)printstack();
 		push(n);
@@ -817,9 +851,10 @@ printstack (void)
 }
 
 opreturn
-printall ( token *t )
+printall(token *t)
 {
 	ldouble hold;
+
 	suppress_autoprint = TRUE;
 	empty_stack_ok = TRUE;
 	printstack();
@@ -827,7 +862,7 @@ printall ( token *t )
 }
 
 opreturn
-printone ( token *t )
+printone(token *t)
 {
 	suppress_autoprint = TRUE;
 	empty_stack_ok = TRUE;
@@ -836,7 +871,7 @@ printone ( token *t )
 }
 
 opreturn
-printhex ( token *t )
+printhex(token *t)
 {
 	print_format = 'x';
 	printone(t);
@@ -844,7 +879,7 @@ printhex ( token *t )
 }
 
 opreturn
-printoct ( token *t )
+printoct(token *t)
 {
 	print_format = 'o';
 	printone(t);
@@ -852,7 +887,7 @@ printoct ( token *t )
 }
 
 opreturn
-printbin ( token *t )
+printbin(token *t)
 {
 	print_format = 'b';
 	printone(t);
@@ -860,7 +895,7 @@ printbin ( token *t )
 }
 
 opreturn
-printdec ( token *t )
+printdec(token *t)
 {
 	print_format = 'd';
 	printone(t);
@@ -868,7 +903,7 @@ printdec ( token *t )
 }
 
 opreturn
-printfloat ( token *t )
+printfloat(token *t)
 {
 	print_format = 'f';
 	printone(t);
@@ -877,23 +912,23 @@ printfloat ( token *t )
 
 /* debug support -- hidden command */
 opreturn
-printraw ( token *t )
+printraw(token *t)
 {
 	struct num *s;
 
-	printf("int_mask 0x%llx, int_sign_bit 0x%llx\n",
-		int_mask, int_sign_bit);
+	printf("int_mask 0x%llx, int_sign_bit 0x%llx\n", int_mask,
+	       int_sign_bit);
 
 	printf("stack:\n");
 	s = stack;
 	printf("%16s   %16s\n", "(long long)", "(long double)");
-	while(s) {
-	    printf("%#16Lx   %#16Lg\n", 
-		    (long long)(s->val), s->val);
-	    s = s->next;
+	while (s) {
+		printf("%#16Lx   %#16Lg\n", (long long)(s->val), s->val);
+		s = s->next;
 	}
 	printf("native sizes (bits):\n");
-	printf("%16lu   %16lu\n", 8*sizeof(long long), 8*sizeof(long double));
+	printf("%16lu   %16lu\n", 8 * sizeof(long long),
+	       8 * sizeof(long double));
 	printf("long double mantissa width %d\n", LDBL_MANT_DIG);
 
 	suppress_autoprint = TRUE;
@@ -901,80 +936,86 @@ printraw ( token *t )
 }
 
 opreturn
-punctuation ( token *t )
+punctuation(token *t)
 {
 	punct = !punct;
 	printf(" numeric punctuation is now %s\n", punct ? "on" : "off");
 	return GOODOP;
 }
 
-
 static char *
 mode2name(void)
 {
-    switch (mode) {
-    case 'f':  return "float"; break;
-    case 'd':  return "decimal"; break;
-    case 'o':  return "octal"; break;
-    case 'x':  return "hex"; break;
-    case 'b':  return "binary"; break;
-    default:  printf(" mode is 0x%x\n", mode); return "ERROR"; break;
-    }
+	switch (mode) {
+	case 'f':
+		return "float";
+	case 'd':
+		return "decimal";
+	case 'o':
+		return "octal";
+	case 'x':
+		return "hex";
+	case 'b':
+		return "binary";
+	default:
+		printf(" mode is 0x%x\n", mode);
+		return "ERROR";
+	}
 }
 
 void
 showmode(void)
 {
-    printf(" Mode is %s. ", mode2name());
-    if (mode == 'f') {
-	printf(" Displaying %d decimal places.\n", float_digits);
-    } else {
-	printf(" Integer math with %d bits.\n", int_width);
-    }
-    suppress_autoprint = TRUE;
+	printf(" Mode is %s. ", mode2name());
+	if (mode == 'f') {
+		printf(" Displaying %d decimal places.\n", float_digits);
+	} else {
+		printf(" Integer math with %d bits.\n", int_width);
+	}
+	suppress_autoprint = TRUE;
 }
 
 opreturn
-modeinfo ( token *t )
+modeinfo(token *t)
 {
 	showmode();
 	return GOODOP;
 }
 
 opreturn
-modehex ( token *t )
+modehex(token *t)
 {
 	print_format = mode = 'x';
 	showmode();
-	return printall(t);  /* side-effect: whole stack truncated to integer*/
+	return printall(t);	/* side-effect: stack truncated to integer */
 }
 
 opreturn
-modebin ( token *t )
+modebin(token *t)
 {
 	print_format = mode = 'b';
 	showmode();
-	return printall(t);  /* side-effect: whole stack truncated to integer*/
+	return printall(t);	/* side-effect: stack truncated to integer */
 }
 
 opreturn
-modeoct ( token *t )
+modeoct(token *t)
 {
 	print_format = mode = 'o';
 	showmode();
-	return printall(t);  /* side-effect: whole stack truncated to integer*/
+	return printall(t);	/* side-effect: stack truncated to integer */
 }
 
 opreturn
-modedec ( token *t )
+modedec(token *t)
 {
 	print_format = mode = 'd';
 	showmode();
-	return printall(t);  /* side-effect: whole stack truncated to integer*/
+	return printall(t);	/* side-effect: stack truncated to integer */
 }
 
 opreturn
-modefloat ( token *t )
+modefloat(token *t)
 {
 	print_format = mode = 'f';
 	showmode();
@@ -982,9 +1023,10 @@ modefloat ( token *t )
 }
 
 opreturn
-precision ( token *t )
+precision(token *t)
 {
 	ldouble digits;
+
 	if (!pop(&digits))
 		return BADOP;
 	float_digits = digits;
@@ -995,31 +1037,31 @@ precision ( token *t )
 void
 setup_width(int bits)
 {
-    /* we use long double to store our data.  in integer mode, this
-     * means the FP mantissa, if it's shorter, may limit our maximum
-     * word width.
-     */
-    if (!max_int_width) {  /* first call */
-	    max_int_width = LONGLONG_BITS;
-	    if (max_int_width > LDBL_MANT_DIG)
-		    max_int_width = LDBL_MANT_DIG;
-	    bits = max_int_width;
-    }
+	/* we use long double to store our data.  in integer mode, this
+	 * means the FP mantissa, if it's shorter, may limit our maximum
+	 * word width.
+	 */
+	if (!max_int_width) {	/* first call */
+		max_int_width = LONGLONG_BITS;
+		if (max_int_width > LDBL_MANT_DIG)
+			max_int_width = LDBL_MANT_DIG;
+		bits = max_int_width;
+	}
 
-    if (bits > max_int_width)
-	bits = max_int_width;
+	if (bits > max_int_width)
+		bits = max_int_width;
 
-    int_width = bits;
-    int_sign_bit = (1LL << (int_width - 1));
+	int_width = bits;
+	int_sign_bit = (1LL << (int_width - 1));
 
-    if (int_width == LONGLONG_BITS)
-	    int_mask = ~0;
-    else
-	    int_mask = (1LL << int_width) - 1;
+	if (int_width == LONGLONG_BITS)
+		int_mask = ~0;
+	else
+		int_mask = (1LL << int_width) - 1;
 }
 
 opreturn
-width ( token *t )
+width(token *t)
 {
 	ldouble n;
 	long long bits;
@@ -1048,7 +1090,7 @@ width ( token *t )
 }
 
 opreturn
-store ( token *t )
+store(token *t)
 {
 	ldouble a;
 
@@ -1061,7 +1103,7 @@ store ( token *t )
 }
 
 opreturn
-store2 ( token *t )
+store2(token *t)
 {
 	ldouble a;
 
@@ -1074,7 +1116,7 @@ store2 ( token *t )
 }
 
 opreturn
-store3 ( token *t )
+store3(token *t)
 {
 	ldouble a;
 
@@ -1087,40 +1129,41 @@ store3 ( token *t )
 }
 
 opreturn
-recall ( token *t )
+recall(token *t)
 {
 	push(offstack);
 	return GOODOP;
 }
 
 opreturn
-recall2 ( token *t )
+recall2(token *t)
 {
 	push(offstack2);
 	return GOODOP;
 }
 
 opreturn
-recall3 ( token *t )
+recall3(token *t)
 {
 	push(offstack3);
 	return GOODOP;
 }
 
 opreturn
-push_pi ( token *t )
+push_pi(token *t)
 {
 	push(pi);
 	return GOODOP;
 }
 
 opreturn
-units_in_mm( token *t )
+units_in_mm(token *t)
 {
 	ldouble a;
+
 	if (pop(&a)) {
 		a *= 25.4;
-		push( a );
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1128,12 +1171,13 @@ units_in_mm( token *t )
 }
 
 opreturn
-units_mm_in( token *t )
+units_mm_in(token *t)
 {
 	ldouble a;
+
 	if (pop(&a)) {
 		a /= 25.4;
-		push( a );
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1141,13 +1185,14 @@ units_mm_in( token *t )
 }
 
 opreturn
-units_F_C( token *t )
+units_F_C(token *t)
 {
 	ldouble a;
+
 	if (pop(&a)) {
 		a -= 32.0;
 		a /= 1.8;
-		push( a );
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1155,13 +1200,14 @@ units_F_C( token *t )
 }
 
 opreturn
-units_C_F( token *t )
+units_C_F(token *t)
 {
 	ldouble a;
+
 	if (pop(&a)) {
 		a *= 1.8;
 		a += 32.0;
-		push( a );
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1169,12 +1215,13 @@ units_C_F( token *t )
 }
 
 opreturn
-units_l_qt( token *t )
+units_l_qt(token *t)
 {
 	ldouble a;
+
 	if (pop(&a)) {
 		a *= 1.05669;
-		push( a );
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1182,12 +1229,13 @@ units_l_qt( token *t )
 }
 
 opreturn
-units_qt_l( token *t )
+units_qt_l(token *t)
 {
 	ldouble a;
+
 	if (pop(&a)) {
 		a /= 1.05669;
-		push( a );
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1195,12 +1243,13 @@ units_qt_l( token *t )
 }
 
 opreturn
-units_oz_g( token *t )
+units_oz_g(token *t)
 {
 	ldouble a;
+
 	if (pop(&a)) {
 		a *= 28.3495;
-		push( a );
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1208,12 +1257,13 @@ units_oz_g( token *t )
 }
 
 opreturn
-units_g_oz( token *t )
+units_g_oz(token *t)
 {
 	ldouble a;
+
 	if (pop(&a)) {
 		a /= 28.3495;
-		push( a );
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1221,12 +1271,13 @@ units_g_oz( token *t )
 }
 
 opreturn
-units_mi_km( token *t )
+units_mi_km(token *t)
 {
 	ldouble a;
+
 	if (pop(&a)) {
 		a /= 0.6213712;
-		push( a );
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1234,12 +1285,13 @@ units_mi_km( token *t )
 }
 
 opreturn
-units_km_mi( token *t )
+units_km_mi(token *t)
 {
 	ldouble a;
+
 	if (pop(&a)) {
 		a *= 0.6213712;
-		push( a );
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1247,7 +1299,7 @@ units_km_mi( token *t )
 }
 
 opreturn
-autop ( token *t )
+autop(token *t)
 {
 	autoprint = !autoprint;
 	printf(" autoprinting is now %s\n", autoprint ? "on" : "off");
@@ -1255,26 +1307,28 @@ autop ( token *t )
 }
 
 opreturn
-quit ( token *t )
+quit(token *t)
 {
 	exit(0);
 }
 
-void parse_tok(char *p, token *t, char **nextp)
+void
+parse_tok(char *p, token *t, char **nextp)
 {
 	int sign = 1;
 
 	/* be sure + and - are bound closely to numbers */
-	if (*p == '+' && (*(p+1) == '.' || isdigit(*(p+1)))) {
-		p++;  
-	} else if (*p == '-' && (*(p+1) == '.' || isdigit(*(p+1)))) {
+	if (*p == '+' && (*(p + 1) == '.' || isdigit(*(p + 1)))) {
+		p++;
+	} else if (*p == '-' && (*(p + 1) == '.' || isdigit(*(p + 1)))) {
 		sign = -1;
-		p++;  
+		p++;
 	}
 
-	if (*p == '0' && (*(p+1) == 'x' || *(p+1) == 'X')) {
+	if (*p == '0' && (*(p + 1) == 'x' || *(p + 1) == 'X')) {
 		// hex
 		long long ln = strtoull(p, nextp, 16);
+
 		if (ln == 0 && p == *nextp)
 			goto unknown;
 		t->type = NUMERIC;
@@ -1282,18 +1336,20 @@ void parse_tok(char *p, token *t, char **nextp)
 		t->val.val = ln * sign;
 		return;
 
-	} else if (*p == '0' && (*(p+1) == 'b' || *(p+1) == 'B')) {
+	} else if (*p == '0' && (*(p + 1) == 'b' || *(p + 1) == 'B')) {
 		// binary
-		long long ln = strtoull(p+2, nextp, 2);
+		long long ln = strtoull(p + 2, nextp, 2);
+
 		if (ln == 0 && p == *nextp)
 			goto unknown;
 		t->type = NUMERIC;
 		t->val.val = ln * sign;
 		return;
 
-	} else if (*p == '0' && ('0' <= *(p+1) && *(p+1) <= '7')) {
+	} else if (*p == '0' && ('0' <= *(p + 1) && *(p + 1) <= '7')) {
 		// octal
 		long long ln = strtoull(p, nextp, 8);
+
 		if (ln == 0 && p == *nextp)
 			goto unknown;
 		t->type = NUMERIC;
@@ -1303,6 +1359,7 @@ void parse_tok(char *p, token *t, char **nextp)
 	} else if (isdigit(*p) || (*p == '.')) {
 		// decimal
 		long double dd = strtod(p, nextp);
+
 		if (dd == 0.0 && p == *nextp)
 			goto unknown;
 		t->type = NUMERIC;
@@ -1311,17 +1368,18 @@ void parse_tok(char *p, token *t, char **nextp)
 	} else {
 		// command
 		oper *op;
+
 		op = opers;
 		while (op->name) {
 			int matchlen;
+
 			if (!op->func) {
 				op++;
 				continue;
 			}
 			matchlen = strlen(op->name);
 			if (!strncmp(op->name, p, matchlen)) {
-				if (p[matchlen] == '\0' ||
-						isspace(p[matchlen]) ) {
+				if (p[matchlen] == '\0' || isspace(p[matchlen])) {
 					*nextp = p + matchlen;
 					t->type = OP;
 					t->val.oper = op;
@@ -1331,7 +1389,7 @@ void parse_tok(char *p, token *t, char **nextp)
 			op++;
 		}
 		if (!op->name) {
-    unknown:
+		      unknown:
 			t->val.str = p;
 			t->type = UNKNOWN;
 			return;
@@ -1350,18 +1408,18 @@ flushinput(void)
 void
 no_comm(char *cp)
 {
-    char *ncp;
+	char *ncp;
 
-    /* first eliminate comments */
-    if ((ncp = strchr(cp, '#')) != NULL)
-	    *ncp = '\0';
+	/* first eliminate comments */
+	if ((ncp = strchr(cp, '#')) != NULL)
+		*ncp = '\0';
 
-    /* then eliminate commas from numbers, like "1,345,011".  this
-     * removes them from the whole line; a side-effect is that
-     * there can be no commas in commands.
-     */
-    while ((cp = strchr(cp, ',')) != NULL)
-	    memmove(cp, cp+1, strlen(cp));
+	/* then eliminate commas from numbers, like "1,345,011".  this
+	 * removes them from the whole line; a side-effect is that
+	 * there can be no commas in commands.
+	 */
+	while ((cp = strchr(cp, ',')) != NULL)
+		memmove(cp, cp + 1, strlen(cp));
 }
 
 /* on return, the global input_ptr is a string containing commands
@@ -1405,20 +1463,19 @@ fetch_line(void)
 		input_ptr = input_buf;
 		return 1;
 	}
-
 #ifdef USE_READLINE
 
 	static char readline_init_done = 0;
 
-	if (!readline_init_done) {  // readline initializations
+	if (!readline_init_done) {	// readline initializations
 
 		using_history();
 
 		/* prevent readline doing tab filename completion */
-		rl_bind_key_in_map ('\t', rl_insert,
-			rl_get_keymap_by_name("emacs"));
-		rl_bind_key_in_map ('\t', rl_insert,
-			rl_get_keymap_by_name("vi-insert"));
+		rl_bind_key_in_map('\t', rl_insert,
+				   rl_get_keymap_by_name("emacs"));
+		rl_bind_key_in_map('\t', rl_insert,
+				   rl_get_keymap_by_name("vi-insert"));
 
 		readline_init_done = 1;
 	}
@@ -1441,7 +1498,7 @@ fetch_line(void)
 	if (getline(&input_buf, &blen, stdin) < 0)
 		exit(0);
 
-	/* if stdin is a terminal, the command is already on-screen. 
+	/* if stdin is a terminal, the command is already on-screen.
 	 * but we also want it mixed with the output if we're
 	 * redirecting from a file or pipe.  (easy to get rid of it
 	 * with something like: "ca < commands | grep '^ '"
@@ -1449,7 +1506,7 @@ fetch_line(void)
 	if (!isatty(0))
 		printf("%s", input_buf);
 
-#endif   
+#endif
 
 	no_comm(input_buf);
 
@@ -1469,7 +1526,7 @@ gettoken(struct token *t)
 	while (isspace(*input_ptr))
 		input_ptr++;
 
-	if (*input_ptr == '\0') { /* out of input */
+	if (*input_ptr == '\0') {	/* out of input */
 		t->type = EOL;
 		input_ptr = NULL;
 		return 1;
@@ -1482,11 +1539,12 @@ gettoken(struct token *t)
 }
 
 opreturn
-help ( token *t )
+help(token *t)
 {
 	oper *op;
+
 	op = opers;
-	printf( "\
+	printf("\
 Entering a number pushes it on the stack.\n\
 Operators replace either one or two top stack values with their result.\n\
 All whitespace is equal; numbers and operators may appear on one or more lines.\n\
@@ -1503,7 +1561,7 @@ Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
 			putchar('\n');
 		} else {
 			if (op->name[0] == ';') {
-				/* hidden command, for debug */;
+				/* hidden command, for debug */ ;
 			} else if (!op->func) {
 				printf("%s\n", op->name);
 			} else if (!op->help) {
@@ -1514,35 +1572,36 @@ Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
 		}
 		op++;
 	}
-	printf("%78s\n", __FILE__" built "__DATE__" "__TIME__);
-	printf( "\nTip:  To see this help in a pager, try running \"ca help q | less\"\n");
+	printf("%78s\n", __FILE__ " built " __DATE__ " " __TIME__);
+	printf
+	    ("\nTip:  To see this help in a pager, try running \"ca help q | less\"\n");
 	return GOODOP;
 }
 
-
+// *INDENT-OFF*.
 struct oper opers[] = {
     {"Operators with two operands", 0, 0},
-	{"+", add, 		0 }, 
-	{"-", subtract, 	"Add and subtract x and y" },
+	{"+", add,		0 },
+	{"-", subtract,		"Add and subtract x and y" },
 	{"*", multiply,		0 },
 	{"x", multiply,		"Two ways to multiply x and y" },
-	{"/", divide, 		0 },
-	{"%", modulo, 		"Divide and modulo of y by x (arithmetic shift)" },
-	{"^", y_to_the_x, 	"Raise y to the x'th power" },
-	{">>", rshift, 		0 },
-	{"<<", lshift, 		"Right/left logical shift of y by x bits" },
-	{"&", and, 		0 },
-	{"|", or, 		0 },
-	{"xor", xor, 		"Bitwise AND, OR, and XOR of y and x" },
-	{"setb", setbit, 	0 },
+	{"/", divide,		0 },
+	{"%", modulo,		"Divide and modulo of y by x (arithmetic shift)" },
+	{"^", y_to_the_x,	"Raise y to the x'th power" },
+	{">>", rshift,		0 },
+	{"<<", lshift,		"Right/left logical shift of y by x bits" },
+	{"&", and,		0 },
+	{"|", or,		0 },
+	{"xor", xor,		"Bitwise AND, OR, and XOR of y and x" },
+	{"setb", setbit,	0 },
 	{"clearb", clearbit,	"Set and clear shift bit x in y" },
 	{"", 0, 0},
     {"Operators with one operand", 0, 0},
-	{"~", not, 		"Bitwise NOT of x (1's complement)" },
+	{"~", not,		"Bitwise NOT of x (1's complement)" },
 	{"chs", chsign,		0 },
 	{"negate", chsign,	"Change sign of x (2's complement)" },
 	{"recip", recip,        0 },
-	{"sqrt", squarert,      "Reciprocal and quare root of x" },
+	{"sqrt", squarert,      "Reciprocal and square root of x" },
 	{"sin", sine,           0 },
 	{"cos", cosine,         0 },
 	{"tan", tangent,        0 },
@@ -1554,26 +1613,26 @@ struct oper opers[] = {
 	{"int", integer,	"Absolute value, fractional and integer parts of x" },
 	{"", 0, 0},
     {"Stack manipulation", 0, 0},
-	{"clear", clear, 	"Clear stack" },
-	{"pop", rolldown, 	"Pop (and discard) x" },
-	{"push", enter, 	0 },
-	{"dup", enter, 	0 },
-	{"enter", enter, 	"Push (duplicate) x" },
-	{"lastx", repush, 	0 },
-	{"lx", repush, 		"Fetch previous x" },
+	{"clear", clear,	"Clear stack" },
+	{"pop", rolldown,	"Pop (and discard) x" },
+	{"push", enter,		0 },
+	{"dup", enter,		0 },
+	{"enter", enter,	"Push (duplicate) x" },
+	{"lastx", repush,	0 },
+	{"lx", repush,		"Fetch previous x" },
 	{"exch", exchange,	0 },
-	{"swap", exchange, 	"Exchange x and y" },
-	{"store", store, 	0 },
+	{"swap", exchange,	"Exchange x and y" },
+	{"store", store,	0 },
 	{"sto", store,		0 },
 	{"sto1", store,		0 },
 	{"sto2", store2,	0 },
 	{"sto3", store3,	"Save x off-stack (3 locations)" },
-	{"recall", recall, 	0 },
-	{"rcl", recall, 	0 },
-	{"rcl1", recall, 	0 },
-	{"rcl2", recall2, 	0 },
-	{"rcl3", recall3, 	"Fetch x (3 locations)" },
-	{"pi", push_pi, 	"Push constant pi" },
+	{"recall", recall,	0 },
+	{"rcl", recall,		0 },
+	{"rcl1", recall,	0 },
+	{"rcl2", recall2,	0 },
+	{"rcl3", recall3,	"Fetch x (3 locations)" },
+	{"pi", push_pi,		"Push constant pi" },
 	{"", 0, 0},
     {"Conversions:", 0, 0},
 	{"i2mm", units_in_mm,   0 },
@@ -1588,26 +1647,25 @@ struct oper opers[] = {
 	{"km2mi", units_km_mi,  "miles / kilometers" },
 	{"", 0, 0},
     {"Display:", 0, 0},
-	{"P", printall, 	"Print whole stack" },
-	{"p", printone, 	"Print x in mode's format" },
-	{"f", printfloat, 	0 },
-	{"d", printdec, 	0 },
-	{"o", printoct, 	0 },
-	{"h", printhex, 	0 },
-	{"b", printbin, 	0 },
-	{"x", printhex, 	"Print x in float, decimal, octal, hex, binary" },
-	{";r", printraw, 	"actual stack contents, for debug (hidden)" },
+	{"P", printall,		"Print whole stack" },
+	{"p", printone,		"Print x in mode's format" },
+	{"f", printfloat,	0 },
+	{"d", printdec,		0 },
+	{"o", printoct,		0 },
+	{"h", printhex,		0 },
+	{"b", printbin,		"Print x in float, decimal, octal, hex, binary" },
+	{";r", printraw,	"actual stack contents, for debug (hidden)" },
 	{"autoprint", autop,	0 },
-	{"a", autop, 		"Toggle autoprinting on/off" },
+	{"a", autop,		"Toggle autoprinting on/off" },
 	{"", 0, 0},
     {"Modes:", 0, 0},
-	{"F", modefloat, 	"Switch to floating point mode" },
-	{"D", modedec, 		0 },
+	{"F", modefloat,	"Switch to floating point mode" },
+	{"D", modedec,		0 },
 	{"I", modedec,		"Switch to decimal integer mode" },
-	{"H", modehex, 		0 },
-	{"X", modehex, 		"Switch to hex mode" },
-	{"O", modeoct, 		0 },
-	{"B", modebin, 		"Switch to octal or binary modes" },
+	{"H", modehex,		0 },
+	{"X", modehex,		"Switch to hex mode" },
+	{"O", modeoct,		0 },
+	{"B", modebin,		"Switch to octal or binary modes" },
 	{"precision", precision, 0 },
 	{"k", precision,        "Set float mode display precision" },
 	{"width", width,	0 },
@@ -1617,17 +1675,18 @@ struct oper opers[] = {
 	{"mode", modeinfo,	"Display current mode parameters" },
 	{"", 0, 0},
     {"Housekeeping:", 0, 0},
-	{"?", help, 		0 },
-	{"help", help, 		"this list" },
-	{"quit", quit, 		0 },
-	{"q", quit, 		0 },
-	{"exit", quit, 		"leave" },
+	{"?", help,		0 },
+	{"help", help,		"this list" },
+	{"quit", quit,		0 },
+	{"q", quit,		0 },
+	{"exit", quit,		"leave" },
 	{"#", help,		"Comment. The '#' and the rest of the line will be ignored." },
 	{NULL, NULL},
 };
+// *INDENT-ON*.
 
 int
-main(argc,argv)
+main(argc, argv)
 int argc;
 char *argv[];
 {
@@ -1644,7 +1703,7 @@ char *argv[];
 	g_argv = argv;
 
 	// apparently needed to make the %'Ld format for commas work
-	setlocale(LC_ALL,"");
+	setlocale(LC_ALL, "");
 
 	setup_width(0);
 
@@ -1658,16 +1717,16 @@ char *argv[];
 			break;
 
 		print_format = mode;
-		switch(t->type) {
+		switch (t->type) {
 		case NUMERIC:
 			push(t->val.val);
 			break;
 		case OP:
-			(void)(t->val.oper->func)(t);
+			(void)(t->val.oper->func) (t);
 			break;
 		case EOL:
-			if (!suppress_autoprint && autoprint &&
-					lasttoktype == OP) {
+			if (!suppress_autoprint && autoprint
+			    && lasttoktype == OP) {
 				empty_stack_ok = TRUE;
 				printtop();
 			}
@@ -1675,7 +1734,7 @@ char *argv[];
 			break;
 		default:
 		case UNKNOWN:
-			printf(" unrecognized input '%s'\n",t->val.str);
+			printf(" unrecognized input '%s'\n", t->val.str);
 			flushinput();
 			break;
 
@@ -1686,4 +1745,3 @@ char *argv[];
 	exit(1);
 	return (1);
 }
-
