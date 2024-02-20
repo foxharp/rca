@@ -148,12 +148,12 @@ long long int_mask;
 /* 4 modes: float, decimal integer, hex, and octal.
  * the last 3 are integer modes.
  */
-int mode = 'f';			/* or 'd', 'x', or 'o' */
+int mode = 'f';			/* or 'd', 'h', or 'o' */
 
 /* decimal, hex, or octal output.  normally matches mode, but
  * can be changed by individual commands
  */
-int print_format = 'f';		/* 'f', 'd', 'x', or 'o' */
+int print_format = 'f';		/* 'f', 'd', 'h', or 'o' */
 
 /* used to suppress "empty stack" messages */
 boolean empty_stack_ok = FALSE;
@@ -793,7 +793,7 @@ printtop(void)
 
 	if (pop(&n)) {
 		switch (print_format) {
-		case 'x':
+		case 'h':
 			ln = (long long)n & mask;
 			printf(" 0x%Lx\n", ln);
 			break;
@@ -873,7 +873,7 @@ printone(token *t)
 opreturn
 printhex(token *t)
 {
-	print_format = 'x';
+	print_format = 'h';
 	printone(t);
 	return GOODOP;
 }
@@ -953,7 +953,7 @@ mode2name(void)
 		return "decimal";
 	case 'o':
 		return "octal";
-	case 'x':
+	case 'h':
 		return "hex";
 	case 'b':
 		return "binary";
@@ -985,7 +985,7 @@ modeinfo(token *t)
 opreturn
 modehex(token *t)
 {
-	print_format = mode = 'x';
+	print_format = mode = 'h';
 	showmode();
 	return printall(t);	/* side-effect: stack truncated to integer */
 }
