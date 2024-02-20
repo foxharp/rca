@@ -1,0 +1,203 @@
+
+1 1 +
+ 2
+10 10 x
+ 100
+exch
+ 2
+/
+ 50
+8 /
+ 6.25
+int
+ 6
+lx
+ 6.25
+frac
+ 0.25
+-
+ 5.75
+P
+ 5.75
+pi
+ 3.14159
+P
+ 5.75
+ 3.14159
+%
+ 1
+10 4 %
+ 2
+10 ^
+ 1024
+2 >>
+ 256
+4 <<
+ 4096
+
+H
+ Mode is hex.  Integer math with 64 bits.
+ 0x1
+ 0x1000
+0xfffff
+0xaaaaa ~ &
+ 0x55555
+lastx |
+ 0xfffffffffff55555
+clear
+ empty stack
+20 width
+ Words are 20 bits wide.
+0xfffff
+0xaaaaa ~ &
+ 0x55555
+lastx ~ |
+ 0xfffff
+0x10101010 xor
+ 0xfefef
+d
+ -4,113
+chs
+ 0x1011
+d
+ 4,113
+clear
+ empty stack
+F
+ Mode is float.  Displaying 6 decimal places.
+3
+recip
+ 0.333333
+sqrt
+ 0.57735
+push
+ 0.57735
+recip
+ 1.73205
+*
+ 1
+asin
+ 90
+1 +
+ 91
+cos
+ -0.0174524
+lastx +
+ 90.9825
+frac
+ 0.982548
+store
+ 0.982548
+1 i2mm
+ 25.4
+km2mi
+ 15.7828
+15k
+ 15 digits of displayed precision.
+ 15.78282848
+oz2g
+ 447.43529599376
+g2oz
+ 15.78282848
+l2q
+ 16.6775570265312
+c2f
+ 62.0196026477562
+o
+ 076
+h
+ 0x3e
+0xf0 +
+ 302.019602647756
+H
+ Mode is hex.  Integer math with 20 bits.
+ 0x0
+ 0x12e
+0xf00 |
+ 0xf2e
+12 width
+ Words are 12 bits wide.
+ 0x0
+ 0xf2e
+d
+ -210
+2 +
+ 0xf30
+d
+ -208
+100 +
+ 0xf94
+200 +
+ 0x5c
+clear
+ empty stack
+64w
+ Words are 64 bits wide.
+0x8765
+h
+ 0x8765
+16 <<
+ 0xffffffff87650000
+h
+ 0xffffffff87650000
+b
+ 0b11111111,11111111,11111111,11111111,10000111,01100101,00000000,00000000
+Commas
+ numeric punctuation is now off
+ 0xffffffff87650000
+16w
+ Words are 16 bits wide.
+ 0x0
+h
+ 0x0
+B
+ Mode is binary.  Integer math with 16 bits.
+ 0b0000000000000000
+C
+ numeric punctuation is now on
+ 0b00000000,00000000
+b
+ 0b00000000,00000000
+D
+ Mode is decimal.  Integer math with 16 bits.
+ 0
+32w
+ Words are 32 bits wide.
+ -2,023,424,000
+F
+ Mode is float.  Displaying 15 decimal places.
+ -2023424000
+pi 100,000 *
+ 314159.265358979
+H
+ Mode is hex.  Integer math with 32 bits.
+ 0x87650000
+ 0x4cb2f
+D
+ Mode is decimal.  Integer math with 32 bits.
+ -2,023,424,000
+ 314,159
+C
+ numeric punctuation is now off
+ 314159
+
+# comment test
+clear H  # comment test
+ empty stack
+ Mode is hex.  Integer math with 32 bits.
+0x7fffffff#ffff
+chs
+ 0x80000001
+chs
+ 0x7fffffff
+1 +
+ 0x80000000
+chs
+ 0x80000000
+1 +
+ 0x80000001
+chs
+ 0x7fffffff
+
+
+
