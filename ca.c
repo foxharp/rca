@@ -745,7 +745,7 @@ exchange(token *t)
 }
 
 void
-printbinarybyte(long long mask, unsigned long long n)
+putbinarybyte(long long mask, unsigned long long n)
 {
 	int i;
 
@@ -759,25 +759,52 @@ printbinarybyte(long long mask, unsigned long long n)
 }
 
 void
-printbinary2(int width, long long mask, unsigned long long n)
+putbinary2(int width, long long mask, unsigned long long n)
 {
 	int i, bytes = (width + 7) / 8;
 
 	for (i = bytes - 1; i >= 0; i--) {
-		printbinarybyte(mask >> (8 * i), n >> (8 * i));
+		putbinarybyte(mask >> (8 * i), n >> (8 * i));
 		if (punct && i >= 1)
 			putchar(',');
 	}
 }
 
 void
-printbinary(long long n)
+putbinary(long long n)
 {
-	printf("0b");
 	if (mode == 'f')	// no masking in float mode
-		printbinary2(max_int_width, ~0, (unsigned long long)n);
+		putbinary2(max_int_width, ~0, (unsigned long long)n);
 	else
-		printbinary2(int_width, int_mask, (unsigned long long)n);
+		putbinary2(int_width, int_mask, (unsigned long long)n);
+}
+
+void
+puthex(unsigned long long n)
+{
+	/* commas every 4 hex digits */
+	if (n < 0x10000) {
+		printf("%Lx", n);
+		return;
+	}
+	puthex((n / 0x10000) );
+	if (punct)
+		putchar(',');
+	printf("%04Lx", n % 0x10000);
+}
+
+void
+putoct(unsigned long long n)
+{
+	/* commas every 3 octal digits */
+	if (n < 01000) {
+		printf("%Lo", n);
+		return;
+	}
+	putoct(n / 01000);
+	if (punct)
+		putchar(',');
+	printf("%03Lo", n % 01000);
 }
 
 void
@@ -795,16 +822,20 @@ printtop(void)
 		switch (print_format) {
 		case 'h':
 			ln = (long long)n & mask;
-			printf(" 0x%Lx\n", ln);
+			printf(" 0x");
+			puthex(ln);
+			putchar('\n');
 			break;
 		case 'o':
 			ln = (long long)n & mask;
-			printf(" 0%Lo\n", ln);
+			printf(" 0");
+			putoct(ln);
+			putchar('\n');
 			break;
 		case 'b':
 			ln = (long long)n & mask;
-			putchar(' ');
-			printbinary(ln);
+			printf(" 0b");
+			putbinary(ln);
 			putchar('\n');
 			break;
 		case 'd':
