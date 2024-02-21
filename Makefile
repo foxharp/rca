@@ -4,10 +4,10 @@ all:
 	doit ca.c
 
 test:
-	doit -test ca.c
+	egrep -v '^ ' ca_test.txt | ca | diff -u ca_test.txt -
 
 newtest:
-	doit -newtest ca.c
+	egrep -v '^ ' ca_test.txt | ca > new_ca_test.txt
 	
 publish:
 	( \
