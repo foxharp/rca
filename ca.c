@@ -1748,7 +1748,6 @@ char *argv[];
 		if (!gettoken(t))
 			break;
 
-		print_format = mode;
 		switch (t->type) {
 		case NUMERIC:
 			push(t->val.val);
@@ -1769,11 +1768,13 @@ char *argv[];
 			printf(" unrecognized input '%s'\n", t->val.str);
 			flushinput();
 			break;
-
 		}
-		empty_stack_ok = FALSE;
+
 		lasttoktype = t->type;
+
+		/* re-establish defaults */
+		empty_stack_ok = FALSE;
+		print_format = mode;
 	}
 	exit(1);
-	return (1);
 }
