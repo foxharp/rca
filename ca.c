@@ -188,7 +188,7 @@ push(ldouble n)
 	}
 
 	if (mode != 'f') {
-		p->val = sign_extend((long long)n);
+		p->val = sign_extend((long long)n & int_mask);
 		debug(("pushed s/e 0x%Lx\n", (long long)(p->val)));
 	} else {
 		p->val = n;
@@ -1581,8 +1581,7 @@ Operators replace either one or two top stack values with their result.\n\
 All whitespace is equal; numbers and operators may appear on one or more lines.\n\
 Whitespace is optional between numbers and commands, but not vice versa.\n\
 Commas can appear in numbers (e.g., \"3,577,455\").\n\
-Math is done in long double floating point, which is preserved in float mode.\n\
-Hex, octal, and decimal integer modes convert results to long long integer.\n\
+Numbers are represented as long double and signed long long.\n\
 Always use 0xNNN/0NNN to enter hex/octal, even in hex or octal mode.\n\
 Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
 \n\
