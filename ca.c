@@ -18,9 +18,9 @@
  *  build with:
  *	doit:      gcc -g -o ca -D USE_READLINE ca.c -lm -lreadline
  *	doit-norl: gcc -g -o ca ca.c -lm
- *  test support:
- *	doit-test:    egrep -v '^ ' ca_test.txt | ca | diff -u ca_test.txt -
- *	doit-newtest: egrep -v '^ ' ca_test.txt | ca > new_ca_test.txt
+ *
+ *  documentation:
+ *	ca help q | less
  */
 
 #include <stdlib.h>
