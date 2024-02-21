@@ -29,11 +29,11 @@ P
 10 4 %
  2
 10 ^
- 1024
+ 1,024
 2 >>
  256
 4 <<
- 4096
+ 4,096
 
 H
  Mode is hex.  Integer math with 64 bits.
@@ -41,20 +41,23 @@ H
  0x1000
 0xfffff
 0xaaaaa ~ &
- 0x55555
+ 0x5,5555
 lastx |
- 0xfffffffffff55555
-clear
- empty stack
+ 0xffff,ffff,fff5,5555
 20 width
  Words are 20 bits wide.
+ 0x1
+ 0x1000
+ 0x5,5555
+clear
+ empty stack
 0xfffff
 0xaaaaa ~ &
- 0x55555
+ 0x5,5555
 lastx ~ |
- 0xfffff
+ 0xf,ffff
 0x10101010 xor
- 0xfefef
+ 0xf,efef
 d
  -4,113
 chs
@@ -115,9 +118,15 @@ H
  0x12e
 0xf00 |
  0xf2e
+4 <<
+ 0xf2e0
 12 width
  Words are 12 bits wide.
  0x0
+ 0x2e0
+4 >>
+ 0x2e
+0xf00 |
  0xf2e
 d
  -210
@@ -134,17 +143,17 @@ clear
 64w
  Words are 64 bits wide.
 0x8765
-h
- 0x8765
+o
+ 0103,545
 16 <<
- 0xffffffff87650000
+ 0x8765,0000
 h
- 0xffffffff87650000
+ 0x8765,0000
 b
- 0b11111111,11111111,11111111,11111111,10000111,01100101,00000000,00000000
-Commas
+ 0b00000000,00000000,00000000,00000000,10000111,01100101,00000000,00000000
+commas
  numeric punctuation is now off
- 0xffffffff87650000
+ 0x87650000
 16w
  Words are 16 bits wide.
  0x0
@@ -153,7 +162,7 @@ h
 B
  Mode is binary.  Integer math with 16 bits.
  0b0000000000000000
-C
+c
  numeric punctuation is now on
  0b00000000,00000000
 b
@@ -163,21 +172,28 @@ D
  0
 32w
  Words are 32 bits wide.
- -2,023,424,000
+ 0
+h
+ 0x0
+0x8765,0000
+
 F
  Mode is float.  Displaying 15 decimal places.
- -2023424000
+ 0
+ -2,023,424,000
 pi 100,000 *
- 314159.265358979
+ 314,159.265358979
 H
  Mode is hex.  Integer math with 32 bits.
- 0x87650000
- 0x4cb2f
+ 0x0
+ 0x8765,0000
+ 0x4,cb2f
 D
  Mode is decimal.  Integer math with 32 bits.
+ 0
  -2,023,424,000
  314,159
-C
+c
  numeric punctuation is now off
  314159
 
@@ -198,6 +214,92 @@ chs
  0x80000001
 chs
  0x7fffffff
+
+24 clearb 
+ 0x7effffff
+
+O
+ Mode is octal.  Integer math with 32 bits.
+ 017677777777
+~
+ 020100000000
+h
+ 0x81000000
+c
+ numeric punctuation is now on
+ 020,100,000,000
+h
+ 0x8100,0000
+~
+ 017,677,777,777
+enter
+ 017,677,777,777
+O
+ Mode is octal.  Integer math with 32 bits.
+ 017,677,777,777
+ 017,677,777,777
+h
+ 0x7eff,ffff
+16 <<
+ 037,777,600,000
+h
+ 0xffff,0000
+16 <<
+ 00
+exch
+ 017,677,777,777
+32 <<
+ 00
+clear
+ empty stack
+F
+ Mode is float.  Displaying 15 decimal places.
+32k
+ 32 digits of displayed precision.
+pi
+ 3.1415926535897932385128089594062
+frac
+ 0.14159265358979323851280895940619
+pi
+ 3.1415926535897932385128089594062
+chs
+ -3.1415926535897932385128089594062
+frac
+ -0.14159265358979323851280895940619
+pi
+ 3.1415926535897932385128089594062
+int
+ 3
+pi
+ 3.1415926535897932385128089594062
+chs
+ -3.1415926535897932385128089594062
+int
+ -3
+pi
+ 3.1415926535897932385128089594062
+15k
+ 15 digits of displayed precision.
+ 3.14159265358979
+pi
+ 3.14159265358979
+10 15 ^ *
+ 3.14159265358979e+15
+d
+ 3,141,592,653,589,793
+f
+ 3.14159265358979e+15
+pi
+ 3.14159265358979
+10 15 ^ *
+ 3.14159265358979e+15
+-
+ 0
+
+
+
+
+
 
 
 
