@@ -98,7 +98,7 @@ typedef struct oper oper;
 
 struct oper {
 	char *name;
-	 opreturn(*func) (token *);
+	opreturn (*func) (token *);
 	char *help;
 };
 
@@ -121,42 +121,35 @@ struct token {
 #define EOL 2
 #define UNKNOWN -1
 
+/* 4 major modes: float, decimal, hex, octal, binary.
+ * all but float are integer modes.
+ */
+int mode = 'f';			/* 'f', 'd', 'h', 'o', 'b' */
+
 /* if true, print the top of stack after any line that ends with an operator */
 boolean autoprint = TRUE;
+
+/* to temporarily suppress autoprint, e.g., right after printing */
 boolean suppress_autoprint = FALSE;
 
-/* if true, will decorate decimals "1,333,444".   binary bytes also get the
- * spa treatment, where commas separate bytes.
- */
+/* if true, will decorate numbers, like "1,333,444".  */
 boolean punct = TRUE;
+
+/* used to suppress "empty stack" messages from pop() */
+boolean pop_fail_ok = FALSE;
 
 /* default floating point precision */
 int float_digits = 6;
 
-// is there a pre-defined name for this?
+/* is there a pre-defined name for this? */
 #define LONGLONG_BITS (sizeof(long long) * 8)
 
-/* Dealing with all 64 bits when you just want to do some 16 bit hex
- * math is a pain, so we can limit the word size to anything we want.
- * These all help do that.
+/* These all help limit the word size to anything we want.
  */
 int max_int_width;
 int int_width;
 long long int_sign_bit;
 long long int_mask;
-
-/* 4 modes: float, decimal integer, hex, and octal.
- * the last 3 are integer modes.
- */
-int mode = 'f';			/* or 'd', 'h', or 'o' */
-
-/* decimal, hex, or octal output.  normally matches mode, but
- * can be changed by individual commands
- */
-int print_format = 'f';		/* 'f', 'd', 'h', or 'o' */
-
-/* used to suppress "empty stack" messages */
-boolean empty_stack_ok = FALSE;
 
 /* the most recent top-of-stack */
 ldouble lastx;
@@ -187,12 +180,12 @@ push(ldouble n)
 		exit(1);
 	}
 
-	if (mode != 'f') {
-		p->val = sign_extend((long long)n & int_mask);
-		debug(("pushed s/e 0x%Lx\n", (long long)(p->val)));
-	} else {
+	if (mode == 'f') {
 		p->val = n;
 		debug(("pushed %Lg/0x%Lx as-is\n", n, (long long)(p->val)));
+	} else {
+		p->val = sign_extend((long long)n & int_mask);
+		debug(("pushed s/e 0x%Lx\n", (long long)(p->val)));
 	}
 
 	p->next = stack;
@@ -206,7 +199,7 @@ pop(ldouble *f)
 
 	p = stack;
 	if (!p) {
-		if (!empty_stack_ok)
+		if (!pop_fail_ok)
 			printf(" empty stack\n");
 		return FALSE;
 	}
@@ -702,7 +695,7 @@ clear(token *t)
 }
 
 opreturn
-rolldown(token *t)		// "pop"
+rolldown(token *t)		// aka "pop"
 {
 	(void)pop(&lastx);
 	return GOODOP;
@@ -722,7 +715,7 @@ enter(token *t)
 }
 
 opreturn
-repush(token *t)		// "lastx"
+repush(token *t)		// aka "lastx"
 {
 	push(lastx);
 	return GOODOP;
@@ -765,7 +758,7 @@ putbinary2(int width, long long mask, unsigned long long n)
 
 	for (i = bytes - 1; i >= 0; i--) {
 		putbinarybyte(mask >> (8 * i), n >> (8 * i));
-		if (punct && i >= 1)
+		if (punct && i >= 1) // commas every 8 bits
 			putchar(',');
 	}
 }
@@ -808,18 +801,21 @@ putoct(unsigned long long n)
 }
 
 void
-printtop(void)
+print_top(int format)
 {
 	ldouble n;
 	long long ln;
 	long long mask = int_mask;
 	long long signbit;
 
+	suppress_autoprint = TRUE;
+
 	if (mode == 'f')	// no masking in float mode
 		mask = ~0;
 
+	pop_fail_ok = TRUE;
 	if (pop(&n)) {
-		switch (print_format) {
+		switch (format) {
 		case 'h':
 			ln = (long long)n & mask;
 			printf(" 0x");
@@ -874,20 +870,21 @@ printstack(void)
 {
 	ldouble n;
 
+	pop_fail_ok = TRUE;
 	if (pop(&n)) {
 		(void)printstack();
 		push(n);
-		printtop();
+		print_top(mode);
 	}
 }
 
+/* printall side-effect: stack truncated to integer
+ */
 opreturn
 printall(token *t)
 {
 	ldouble hold;
 
-	suppress_autoprint = TRUE;
-	empty_stack_ok = TRUE;
 	printstack();
 	return GOODOP;
 }
@@ -895,49 +892,42 @@ printall(token *t)
 opreturn
 printone(token *t)
 {
-	suppress_autoprint = TRUE;
-	empty_stack_ok = TRUE;
-	printtop();
+	print_top(mode);
 	return GOODOP;
 }
 
 opreturn
 printhex(token *t)
 {
-	print_format = 'h';
-	printone(t);
+	print_top('h');
 	return GOODOP;
 }
 
 opreturn
 printoct(token *t)
 {
-	print_format = 'o';
-	printone(t);
+	print_top('o');
 	return GOODOP;
 }
 
 opreturn
 printbin(token *t)
 {
-	print_format = 'b';
-	printone(t);
+	print_top('b');
 	return GOODOP;
 }
 
 opreturn
 printdec(token *t)
 {
-	print_format = 'd';
-	printone(t);
+	print_top('d');
 	return GOODOP;
 }
 
 opreturn
 printfloat(token *t)
 {
-	print_format = 'f';
-	printone(t);
+	print_top('f');
 	return GOODOP;
 }
 
@@ -1016,39 +1006,39 @@ modeinfo(token *t)
 opreturn
 modehex(token *t)
 {
-	print_format = mode = 'h';
+	mode = 'h';
 	showmode();
-	return printall(t);	/* side-effect: stack truncated to integer */
+	return printall(t);
 }
 
 opreturn
 modebin(token *t)
 {
-	print_format = mode = 'b';
+	mode = 'b';
 	showmode();
-	return printall(t);	/* side-effect: stack truncated to integer */
+	return printall(t);
 }
 
 opreturn
 modeoct(token *t)
 {
-	print_format = mode = 'o';
+	mode = 'o';
 	showmode();
-	return printall(t);	/* side-effect: stack truncated to integer */
+	return printall(t);
 }
 
 opreturn
 modedec(token *t)
 {
-	print_format = mode = 'd';
+	mode = 'd';
 	showmode();
-	return printall(t);	/* side-effect: stack truncated to integer */
+	return printall(t);
 }
 
 opreturn
 modefloat(token *t)
 {
-	print_format = mode = 'f';
+	mode = 'f';
 	showmode();
 	return printall(t);
 }
@@ -1068,11 +1058,11 @@ precision(token *t)
 void
 setup_width(int bits)
 {
-	/* we use long double to store our data.  in integer mode, this
-	 * means the FP mantissa, if it's shorter, may limit our maximum
-	 * word width.
+	/* we use long double to store our data.  in integer mode,
+	 * this means the FP mantissa, if it's shorter than long long,
+	 * may limit our maximum word width.
 	 */
-	if (!max_int_width) {	/* first call */
+	if (!bits || !max_int_width) {	/* first call */
 		max_int_width = LONGLONG_BITS;
 		if (max_int_width > LDBL_MANT_DIG)
 			max_int_width = LDBL_MANT_DIG;
@@ -1389,7 +1379,7 @@ parse_tok(char *p, token *t, char **nextp)
 
 	} else if (isdigit(*p) || (*p == '.')) {
 		// decimal
-		long double dd = strtod(p, nextp);
+		long double dd = strtold(p, nextp);
 
 		if (dd == 0.0 && p == *nextp)
 			goto unknown;
@@ -1679,14 +1669,14 @@ struct oper opers[] = {
 	{"km2mi", units_km_mi,  "miles / kilometers" },
 	{"", 0, 0},
     {"Display:", 0, 0},
-	{"P", printall,		"Print whole stack" },
-	{"p", printone,		"Print x in mode's format" },
+	{"P", printall,		"Print whole stack according to mode" },
+	{"p", printone,		"Print x according to mode" },
 	{"f", printfloat,	0 },
 	{"d", printdec,		0 },
 	{"o", printoct,		0 },
 	{"h", printhex,		0 },
 	{"b", printbin,		"Print x in float, decimal, octal, hex, binary" },
-	{";r", printraw,	"actual stack contents, for debug (hidden)" },
+	{";r", printraw,	"raw stack contents, for debug (hidden)" },
 	{"autoprint", autop,	0 },
 	{"a", autop,		"Toggle autoprinting on/off" },
 	{"", 0, 0},
@@ -1730,11 +1720,11 @@ char *argv[];
 	pn = strrchr(argv[0], '/');
 	progname = pn ? (pn + 1) : argv[0];
 
-	/* fetch_line() will process arguments as commands directly */
+	/* fetch_line() will process args as if they were input as commands */
 	g_argc = argc;
 	g_argv = argv;
 
-	// apparently needed to make the %'Ld format for commas work
+	/* apparently needed to make the %'Ld format for commas work */
 	setlocale(LC_ALL, "");
 
 	setup_width(0);
@@ -1758,8 +1748,7 @@ char *argv[];
 		case EOL:
 			if (!suppress_autoprint && autoprint
 			    && lasttoktype == OP) {
-				empty_stack_ok = TRUE;
-				printtop();
+				print_top(mode);
 			}
 			suppress_autoprint = FALSE;
 			break;
@@ -1773,8 +1762,7 @@ char *argv[];
 		lasttoktype = t->type;
 
 		/* re-establish defaults */
-		empty_stack_ok = FALSE;
-		print_format = mode;
+		pop_fail_ok = FALSE;
 	}
 	exit(1);
 }
