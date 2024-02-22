@@ -1206,6 +1206,34 @@ units_mm_in(token *t)
 }
 
 opreturn
+units_ft_m(token *t)
+{
+	ldouble a;
+
+	if (pop(&a)) {
+		a /= 3.28084;
+		push(a);
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
+units_m_ft(token *t)
+{
+	ldouble a;
+
+	if (pop(&a)) {
+		a *= 3.28084;
+		push(a);
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
 units_F_C(token *t)
 {
 	ldouble a;
@@ -1659,14 +1687,16 @@ struct oper opers[] = {
     {"Conversions:", 0, 0},
 	{"i2mm", units_in_mm,   0 },
 	{"mm2i", units_mm_in,   "inches / millimeters" },
+	{"ft2m", units_ft_m,	0},
+	{"m2ft", units_m_ft,	"feet / meters" },
+	{"mi2km", units_mi_km,  0 },
+	{"km2mi", units_km_mi,  "miles / kilometers" },
 	{"f2c", units_F_C,      0 },
 	{"c2f", units_C_F,      "degrees F/C" },
 	{"oz2g", units_oz_g,    0 },
 	{"g2oz", units_g_oz,    "ounces / grams" },
 	{"q2l", units_qt_l,     0 },
 	{"l2q", units_l_qt,     "quarts / liters" },
-	{"mi2km", units_mi_km,  0 },
-	{"km2mi", units_km_mi,  "miles / kilometers" },
 	{"", 0, 0},
     {"Display:", 0, 0},
 	{"P", printall,		"Print whole stack according to mode" },
