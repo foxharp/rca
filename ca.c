@@ -777,13 +777,13 @@ puthex(unsigned long long n)
 {
 	/* commas every 4 hex digits */
 	if (n < 0x10000) {
-		printf("%Lx", n);
+               printf("%llx", n);
 		return;
 	}
 	puthex((n / 0x10000));
 	if (punct)
 		putchar(',');
-	printf("%04Lx", n % 0x10000);
+       printf("%04llx", n % 0x10000);
 }
 
 void
@@ -791,13 +791,13 @@ putoct(unsigned long long n)
 {
 	/* commas every 3 octal digits */
 	if (n < 01000) {
-		printf("%Lo", n);
+               printf("%llo", n);
 		return;
 	}
 	putoct(n / 01000);
 	if (punct)
 		putchar(',');
-	printf("%03Lo", n % 01000);
+       printf("%03llo", n % 01000);
 }
 
 void
@@ -837,7 +837,7 @@ print_top(int format)
 		case 'd':
 			ln = (long long)n;
 			if (mode == 'f' || int_width == LONGLONG_BITS) {
-				printf(punct ? " %'Ld\n" : " %Ld\n", ln);
+                               printf(punct ? " %'lld\n" : " %lld\n", ln);
 			} else {
 				/* shenanigans to make pos/neg numbers
 				 * appear properly.
@@ -853,7 +853,7 @@ print_top(int format)
 					t = ln & mask;
 					printf(" ");
 				}
-				printf(punct ? "%'Ld\n" : "%Ld\n", t);
+                               printf(punct ? "%'lld\n" : "%lld\n", t);
 			}
 			break;
 		default:	// 'f'
@@ -944,7 +944,7 @@ printraw(token *t)
 	s = stack;
 	printf("%16s   %16s\n", "(long long)", "(long double)");
 	while (s) {
-		printf("%#16Lx   %#16Lg\n", (long long)(s->val), s->val);
+               printf("%#16llx   %#16Lg\n", (long long)(s->val), s->val);
 		s = s->next;
 	}
 	printf("native sizes (bits):\n");
@@ -1093,11 +1093,11 @@ width(token *t)
 	bits = n;
 	if (bits > max_int_width) {
 		bits = max_int_width;
-		printf(" Width out of range, set to max (%Ld)\n", bits);
+               printf(" Width out of range, set to max (%lld)\n", bits);
 	}
 	if (bits < 8) {
 		bits = 8;
-		printf(" Width out of range, set to min (%Ld)\n", bits);
+               printf(" Width out of range, set to min (%lld)\n", bits);
 	}
 
 	setup_width(bits);
@@ -1744,9 +1744,7 @@ struct oper opers[] = {
 // *INDENT-ON*.
 
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	struct token tok;
 	token *t = &tok;
