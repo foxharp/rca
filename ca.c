@@ -1467,8 +1467,14 @@ no_comm(char *cp)
 	 * removes them from the whole line; a side-effect is that
 	 * there can be no commas in commands.
 	 */
-	while ((cp = strchr(cp, ',')) != NULL)
-		memmove(cp, cp + 1, strlen(cp));
+	ncp = cp;
+	while ((ncp = strchr(ncp, ',')) != NULL)
+		memmove(ncp, ncp + 1, strlen(ncp));
+
+	/* same for '$' signs */
+	ncp = cp;
+	while ((ncp = strchr(ncp, '$')) != NULL)
+		memmove(ncp, ncp + 1, strlen(ncp));
 }
 
 /* on return, the global input_ptr is a string containing commands
@@ -1598,7 +1604,7 @@ Entering a number pushes it on the stack.\n\
 Operators replace either one or two top stack values with their result.\n\
 All whitespace is equal; numbers and operators may appear on one or more lines.\n\
 Whitespace is optional between numbers and commands, but not vice versa.\n\
-Commas can appear in numbers on input (e.g., \"3,577,455\").\n\
+Numbers can include commas and $ signs (e.g., \"$3,577,455\").\n\
 Numbers are represented as long double and signed long long.\n\
 Ops that can be done in long double, are.  Others use long long.\n\
 Max width for integers is the shorter of long long or the long double mantissa.\n\
