@@ -136,9 +136,6 @@ boolean suppress_autoprint = FALSE;
 /* if true, will decorate numbers, like "1,333,444".  */
 boolean punct = TRUE;
 
-/* used to suppress "empty stack" messages from pop() */
-boolean pop_fail_ok = FALSE;
-
 /* default floating point precision */
 int float_digits = 6;
 
@@ -202,8 +199,7 @@ pop(ldouble *f)
 
 	p = stack;
 	if (!p) {
-		if (!pop_fail_ok)
-			printf(" empty stack\n");
+		printf(" empty stack\n");
 		return FALSE;
 	}
 	*f = p->val;
@@ -213,7 +209,7 @@ pop(ldouble *f)
 	stack_count--;
 
 	/* remove a stack mark if we've gone below it */
-	if (stack_count < (stack_mark - 1))
+	if (stack_count < stack_mark)
 		stack_mark = 0;
 
 	return TRUE;
@@ -811,9 +807,8 @@ putoct(unsigned long long n)
 }
 
 void
-print_top(int format)
+print_n(ldouble n, int format)
 {
-	ldouble n;
 	long long ln;
 	long long mask = int_mask;
 	long long signbit;
@@ -823,79 +818,76 @@ print_top(int format)
 	if (mode == 'f')	// no masking in float mode
 		mask = ~0;
 
-	pop_fail_ok = TRUE;
-	if (pop(&n)) {
-		switch (format) {
-		case 'h':
-			ln = (long long)n & mask;
-			printf(" 0x");
-			puthex(ln);
-			putchar('\n');
-			break;
-		case 'o':
-			ln = (long long)n & mask;
-			printf(" 0");
-			putoct(ln);
-			putchar('\n');
-			break;
-		case 'b':
-			ln = (long long)n & mask;
-			printf(" 0b");
-			putbinary(ln);
-			putchar('\n');
-			break;
-		case 'd':
-			ln = (long long)n;
-			if (mode == 'f' || int_width == LONGLONG_BITS) {
-				printf(punct ? " %'lld\n" : " %lld\n", ln);
-			} else {
-				/* shenanigans to make pos/neg numbers
-				 * appear properly.
-				 */
-				long long t;
+	switch (format) {
+	case 'h':
+		ln = (long long)n & mask;
+		printf(" 0x");
+		puthex(ln);
+		putchar('\n');
+		break;
+	case 'o':
+		ln = (long long)n & mask;
+		printf(" 0");
+		putoct(ln);
+		putchar('\n');
+		break;
+	case 'b':
+		ln = (long long)n & mask;
+		printf(" 0b");
+		putbinary(ln);
+		putchar('\n');
+		break;
+	case 'd':
+		ln = (long long)n;
+		if (mode == 'f' || int_width == LONGLONG_BITS) {
+			printf(punct ? " %'lld\n" : " %lld\n", ln);
+		} else {
+			/* shenanigans to make pos/neg numbers
+			 * appear properly.
+			 */
+			long long t;
 
-				signbit = 1LL << (int_width - 1);
-				mask = (long long)int_mask & ~signbit;
-				if (ln & signbit) {	// negative
-					t = signbit - (ln & mask);
-					printf(" -");
-				} else {
-					t = ln & mask;
-					printf(" ");
-				}
-				printf(punct ? "%'lld\n" : "%lld\n", t);
+			signbit = 1LL << (int_width - 1);
+			mask = (long long)int_mask & ~signbit;
+			if (ln & signbit) {	// negative
+				t = signbit - (ln & mask);
+				printf(" -");
+			} else {
+				t = ln & mask;
+				printf(" ");
 			}
-			break;
-		default:	// 'f'
-			printf(punct ? " %'.*Lg\n" : " %.*Lg\n", float_digits,
-			       n);
-			break;
+			printf(punct ? "%'lld\n" : "%lld\n", t);
 		}
-		push(n);
+		break;
+	default:		// 'f'
+		printf(punct ? " %'.*Lg\n" : " %.*Lg\n", float_digits, n);
+		break;
 	}
 }
 
 void
-printstack(void)
+print_top(int format)
 {
-	ldouble n;
-
-	pop_fail_ok = TRUE;
-	if (pop(&n)) {
-		(void)printstack();
-		push(n);
-		print_top(mode);
-	}
+	if (stack)
+		print_n(stack->val, format);
 }
 
-/* printall side-effect: stack truncated to integer
- */
+void
+printstack(struct num *s)
+{
+	if (!s)
+		return;
+
+	if (s->next)
+		printstack(s->next);
+
+	print_n(s->val, mode);
+}
+
 opreturn
 printall(token *t)
 {
-	ldouble hold;
-
-	printstack();
+	printstack(stack);
 	return GOODOP;
 }
 
@@ -1124,6 +1116,14 @@ width(token *t)
 	if (mode == 'f')
 		printf("  (Ignored in float mode!)");
 	putchar('\n');
+
+	/* need to mask and sign extend anything on the stack if we've
+	 * shortened word length.
+	 */
+	struct num *s;
+
+	for (s = stack; s; s = s->next)
+		s->val = sign_extend((long long)s->val & int_mask);
 
 	return printall(t);
 }
@@ -1835,8 +1835,6 @@ main(int argc, char *argv[])
 
 		lasttoktype = t->type;
 
-		/* re-establish defaults */
-		pop_fail_ok = FALSE;
 	}
 	exit(1);
 }
