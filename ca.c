@@ -50,14 +50,10 @@ usage(void)
 	exit(1);
 }
 
-#define DEBUG 1
-#undef DEBUG
+/* debugging support, runtime controllable */
+int tracing;
 
-#ifdef DEBUG
-#define debug(a) printf a
-#else
-#define debug(a)
-#endif
+#define trace(a)  do {if (tracing) printf a ;} while(0)
 
 typedef int boolean;
 
@@ -187,10 +183,11 @@ push(ldouble n)
 
 	if (mode == 'f') {
 		p->val = n;
-		debug(("pushed %Lg/0x%Lx as-is\n", n, (long long)(p->val)));
+		trace(("pushed %Lg/0x%llx as-is\n", n, (long long)(p->val)));
 	} else {
 		p->val = sign_extend((long long)n & int_mask);
-		debug(("pushed s/e 0x%Lx\n", (long long)(p->val)));
+		trace(("pushed masked/extended %lld/0x%llx\n",
+		       (long long)(p->val), (long long)(p->val)));
 	}
 
 	p->next = stack;
@@ -211,7 +208,7 @@ pop(ldouble *f)
 	}
 	*f = p->val;
 	stack = p->next;
-	debug(("popped  0x%Lx\n", (long long)(p->val)));
+	trace(("popped  %Lg/0x%llx \n", p->val, (long long)(p->val)));
 	free(p);
 	stack_count--;
 
@@ -970,6 +967,13 @@ printraw(token *t)
 	return GOODOP;
 }
 
+/* debug support -- hidden command */
+opreturn
+tracetoggle(token *t)
+{
+	tracing = !tracing;
+}
+
 opreturn
 punctuation(token *t)
 {
@@ -1415,7 +1419,6 @@ parse_tok(char *p, token *t, char **nextp)
 		if (ln == 0 && p == *nextp)
 			goto unknown;
 		t->type = NUMERIC;
-		debug(("parsed 0x%Lx\n", ln));
 		t->val.val = ln * sign;
 		return;
 
@@ -1749,6 +1752,7 @@ struct oper opers[] = {
 	{"h", printhex,		0 },
 	{"b", printbin,		"Print x in float, decimal, octal, hex, binary" },
 	{";r", printraw,	"raw stack contents, for debug (hidden)" },
+	{";t", tracetoggle,	"toggle tracing, for debug (hidden)" },
 	{"autoprint", autop,	0 },
 	{"a", autop,		"Toggle autoprinting on/off" },
 	{"", 0, 0},
