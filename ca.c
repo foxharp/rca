@@ -89,6 +89,11 @@ struct num {
 
 /* the operand stack */
 struct num *stack;
+int stack_count;
+
+/* for command repeat, like "sum" */
+int stack_mark;
+
 
 /* all user input is either a number or a command operator.
  * this is how operators are looked up, by name
@@ -190,6 +195,7 @@ push(ldouble n)
 
 	p->next = stack;
 	stack = p;
+	stack_count++;
 }
 
 boolean
@@ -205,7 +211,14 @@ pop(ldouble *f)
 	}
 	*f = p->val;
 	stack = p->next;
+	debug(("popped  0x%Lx\n", (long long)(p->val)));
 	free(p);
+	stack_count--;
+
+	/* remove a stack mark if we've gone below it */
+	if (stack_count < (stack_mark-1))
+		stack_mark = 0;
+
 	return TRUE;
 }
 
@@ -947,6 +960,7 @@ printraw(token *t)
 		printf("%#16llx   %#16Lg\n", (long long)(s->val), s->val);
 		s = s->next;
 	}
+	printf("stack_count %d, stack_mark %d\n", stack_count, stack_mark);
 	printf("native sizes (bits):\n");
 	printf("%16lu   %16lu\n", 8 * sizeof(long long),
 	       8 * sizeof(long double));
@@ -1175,6 +1189,25 @@ push_pi(token *t)
 {
 	push(pi);
 	return GOODOP;
+}
+
+opreturn
+mark(token *t)
+{
+	stack_mark = stack_count;
+	return GOODOP;
+}
+
+opreturn
+sum(token *t)
+{
+	opreturn r;
+	while (stack_count > (stack_mark + 1)) {
+		if ((r = add(t)) == BADOP)
+			break;
+	}
+	stack_mark = 0;
+	return r;
 }
 
 opreturn
@@ -1689,6 +1722,8 @@ struct oper opers[] = {
 	{"rcl2", recall2,	0 },
 	{"rcl3", recall3,	"Fetch x (3 locations)" },
 	{"pi", push_pi,		"Push constant pi" },
+	{"mark", mark,		"Mark stack for later summing" },
+	{"sum", sum,		"Sum stack to \"mark\", or entire stack if no mark" },
 	{"", 0, 0},
     {"Conversions:", 0, 0},
 	{"i2mm", units_in_mm,   0 },
