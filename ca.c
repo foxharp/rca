@@ -216,7 +216,7 @@ pop(ldouble *f)
 	stack_count--;
 
 	/* remove a stack mark if we've gone below it */
-	if (stack_count < (stack_mark-1))
+	if (stack_count < (stack_mark - 1))
 		stack_mark = 0;
 
 	return TRUE;
@@ -1202,6 +1202,7 @@ opreturn
 sum(token *t)
 {
 	opreturn r;
+
 	while (stack_count > (stack_mark + 1)) {
 		if ((r = add(t)) == BADOP)
 			break;
