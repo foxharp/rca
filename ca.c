@@ -1206,11 +1206,18 @@ opreturn
 sum(token *t)
 {
 	opreturn r;
+	ldouble a, tot = 0;
 
-	while (stack_count > (stack_mark + 1)) {
-		if ((r = add(t)) == BADOP)
-			break;
+	if (stack_count <= stack_mark) {
+		printf(" nothing to sum\n");
+		return BADOP;
 	}
+	while (stack_count > stack_mark) {
+		if ((r = pop(&a)) == BADOP)
+			break;
+		tot += a;
+	}
+	push(tot);
 	stack_mark = 0;
 	return r;
 }
