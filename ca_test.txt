@@ -296,10 +296,30 @@ pi
 -
  0
 
-
-
-
-
-
-
-
+# test the sum command
+clear
+ empty stack
+1 2 3 4 5
+sum
+ 15
+1 2
+mark
+ 2
+3 4 5
+sum
+ 12
+mark
+ 12
+26 34
++
+ 60
+P
+ 15
+ 1
+ 2
+ 12
+ 60
+sum
+ 60
+sum
+ 90
