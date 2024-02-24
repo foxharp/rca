@@ -706,7 +706,7 @@ clear(void)
 }
 
 opreturn
-rolldown(void)		// aka "pop"
+rolldown(void)			// aka "pop"
 {
 	(void)pop(&lastx);
 	return GOODOP;
@@ -726,7 +726,7 @@ enter(void)
 }
 
 opreturn
-repush(void)		// aka "lastx"
+repush(void)			// aka "lastx"
 {
 	push(lastx);
 	return GOODOP;
