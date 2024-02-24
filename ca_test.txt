@@ -67,7 +67,7 @@ d
 clear
  empty stack
 F
- Mode is float.  Displaying 6 decimal places.
+ Mode is float.  Displaying 6 digits of total precision.
 3
 recip
  0.333333
@@ -96,7 +96,7 @@ store
 km2mi
  15.7828
 15k
- 15 digits of displayed precision.
+ 15 digits of total displayed precision.
  15.78282848
 oz2g
  447.43529599376
@@ -178,7 +178,7 @@ h
 0x8765,0000
 
 F
- Mode is float.  Displaying 15 decimal places.
+ Mode is float.  Displaying 15 digits of total precision.
  0
  -2,023,424,000
 pi 100,000 *
@@ -253,9 +253,9 @@ exch
 clear
  empty stack
 F
- Mode is float.  Displaying 15 decimal places.
+ Mode is float.  Displaying 15 digits of total precision.
 32k
- 32 digits of displayed precision.
+ 32 digits of total displayed precision.
 pi
  3.1415926535897932385128089594062
 frac
@@ -279,12 +279,16 @@ int
 pi
  3.1415926535897932385128089594062
 15k
- 15 digits of displayed precision.
+ 15 digits of total displayed precision.
  3.14159265358979
 pi
  3.14159265358979
 10 15 ^ *
  3.14159265358979e+15
+15K
+5K
+1K
+15k
 d
  3,141,592,653,589,793
 f

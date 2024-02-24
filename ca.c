@@ -1106,13 +1106,16 @@ precision(token *t)
 
 	if (!pop(&digits))
 		return BADOP;
+
 	float_digits = abs(digits);
+	if (float_digits < 1)  float_digits = 1;
 
 	float_specifier = 'g';
 
 	setup_format_string();
 
-	printf(" %d digits of total displayed precision.\n", float_digits);
+	printf(" %d digit%s of total displayed precision.\n",
+		float_digits, float_digits == 1 ? "":"s");
 
 }
 
@@ -1123,13 +1126,16 @@ decimal_length(token *t)
 
 	if (!pop(&digits))
 		return BADOP;
+
 	float_digits = abs(digits);
+	if (float_digits < 1)  float_digits = 1;
 
 	float_specifier = 'f';
 
 	setup_format_string();
 
-	printf(" %d digits after the decimal.\n", float_digits);
+	printf(" %d digit%s after the decimal.\n",
+		float_digits, float_digits == 1 ? "":"s");
 }
 
 void
