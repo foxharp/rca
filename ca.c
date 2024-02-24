@@ -142,7 +142,7 @@ boolean punct = TRUE;
  */
 unsigned int float_digits = 6;
 int float_specifier = 'g';	/* 'f' or 'g' */
-char format_string[30];
+char *format_string;
 
 /* is there a pre-defined name for this? */
 #define LONGLONG_BITS (sizeof(long long) * 8)
@@ -1072,19 +1072,31 @@ modefloat(token *t)
 	return printall(t);
 }
 
-opreturn
+void
 setup_format_string(void)
 {
+	/* The floating print options include
+	    - commas or not
+	    - alternate form or not (we use it with %f, but not %g)
+	    - %f or %g
+	   Also:
+	    - precision
+	   but happily that's provided via the '*' specifier at printf time.
 
-	/* create one of:
-	   " %'#.*Lf\n"
-	   " %'#.*Lg\n"
-	   " %#.*Lf\n"
-	   " %#.*Lg\n"
+	   So there are just four forms to deal with here.
 	 */
-	snprintf(format_string, sizeof(format_string),
-		 " %%%s#.*L%c\n", punct ? "'" : "", float_specifier);
 
+	if (punct) {
+	    if (float_specifier == 'f')
+		format_string = " %'#.*Lf\n";
+	    else
+		format_string = " %'.*Lg\n";
+	} else {
+	    if (float_specifier == 'f')
+		format_string = " %#.*Lf\n";
+	    else
+		format_string = " %.*Lg\n";
+	}
 }
 
 opreturn
