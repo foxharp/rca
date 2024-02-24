@@ -16,8 +16,8 @@
  *		- pgf, Tue Feb 13, 2024
  *
  *  build with:
- *	doit:      gcc -g -o ca -D USE_READLINE ca.c -lm -lreadline
- *	doit-norl: gcc -g -o ca ca.c -lm
+ *	doit:      gcc -g -Wall -Wextra -o ca -D USE_READLINE ca.c -lm -lreadline
+ *	doit-norl: gcc -g -Wall -Wextra -o ca ca.c -lm
  *
  *  documentation:
  *	ca help q | less
@@ -632,7 +632,7 @@ acosine(token *t)
 opreturn
 tangent(token *t)
 {
-	ldouble a, ta;
+	ldouble a;
 
 	if (mode != 'f')
 		return trig_no_sense();
@@ -971,6 +971,7 @@ opreturn
 tracetoggle(token *t)
 {
 	tracing = !tracing;
+	return GOODOP;
 }
 
 opreturn
@@ -1107,7 +1108,7 @@ precision(token *t)
 	if (!pop(&digits))
 		return BADOP;
 
-	float_digits = abs(digits);
+	float_digits = abs((int)digits);
 	if (float_digits < 1)
 		float_digits = 1;
 
@@ -1118,6 +1119,7 @@ precision(token *t)
 	printf(" %d digit%s of total displayed precision.\n",
 	       float_digits, float_digits == 1 ? "" : "s");
 
+	return GOODOP;
 }
 
 opreturn
@@ -1128,7 +1130,7 @@ decimal_length(token *t)
 	if (!pop(&digits))
 		return BADOP;
 
-	float_digits = abs(digits);
+	float_digits = abs((int)digits);
 	if (float_digits < 1)
 		float_digits = 1;
 
@@ -1138,6 +1140,8 @@ decimal_length(token *t)
 
 	printf(" %d digit%s after the decimal.\n",
 	       float_digits, float_digits == 1 ? "" : "s");
+
+	return GOODOP;
 }
 
 void
@@ -1863,7 +1867,7 @@ struct oper opers[] = {
 	{"q", quit,		0 },
 	{"exit", quit,		"leave" },
 	{"#", help,		"Comment. The '#' and the rest of the line will be ignored." },
-	{NULL, NULL},
+	{NULL, NULL, 0},
 };
 // *INDENT-ON*.
 
