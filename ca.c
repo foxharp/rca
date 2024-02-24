@@ -99,7 +99,7 @@ typedef struct oper oper;
 
 struct oper {
 	char *name;
-	 opreturn(*func) (token *);
+	 opreturn(*func) (void);
 	char *help;
 };
 
@@ -221,7 +221,7 @@ pop(ldouble *f)
 }
 
 opreturn
-add(token *t)
+add(void)
 {
 	ldouble a, b;
 
@@ -237,7 +237,7 @@ add(token *t)
 }
 
 opreturn
-subtract(token *t)
+subtract(void)
 {
 	ldouble a, b;
 
@@ -253,7 +253,7 @@ subtract(token *t)
 }
 
 opreturn
-multiply(token *t)
+multiply(void)
 {
 	ldouble a, b;
 
@@ -269,7 +269,7 @@ multiply(token *t)
 }
 
 opreturn
-divide(token *t)
+divide(void)
 {
 	ldouble a, b;
 
@@ -292,7 +292,7 @@ divide(token *t)
 }
 
 opreturn
-modulo(token *t)
+modulo(void)
 {
 	ldouble a, b;
 
@@ -319,7 +319,7 @@ modulo(token *t)
 }
 
 opreturn
-y_to_the_x(token *t)
+y_to_the_x(void)
 {
 	ldouble a, b;
 
@@ -342,7 +342,7 @@ y_to_the_x(token *t)
 }
 
 opreturn
-rshift(token *t)
+rshift(void)
 {
 	ldouble a, b;
 
@@ -362,7 +362,7 @@ rshift(token *t)
 }
 
 opreturn
-lshift(token *t)
+lshift(void)
 {
 	ldouble a, b;
 
@@ -382,7 +382,7 @@ lshift(token *t)
 }
 
 opreturn
-and(token *t)
+and(void)
 {
 	ldouble a, b;
 
@@ -402,7 +402,7 @@ and(token *t)
 }
 
 opreturn
-or(token *t)
+or(void)
 {
 	ldouble a, b;
 
@@ -422,7 +422,7 @@ or(token *t)
 }
 
 opreturn
-xor(token *t)
+xor(void)
 {
 	ldouble a, b;
 
@@ -442,7 +442,7 @@ xor(token *t)
 }
 
 opreturn
-setbit(token *t)
+setbit(void)
 {
 	ldouble a, b;
 
@@ -462,7 +462,7 @@ setbit(token *t)
 }
 
 opreturn
-clearbit(token *t)
+clearbit(void)
 {
 	ldouble a, b;
 
@@ -482,7 +482,7 @@ clearbit(token *t)
 }
 
 opreturn
-not(token *t)
+not(void)
 {
 	ldouble a;
 
@@ -495,7 +495,7 @@ not(token *t)
 }
 
 opreturn
-chsign(token *t)
+chsign(void)
 {
 	ldouble a;
 
@@ -508,7 +508,7 @@ chsign(token *t)
 }
 
 opreturn
-absolute(token *t)
+absolute(void)
 {
 	ldouble a;
 
@@ -521,7 +521,7 @@ absolute(token *t)
 }
 
 opreturn
-recip(token *t)
+recip(void)
 {
 	ldouble a;
 
@@ -540,7 +540,7 @@ recip(token *t)
 }
 
 opreturn
-squarert(token *t)
+squarert(void)
 {
 	ldouble a;
 
@@ -566,7 +566,7 @@ trig_no_sense(void)
 }
 
 opreturn
-sine(token *t)
+sine(void)
 {
 	ldouble a;
 
@@ -582,7 +582,7 @@ sine(token *t)
 }
 
 opreturn
-asine(token *t)
+asine(void)
 {
 	ldouble a;
 
@@ -598,7 +598,7 @@ asine(token *t)
 }
 
 opreturn
-cosine(token *t)
+cosine(void)
 {
 	ldouble a;
 
@@ -614,7 +614,7 @@ cosine(token *t)
 }
 
 opreturn
-acosine(token *t)
+acosine(void)
 {
 	ldouble a;
 
@@ -630,7 +630,7 @@ acosine(token *t)
 }
 
 opreturn
-tangent(token *t)
+tangent(void)
 {
 	ldouble a;
 
@@ -647,7 +647,7 @@ tangent(token *t)
 }
 
 opreturn
-atangent(token *t)
+atangent(void)
 {
 	ldouble a;
 
@@ -663,7 +663,7 @@ atangent(token *t)
 }
 
 opreturn
-fraction(token *t)
+fraction(void)
 {
 	ldouble a;
 
@@ -679,7 +679,7 @@ fraction(token *t)
 }
 
 opreturn
-integer(token *t)
+integer(void)
 {
 	ldouble a;
 
@@ -695,7 +695,7 @@ integer(token *t)
 }
 
 opreturn
-clear(token *t)
+clear(void)
 {
 	ldouble scrap;
 
@@ -706,14 +706,14 @@ clear(token *t)
 }
 
 opreturn
-rolldown(token *t)		// aka "pop"
+rolldown(void)		// aka "pop"
 {
 	(void)pop(&lastx);
 	return GOODOP;
 }
 
 opreturn
-enter(token *t)
+enter(void)
 {
 	ldouble a;
 
@@ -726,14 +726,14 @@ enter(token *t)
 }
 
 opreturn
-repush(token *t)		// aka "lastx"
+repush(void)		// aka "lastx"
 {
 	push(lastx);
 	return GOODOP;
 }
 
 opreturn
-exchange(token *t)
+exchange(void)
 {
 	ldouble a, b;
 
@@ -890,49 +890,49 @@ printstack(struct num *s)
 }
 
 opreturn
-printall(token *t)
+printall(void)
 {
 	printstack(stack);
 	return GOODOP;
 }
 
 opreturn
-printone(token *t)
+printone(void)
 {
 	print_top(mode);
 	return GOODOP;
 }
 
 opreturn
-printhex(token *t)
+printhex(void)
 {
 	print_top('h');
 	return GOODOP;
 }
 
 opreturn
-printoct(token *t)
+printoct(void)
 {
 	print_top('o');
 	return GOODOP;
 }
 
 opreturn
-printbin(token *t)
+printbin(void)
 {
 	print_top('b');
 	return GOODOP;
 }
 
 opreturn
-printdec(token *t)
+printdec(void)
 {
 	print_top('d');
 	return GOODOP;
 }
 
 opreturn
-printfloat(token *t)
+printfloat(void)
 {
 	print_top('f');
 	return GOODOP;
@@ -940,7 +940,7 @@ printfloat(token *t)
 
 /* debug support -- hidden command */
 opreturn
-printraw(token *t)
+printraw(void)
 {
 	struct num *s;
 
@@ -968,14 +968,14 @@ printraw(token *t)
 
 /* debug support -- hidden command */
 opreturn
-tracetoggle(token *t)
+tracetoggle(void)
 {
 	tracing = !tracing;
 	return GOODOP;
 }
 
 opreturn
-punctuation(token *t)
+punctuation(void)
 {
 	punct = !punct;
 	printf(" numeric punctuation is now %s\n", punct ? "on" : "off");
@@ -1027,50 +1027,50 @@ showmode(void)
 }
 
 opreturn
-modeinfo(token *t)
+modeinfo(void)
 {
 	showmode();
 	return GOODOP;
 }
 
 opreturn
-modehex(token *t)
+modehex(void)
 {
 	mode = 'h';
 	showmode();
-	return printall(t);
+	return printall();
 }
 
 opreturn
-modebin(token *t)
+modebin(void)
 {
 	mode = 'b';
 	showmode();
-	return printall(t);
+	return printall();
 }
 
 opreturn
-modeoct(token *t)
+modeoct(void)
 {
 	mode = 'o';
 	showmode();
-	return printall(t);
+	return printall();
 }
 
 opreturn
-modedec(token *t)
+modedec(void)
 {
 	mode = 'd';
 	showmode();
-	return printall(t);
+	return printall();
 }
 
 opreturn
-modefloat(token *t)
+modefloat(void)
 {
 	mode = 'f';
 	showmode();
-	return printall(t);
+	return printall();
 }
 
 void
@@ -1101,7 +1101,7 @@ setup_format_string(void)
 }
 
 opreturn
-precision(token *t)
+precision(void)
 {
 	ldouble digits;
 
@@ -1123,7 +1123,7 @@ precision(token *t)
 }
 
 opreturn
-decimal_length(token *t)
+decimal_length(void)
 {
 	ldouble digits;
 
@@ -1171,7 +1171,7 @@ setup_width(int bits)
 }
 
 opreturn
-width(token *t)
+width(void)
 {
 	ldouble n;
 	long long bits;
@@ -1204,11 +1204,11 @@ width(token *t)
 	for (s = stack; s; s = s->next)
 		s->val = sign_extend((long long)s->val & int_mask);
 
-	return printall(t);
+	return printall();
 }
 
 opreturn
-store(token *t)
+store(void)
 {
 	ldouble a;
 
@@ -1221,7 +1221,7 @@ store(token *t)
 }
 
 opreturn
-store2(token *t)
+store2(void)
 {
 	ldouble a;
 
@@ -1234,7 +1234,7 @@ store2(token *t)
 }
 
 opreturn
-store3(token *t)
+store3(void)
 {
 	ldouble a;
 
@@ -1247,42 +1247,42 @@ store3(token *t)
 }
 
 opreturn
-recall(token *t)
+recall(void)
 {
 	push(offstack);
 	return GOODOP;
 }
 
 opreturn
-recall2(token *t)
+recall2(void)
 {
 	push(offstack2);
 	return GOODOP;
 }
 
 opreturn
-recall3(token *t)
+recall3(void)
 {
 	push(offstack3);
 	return GOODOP;
 }
 
 opreturn
-push_pi(token *t)
+push_pi(void)
 {
 	push(pi);
 	return GOODOP;
 }
 
 opreturn
-mark(token *t)
+mark(void)
 {
 	stack_mark = stack_count;
 	return GOODOP;
 }
 
 opreturn
-sum(token *t)
+sum(void)
 {
 	opreturn r;
 	ldouble a, tot = 0;
@@ -1302,7 +1302,7 @@ sum(token *t)
 }
 
 opreturn
-units_in_mm(token *t)
+units_in_mm(void)
 {
 	ldouble a;
 
@@ -1316,7 +1316,7 @@ units_in_mm(token *t)
 }
 
 opreturn
-units_mm_in(token *t)
+units_mm_in(void)
 {
 	ldouble a;
 
@@ -1330,7 +1330,7 @@ units_mm_in(token *t)
 }
 
 opreturn
-units_ft_m(token *t)
+units_ft_m(void)
 {
 	ldouble a;
 
@@ -1344,7 +1344,7 @@ units_ft_m(token *t)
 }
 
 opreturn
-units_m_ft(token *t)
+units_m_ft(void)
 {
 	ldouble a;
 
@@ -1358,7 +1358,7 @@ units_m_ft(token *t)
 }
 
 opreturn
-units_F_C(token *t)
+units_F_C(void)
 {
 	ldouble a;
 
@@ -1373,7 +1373,7 @@ units_F_C(token *t)
 }
 
 opreturn
-units_C_F(token *t)
+units_C_F(void)
 {
 	ldouble a;
 
@@ -1388,7 +1388,7 @@ units_C_F(token *t)
 }
 
 opreturn
-units_l_qt(token *t)
+units_l_qt(void)
 {
 	ldouble a;
 
@@ -1402,7 +1402,7 @@ units_l_qt(token *t)
 }
 
 opreturn
-units_qt_l(token *t)
+units_qt_l(void)
 {
 	ldouble a;
 
@@ -1416,7 +1416,7 @@ units_qt_l(token *t)
 }
 
 opreturn
-units_oz_g(token *t)
+units_oz_g(void)
 {
 	ldouble a;
 
@@ -1430,7 +1430,7 @@ units_oz_g(token *t)
 }
 
 opreturn
-units_g_oz(token *t)
+units_g_oz(void)
 {
 	ldouble a;
 
@@ -1444,7 +1444,7 @@ units_g_oz(token *t)
 }
 
 opreturn
-units_mi_km(token *t)
+units_mi_km(void)
 {
 	ldouble a;
 
@@ -1458,7 +1458,7 @@ units_mi_km(token *t)
 }
 
 opreturn
-units_km_mi(token *t)
+units_km_mi(void)
 {
 	ldouble a;
 
@@ -1472,7 +1472,7 @@ units_km_mi(token *t)
 }
 
 opreturn
-autop(token *t)
+autop(void)
 {
 	autoprint = !autoprint;
 	printf(" autoprinting is now %s\n", autoprint ? "on" : "off");
@@ -1480,7 +1480,7 @@ autop(token *t)
 }
 
 opreturn
-quit(token *t)
+quit(void)
 {
 	exit(0);
 }
@@ -1717,7 +1717,7 @@ gettoken(struct token *t)
 }
 
 opreturn
-help(token *t)
+help(void)
 {
 	oper *op;
 
@@ -1906,7 +1906,7 @@ main(int argc, char *argv[])
 			push(t->val.val);
 			break;
 		case OP:
-			(void)(t->val.oper->func) (t);
+			(void)(t->val.oper->func) ();
 			break;
 		case EOL:
 			if (!suppress_autoprint && autoprint
