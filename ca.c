@@ -140,8 +140,8 @@ boolean punct = TRUE;
  * displayed precision, or the number of digits after the decimal,
  * depending on float_specifier
  */
-unsigned int float_digits = 6;  
-int float_specifier = 'g';  /* 'f' or 'g' */
+unsigned int float_digits = 6;
+int float_specifier = 'g';	/* 'f' or 'g' */
 char format_string[30];
 
 /* is there a pre-defined name for this? */
@@ -1009,10 +1009,11 @@ showmode(void)
 
 	if (mode == 'f') {
 		char *msg;
+
 		if (float_specifier == 'g') {
 			/* float_digits == 7 gives:  123.4560  */
 			msg = "of total precision";
-		} else { /* 'f' */
+		} else {	/* 'f' */
 			/* float_digits == 7 gives:  123.4560000  */
 			msg = "after the decimal";
 		}
@@ -1076,13 +1077,13 @@ setup_format_string(void)
 {
 
 	/* create one of:
-	    " %'#.*Lf\n"
-	    " %'#.*Lg\n"
-	    " %#.*Lf\n"
-	    " %#.*Lg\n"
-	*/
+	   " %'#.*Lf\n"
+	   " %'#.*Lg\n"
+	   " %#.*Lf\n"
+	   " %#.*Lg\n"
+	 */
 	snprintf(format_string, sizeof(format_string),
-	    " %%%s#.*L%c\n", punct ? "'":"", float_specifier);
+		 " %%%s#.*L%c\n", punct ? "'" : "", float_specifier);
 
 }
 
