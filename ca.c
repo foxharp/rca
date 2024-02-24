@@ -136,8 +136,13 @@ boolean suppress_autoprint = FALSE;
 /* if true, will decorate numbers, like "1,333,444".  */
 boolean punct = TRUE;
 
-/* default floating point precision */
-int float_digits = 6;
+/* Floating point precision.  This may become either the total
+ * displayed precision, or the number of digits after the decimal,
+ * depending on float_specifier
+ */
+unsigned int float_digits = 6;  
+int float_specifier = 'g';  /* 'f' or 'g' */
+char format_string[30];
 
 /* is there a pre-defined name for this? */
 #define LONGLONG_BITS (sizeof(long long) * 8)
@@ -860,7 +865,7 @@ print_n(ldouble n, int format)
 		}
 		break;
 	default:		// 'f'
-		printf(punct ? " %'.*Lg\n" : " %.*Lg\n", float_digits, n);
+		printf(format_string, float_digits, n);
 		break;
 	}
 }
@@ -955,6 +960,8 @@ printraw(token *t)
 	       8 * sizeof(long double));
 	printf("long double mantissa width %d\n", LDBL_MANT_DIG);
 
+	printf("format string for float mode: \"%s\"\n", format_string);
+
 	suppress_autoprint = TRUE;
 	return GOODOP;
 }
@@ -997,12 +1004,23 @@ mode2name(void)
 void
 showmode(void)
 {
+
 	printf(" Mode is %s. ", mode2name());
+
 	if (mode == 'f') {
-		printf(" Displaying %d decimal places.\n", float_digits);
+		char *msg;
+		if (float_specifier == 'g') {
+			/* float_digits == 7 gives:  123.4560  */
+			msg = "of total precision";
+		} else { /* 'f' */
+			/* float_digits == 7 gives:  123.4560000  */
+			msg = "after the decimal";
+		}
+		printf(" Displaying %u digits %s.\n", float_digits, msg);
 	} else {
 		printf(" Integer math with %d bits.\n", int_width);
 	}
+
 	suppress_autoprint = TRUE;
 }
 
@@ -1054,15 +1072,51 @@ modefloat(token *t)
 }
 
 opreturn
+setup_format_string(void)
+{
+
+	/* create one of:
+	    " %'#.*Lf\n"
+	    " %'#.*Lg\n"
+	    " %#.*Lf\n"
+	    " %#.*Lg\n"
+	*/
+	snprintf(format_string, sizeof(format_string),
+	    " %%%s#.*L%c\n", punct ? "'":"", float_specifier);
+
+}
+
+opreturn
 precision(token *t)
 {
 	ldouble digits;
 
 	if (!pop(&digits))
 		return BADOP;
-	float_digits = digits;
-	printf(" %d digits of displayed precision.\n", float_digits);
-	return GOODOP;
+	float_digits = abs(digits);
+
+	float_specifier = 'g';
+
+	setup_format_string();
+
+	printf(" %d digits of total displayed precision.\n", float_digits);
+
+}
+
+opreturn
+decimal_length(token *t)
+{
+	ldouble digits;
+
+	if (!pop(&digits))
+		return BADOP;
+	float_digits = abs(digits);
+
+	float_specifier = 'f';
+
+	setup_format_string();
+
+	printf(" %d digits after the decimal.\n", float_digits);
 }
 
 void
@@ -1771,8 +1825,10 @@ struct oper opers[] = {
 	{"X", modehex,		"Switch to hex mode" },
 	{"O", modeoct,		0 },
 	{"B", modebin,		"Switch to octal or binary modes" },
-	{"precision", precision, 0 },
-	{"k", precision,        "Set float mode display precision" },
+	{"precision",		precision, 0 },
+	{"k", precision,	"Specify float output by total displayed precision (uses %g)" },
+	{"decimals",		decimal_length, 0 },
+	{"K", decimal_length,	"Specify float output by decimal length (uses %f)" },
 	{"width", width,	0 },
 	{"w", width,		"Set effective \"word size\" for integer modes" },
 	{"commas", punctuation,	0 },
@@ -1809,6 +1865,7 @@ main(int argc, char *argv[])
 	setlocale(LC_ALL, "");
 
 	setup_width(0);
+	setup_format_string();
 
 	/* we simply loop forever, either pushing operands or
 	 * executing operators.  the special end-of-line token lets us
