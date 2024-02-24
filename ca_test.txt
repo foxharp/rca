@@ -286,17 +286,34 @@ pi
 10 15 ^ *
  3.14159265358979e+15
 15K
+ 15 digits after the decimal.
+ 3,141,592,653,589,793.238525390625000
 5K
+ 5 digits after the decimal.
+ 3,141,592,653,589,793.23853
 1K
+ 1 digit after the decimal.
+ 3,141,592,653,589,793.2
+0K
+ 1 digit after the decimal.
+ 3,141,592,653,589,793.2
 15k
+ 15 digits of total displayed precision.
+ 3.14159265358979e+15
+1k
+ 1 digit of total displayed precision.
+ 3e+15
+10k
+ 10 digits of total displayed precision.
+ 3.141592654e+15
 d
  3,141,592,653,589,793
 f
- 3.14159265358979e+15
+ 3.141592654e+15
 pi
- 3.14159265358979
+ 3.141592654
 10 15 ^ *
- 3.14159265358979e+15
+ 3.141592654e+15
 -
  0
 
