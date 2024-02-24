@@ -1076,26 +1076,26 @@ void
 setup_format_string(void)
 {
 	/* The floating print options include
-	    - commas or not
-	    - alternate form or not (we use it with %f, but not %g)
-	    - %f or %g
+	   - commas or not
+	   - alternate form or not (we use it with %f, but not %g)
+	   - %f or %g
 	   Also:
-	    - precision
+	   - precision
 	   but happily that's provided via the '*' specifier at printf time.
 
 	   So there are just four forms to deal with here.
 	 */
 
 	if (punct) {
-	    if (float_specifier == 'f')
-		format_string = " %'#.*Lf\n";
-	    else
-		format_string = " %'.*Lg\n";
+		if (float_specifier == 'f')
+			format_string = " %'#.*Lf\n";
+		else
+			format_string = " %'.*Lg\n";
 	} else {
-	    if (float_specifier == 'f')
-		format_string = " %#.*Lf\n";
-	    else
-		format_string = " %.*Lg\n";
+		if (float_specifier == 'f')
+			format_string = " %#.*Lf\n";
+		else
+			format_string = " %.*Lg\n";
 	}
 }
 
@@ -1108,14 +1108,15 @@ precision(token *t)
 		return BADOP;
 
 	float_digits = abs(digits);
-	if (float_digits < 1)  float_digits = 1;
+	if (float_digits < 1)
+		float_digits = 1;
 
 	float_specifier = 'g';
 
 	setup_format_string();
 
 	printf(" %d digit%s of total displayed precision.\n",
-		float_digits, float_digits == 1 ? "":"s");
+	       float_digits, float_digits == 1 ? "" : "s");
 
 }
 
@@ -1128,14 +1129,15 @@ decimal_length(token *t)
 		return BADOP;
 
 	float_digits = abs(digits);
-	if (float_digits < 1)  float_digits = 1;
+	if (float_digits < 1)
+		float_digits = 1;
 
 	float_specifier = 'f';
 
 	setup_format_string();
 
 	printf(" %d digit%s after the decimal.\n",
-		float_digits, float_digits == 1 ? "":"s");
+	       float_digits, float_digits == 1 ? "" : "s");
 }
 
 void
