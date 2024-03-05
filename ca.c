@@ -956,8 +956,8 @@ printraw(void)
 	}
 	printf("stack_count %d, stack_mark %d\n", stack_count, stack_mark);
 	printf("native sizes (bits):\n");
-	printf("%16lu   %16lu\n", 8 * sizeof(long long),
-	       8 * sizeof(long double));
+	printf("%16lu   %16lu\n", (unsigned long)(8 * sizeof(long long)),
+	       (unsigned long)(8 * sizeof(long double)));
 	printf("long double mantissa width %d\n", LDBL_MANT_DIG);
 
 	printf("format string for float mode: \"%s\"\n", format_string);
