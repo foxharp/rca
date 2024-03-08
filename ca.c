@@ -1482,6 +1482,8 @@ autop(void)
 opreturn
 quit(void)
 {
+	if (!suppress_autoprint && autoprint)
+		print_top(mode);
 	exit(0);
 }
 
