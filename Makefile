@@ -17,7 +17,7 @@ publish:
 	scp publish_me.c \
 	  webcontent:/opt/very_public/www/projects.foxharp.net/software/ca.c.txt
 	ssh webcontent web_publish projects
-	echo Available here: https://projects.foxharp.net/software/ca.c.txt
+	@echo Available here: https://projects.foxharp.net/software/ca.c.txt
 
 
 	
