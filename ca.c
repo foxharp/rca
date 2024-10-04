@@ -1725,6 +1725,8 @@ help(void)
 
 	op = opers;
 	printf("\
+There are no program options.\n\
+Arguments on the command line are used as initial calculator input.\n\
 Entering a number pushes it on the stack.\n\
 Operators replace either one or two top stack values with their result.\n\
 All whitespace is equal; numbers and operators may appear on one or more lines.\n\
