@@ -1487,6 +1487,24 @@ quit(void)
 	exit(0);
 }
 
+size_t stralnum(char *s, char **endptr)
+{
+	char *ns = s;
+	while (isalnum(*ns))
+		ns++;
+	*endptr = ns;
+	return ns - s;
+}
+
+size_t strpunct(char *s, char **endptr)
+{
+	char *ns = s;
+	while (ispunct(*ns))
+		ns++;
+	*endptr = ns;
+	return ns - s;
+}
+
 void
 parse_tok(char *p, token *t, char **nextp)
 {
@@ -1540,6 +1558,18 @@ parse_tok(char *p, token *t, char **nextp)
 		t->val.val = dd * sign;
 		return;
 	} else {
+		int n;
+		if (isalpha(*p)) {
+		    n = stralnum(p, nextp);
+		} else if (ispunct(*p)) {
+		    n = strpunct(p, nextp);
+		} else {
+			printf(" illegal character in input\n");
+			t->val.str = p;
+			t->type = UNKNOWN;
+			return;
+		}
+
 		// command
 		oper *op;
 
@@ -1552,13 +1582,11 @@ parse_tok(char *p, token *t, char **nextp)
 				continue;
 			}
 			matchlen = strlen(op->name);
-			if (!strncmp(op->name, p, matchlen)) {
-				if (p[matchlen] == '\0' || isspace(p[matchlen])) {
-					*nextp = p + matchlen;
-					t->type = OP;
-					t->val.oper = op;
-					return;
-				}
+			if (n == matchlen && !strncmp(op->name, p, matchlen)) {
+				*nextp = p + matchlen;
+				t->type = OP;
+				t->val.oper = op;
+				return;
 			}
 			op++;
 		}
