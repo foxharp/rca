@@ -1771,8 +1771,8 @@ Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
 		if (!*op->name) {
 			putchar('\n');
 		} else {
-			if (op->name[0] == ';') {
-				/* hidden command, for debug */ ;
+			if (op->name[0] == 'd' && isupper(op->name[1])) {
+				/* e.g. dR or dT, hidden command for debug */ ;
 			} else if (!op->func) {
 				printf("%s\n", op->name);
 			} else if (!op->help) {
@@ -1869,10 +1869,10 @@ struct oper opers[] = {
 	{"o", printoct,		0 },
 	{"h", printhex,		0 },
 	{"b", printbin,		"Print x in float, decimal, octal, hex, binary" },
-	{";r", printraw,	"raw stack contents, for debug (hidden)" },
-	{";t", tracetoggle,	"toggle tracing, for debug (hidden)" },
 	{"autoprint", autop,	0 },
 	{"a", autop,		"Toggle autoprinting on/off" },
+	{"dR", printraw,	"debug: raw stack contents (hidden)" },
+	{"dT", tracetoggle,	"debug: toggle tracing (hidden)" },
 	{"", 0, 0},
     {"Modes:", 0, 0},
 	{"F", modefloat,	"Switch to floating point mode" },
