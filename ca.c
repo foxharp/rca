@@ -16,7 +16,7 @@
  *		- pgf, Tue Feb 13, 2024
  *
  *  build with:
- *	doit:      gcc -g -Wall -Wextra -o ca -D USE_READLINE ca.c -lm -lreadline
+ *	doit:      gcc -g -Wall -Wextra -o ca -D USE_READLINE -Wno-missing-field-initializers ca.c -lm -lreadline
  *	doit-norl: gcc -g -Wall -Wextra -o ca ca.c -lm
  *
  *  documentation:
@@ -99,8 +99,10 @@ typedef struct oper oper;
 
 struct oper {
 	char *name;
-	 opreturn(*func) (void);
+	opreturn(*func) (void);
 	char *help;
+	int operands;    /* only used by open_paren() */
+	int precedence;  /* only used by open_paren() */
 };
 
 /* operator table */
@@ -114,6 +116,7 @@ struct token {
 		char *str;
 	} val;
 	int type;
+	struct token *next;  /* so we can stack tokens, for infix processing */
 };
 
 /* values for token.type */
@@ -185,7 +188,7 @@ push(ldouble n)
 
 	if (mode == 'f') {
 		p->val = n;
-		trace(("pushed %Lg/0x%llx as-is\n", n, (long long)(p->val)));
+		trace(("pushed %Lg/0x%llx\n", n, (long long)(p->val)));
 	} else {
 		p->val = sign_extend((long long)n & int_mask);
 		trace(("pushed masked/extended %lld/0x%llx\n",
@@ -219,6 +222,90 @@ pop(ldouble *f)
 
 	return TRUE;
 }
+
+
+token *outstack, *opstack, *infix_stack;
+
+void
+tpush(token **tstackp, token *token)
+{
+	struct token *t = (struct token *)calloc(1, sizeof(struct token));
+
+	if (!t) {
+		perror("calloc");
+		exit(1);
+	}
+
+	*t = *token;
+	trace(("pushed an infix token to %s stack\n",
+		(*tstackp == outstack) ? "output":"operator"));
+
+	t->next = *tstackp;
+	*tstackp = t;
+}
+
+token *
+tpeek(token **tstackp)
+{
+	return *tstackp;
+}
+
+token *
+tpop(token **tstackp)
+{
+	struct token *rt;
+
+	rt = *tstackp;
+	if (!rt) {
+		trace(("empty tstack\n"));
+		return NULL;
+	}
+
+	*tstackp = (*tstackp)->next;
+	trace(("popped an infix token from %s stack\n",
+		(*tstackp == outstack) ? "output":"operator"));
+
+	return rt;
+}
+
+void
+tempty(token **tstackp)
+{
+	while (*tstackp) {
+		*tstackp = (*tstackp)->next;
+	}
+}
+
+void
+tdump(token **tstackp)
+{
+	if (!tracing) return;
+
+	token *t = *tstackp;
+
+	char *n;
+	if (tstackp == &opstack)
+		n = "opstack";
+	else if (tstackp == &outstack)
+		n = "outstack";
+	else if (tstackp == &infix_stack)
+		n = "infix_stack";
+	else
+		n = "unknown stack";
+
+	printf("%s stack: ", n);
+	while (t) {
+		if (t->type == NUMERIC)
+		    printf("%Lf  ", t->val.val);
+		else if (t->type == OP)
+		    printf("%s  ", t->val.oper->name);
+		else 
+		    printf("t->type is %d", t->type);
+		t = t->next;
+	}
+	printf("\n");
+}
+
 
 opreturn
 add(void)
@@ -1724,12 +1811,8 @@ fetch_line(void)
 }
 
 int
-gettoken(struct token *t)
+get_line_token(struct token *t)
 {
-
-	if (input_ptr == NULL)
-		if (!fetch_line())
-			return 0;
 
 	while (isspace(*input_ptr))
 		input_ptr++;
@@ -1746,6 +1829,172 @@ gettoken(struct token *t)
 	return 1;
 }
 
+int
+gettoken(struct token *t)
+{
+	if (input_ptr == NULL)
+		if (!fetch_line())
+			return 0;
+
+	return get_line_token(t);
+}
+
+token open_paren_token, chsign_token;
+
+void
+create_support_tokens()
+{
+    /* we need a couple of token references for later on, specifically
+     * for dealing with infix processing.
+     */
+    char *outp;
+    parse_tok("(", &open_paren_token, &outp);
+    parse_tok("chs", &chsign_token, &outp);
+}
+
+opreturn
+close_paren(void)  /* never called, but helps with infix processing */
+{
+    return BADOP;
+}
+
+opreturn
+open_paren(void)
+{
+	struct token tok;
+	token *t = &tok;
+	token *prev_t = NULL;
+	token *tp;
+
+	tempty(&outstack);
+	tempty(&opstack);
+
+	tpush(&opstack, &open_paren_token);
+
+	trace(("collecting infix line\n"));
+
+	while (1) {
+		while (isspace(*input_ptr))
+			input_ptr++;
+
+		if (!*input_ptr)
+			break;
+
+		parse_tok(input_ptr, t, &input_ptr);
+
+		switch (t->type) {
+		case NUMERIC:
+			trace(("val is %Lf\n", t->val.val));
+        		tpush(&outstack, t);
+			break;
+		case OP:
+			char *tname = t->val.oper->name;
+			int operands = t->val.oper->operands;
+			int precedence = t->val.oper->precedence;
+
+			trace(("oper is %s\n", tname ));
+
+			tp = tpeek(&opstack);
+
+			if (t->val.oper->func == open_paren) {
+				// Push opening parenthesis to operator stack
+				tpush(&opstack, t);
+			} else if (t->val.oper->func == close_paren) {
+				// Process until matching opening parenthesis
+				while (1) {
+					if (tp == NULL) {
+						printf(" mismatched parentheses\n");
+						return BADOP;
+					}
+
+					if (tp->val.oper->func == open_paren)
+						break;
+
+					tpush(&outstack, tpop(&opstack));
+					tp = tpeek(&opstack);
+				}
+
+				// Pop the opening parenthesis
+				tpop(&opstack);
+				tp = tpeek(&opstack);
+				if (tp && tp->val.oper->operands == 1) {
+					tpush(&outstack, tpop(&opstack));
+				}
+
+			} else if (operands == 1) {
+
+				tpush(&opstack, t);
+
+			} else if (operands == 2) {
+				// special case:  '-' is either binary
+				// subtraction or unary "change sign". 
+				// It's unary if it comes first, or
+				// follows another operator.
+				if (t->val.oper->func == subtract &&
+					(!prev_t || (prev_t->type == OP))) {
+					tpush(&opstack, &chsign_token);
+				} else {
+					// Handle binary operators
+					while (tp != NULL) {
+						if (tp->val.oper->func ==
+								open_paren)
+							break;
+						if (tp->val.oper->precedence <=
+								precedence)
+							break;
+
+						tpush(&outstack,
+								tpop(&opstack));
+						tp = tpeek(&opstack);
+					}
+					tpush(&opstack, t);
+				}
+			} else {
+				printf(" '%s' unsuitable in infix expression\n",
+				    t->val.oper->name);
+			}
+			break;
+
+		default:
+		case UNKNOWN:
+			printf(" unrecognized input '%s'\n", t->val.str);
+			flushinput();
+			return BADOP;
+		}
+ 		prev_t = t;
+
+		tdump(&opstack);
+		tdump(&outstack);
+	}
+	tdump(&opstack);
+	tdump(&outstack);
+
+	trace(("final move\n"));
+
+	while ((t = tpop(&opstack)) != NULL) {
+		if (t->val.oper->func == open_paren) {
+			if (tpeek(&opstack) != NULL) {
+				printf(" mismatched parentheses\n");
+				return BADOP;
+			}
+			break;
+		}
+		tpush(&outstack, t);
+	}
+	
+	tdump(&opstack);
+	tdump(&outstack);
+
+	trace(("moving to infix stack\n"));
+	while((t = tpop(&outstack)) != NULL) {
+		tpush(&infix_stack, t);
+	}
+	tdump(&infix_stack);
+
+	return GOODOP;
+}
+
+
 opreturn
 help(void)
 {
@@ -1753,17 +2002,22 @@ help(void)
 
 	op = opers;
 	printf("\
-There are no program options.\n\
-Arguments on the command line are used as initial calculator input.\n\
+Any arguments on the command line are used as initial calculator input.\n\
 Entering a number pushes it on the stack.\n\
 Operators replace either one or two top stack values with their result.\n\
-All whitespace is equal; numbers and operators may appear on one or more lines.\n\
-Whitespace is optional between numbers and commands, but not vice versa.\n\
+Numbers and operators may appear on one or more lines.\n\
+Most whitespace is optional between numbers and commands.\n\
 Numbers can include commas and $ signs (e.g., \"$3,577,455\").\n\
 Numbers are represented as long double and signed long long.\n\
-Ops that can be done in long double, are.  Others use long long.\n\
+Operations that can be done in long double, are.  Others use long long.\n\
 Max width for integers is the shorter of long long or the long double mantissa.\n\
 Always use 0xNNN/0NNN to enter hex/octal, even in hex or octal mode.\n\
+A one line infix expression may be started with '('.  The evaluated result\n\
+ goes on the stack.  For example, '(sqrt(sin(30)^2 + cos(3)^2) + 2)' will\n\
+ push the value '3'.  The trailing ')' is optional.  All operators and\n\
+ functions, all unit conversions, and all commands that produce constants\n\
+ (e.g., 'pi', 'recall') can be referenced in infix expressions.\n\
+ The infix expression must all be on one line.\n\
 Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
 \n\
 ");
@@ -1771,8 +2025,8 @@ Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
 		if (!*op->name) {
 			putchar('\n');
 		} else {
-			if (op->name[0] == 'd' && isupper(op->name[1])) {
-				/* e.g. dR or dT, hidden command for debug */ ;
+			if (op->help && !strcmp(op->help, "HideMe")) {
+				/* hidden command */ ;
 			} else if (!op->func) {
 				printf("%s\n", op->name);
 			} else if (!op->help) {
@@ -1792,36 +2046,37 @@ Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
 // *INDENT-OFF*.
 struct oper opers[] = {
     {"Operators with two operands", 0, 0},
-	{"+", add,		0 },
-	{"-", subtract,		"Add and subtract x and y" },
-	{"*", multiply,		0 },
-	{"x", multiply,		"Two ways to multiply x and y" },
-	{"/", divide,		0 },
-	{"%", modulo,		"Divide and modulo of y by x (arithmetic shift)" },
-	{"^", y_to_the_x,	"Raise y to the x'th power" },
-	{">>", rshift,		0 },
-	{"<<", lshift,		"Right/left logical shift of y by x bits" },
-	{"&", and,		0 },
-	{"|", or,		0 },
-	{"xor", xor,		"Bitwise AND, OR, and XOR of y and x" },
-	{"setb", setbit,	0 },
-	{"clearb", clearbit,	"Set and clear shift bit x in y" },
+	{"+", add,		0, 2, 12 },
+	{"-", subtract,		"Add and subtract x and y", 2, 12 },
+	{"*", multiply,		0, 2, 13 },
+	{"x", multiply,		"Two ways to multiply x and y", 2, 13 },
+	{"/", divide,		0, 2, 13 },
+	{"%", modulo,		"Divide and modulo of y by x (arithmetic shift)", 2, 13 },
+	{"^", y_to_the_x,	"Raise y to the x'th power", 2, 14 },
+	// {"**", y_to_the_x,	"Raise y to the x'th power", 2, 14 },
+	{">>", rshift,		0, 2, 10 },
+	{"<<", lshift,		"Right/left logical shift of y by x bits", 2, 10 },
+	{"&", and,		0, 2, 7 },
+	{"|", or,		0, 2, 5 },
+	{"xor", xor,		"Bitwise AND, OR, and XOR of y and x", 2, 6 },
+	{"setb", setbit,	0, 2, 2 },
+	{"clearb", clearbit,	"Set and clear shift bit x in y", 2, 2 },
 	{"", 0, 0},
     {"Operators with one operand", 0, 0},
-	{"~", not,		"Bitwise NOT of x (1's complement)" },
-	{"chs", chsign,		0 },
-	{"negate", chsign,	"Change sign of x (2's complement)" },
-	{"recip", recip,        0 },
-	{"sqrt", squarert,      "Reciprocal and square root of x" },
-	{"sin", sine,           0 },
-	{"cos", cosine,         0 },
-	{"tan", tangent,        0 },
-	{"asin", asine,         0 },
-	{"acos", acosine,       0 },
-	{"atan", atangent,      "Trig functions (in degrees)" },
-	{"abs", absolute,	0 },
-	{"frac", fraction,	0 },
-	{"int", integer,	"Absolute value, fractional and integer parts of x" },
+	{"~", not,		"Bitwise NOT of x (1's complement)", 1, 3 },
+	{"chs", chsign,		0, 1 },
+	{"negate", chsign,	"Change sign of x (2's complement)", 1 },
+	{"recip", recip,        0, 1 },
+	{"sqrt", squarert,      "Reciprocal and square root of x", 1 },
+	{"sin", sine,           0, 1 },
+	{"cos", cosine,         0, 1 },
+	{"tan", tangent,        0, 1 },
+	{"asin", asine,         0, 1 },
+	{"acos", acosine,       0, 1 },
+	{"atan", atangent,      "Trig functions (in degrees)", 1 },
+	{"abs", absolute,	0, 1 },
+	{"frac", fraction,	0, 1 },
+	{"int", integer,	"Absolute value, fractional and integer parts of x", 1 },
 	{"", 0, 0},
     {"Stack manipulation", 0, 0},
 	{"clear", clear,	"Clear stack" },
@@ -1833,33 +2088,36 @@ struct oper opers[] = {
 	{"lx", repush,		"Fetch previous x" },
 	{"exch", exchange,	0 },
 	{"swap", exchange,	"Exchange x and y" },
+	{"mark", mark,		"Mark stack for later summing" },
+	{"sum", sum,		"Sum stack to \"mark\", or entire stack if no mark" },
+    {"Constants and storage", 0, 0},
 	{"store", store,	0 },
 	{"sto", store,		0 },
 	{"sto1", store,		0 },
 	{"sto2", store2,	0 },
 	{"sto3", store3,	"Save x off-stack (3 locations)" },
-	{"recall", recall,	0 },
-	{"rcl", recall,		0 },
-	{"rcl1", recall,	0 },
-	{"rcl2", recall2,	0 },
-	{"rcl3", recall3,	"Fetch x (3 locations)" },
-	{"pi", push_pi,		"Push constant pi" },
-	{"mark", mark,		"Mark stack for later summing" },
-	{"sum", sum,		"Sum stack to \"mark\", or entire stack if no mark" },
+	{"recall", recall,	0, 1 },
+	{"rcl", recall,		0, 1 },
+	{"rcl1", recall,	0, 1 },
+	{"rcl2", recall2,	0, 1 },
+	{"rcl3", recall3,	"Fetch x (3 locations)", 1 },
+	{"pi", push_pi,		"Push constant pi", 1 },
+	{"(", open_paren,	"Take rest of line as an \"infix\" (traditional) arithmetic expression" },
+	{")", close_paren,	"HideMe" }, // this needs to be an operator, for infix to work
 	{"", 0, 0},
     {"Conversions:", 0, 0},
-	{"i2mm", units_in_mm,   0 },
-	{"mm2i", units_mm_in,   "inches / millimeters" },
-	{"ft2m", units_ft_m,	0},
-	{"m2ft", units_m_ft,	"feet / meters" },
-	{"mi2km", units_mi_km,  0 },
-	{"km2mi", units_km_mi,  "miles / kilometers" },
-	{"f2c", units_F_C,      0 },
-	{"c2f", units_C_F,      "degrees F/C" },
-	{"oz2g", units_oz_g,    0 },
-	{"g2oz", units_g_oz,    "ounces / grams" },
-	{"q2l", units_qt_l,     0 },
-	{"l2q", units_l_qt,     "quarts / liters" },
+	{"i2mm", units_in_mm,   0, 1 },
+	{"mm2i", units_mm_in,   "inches / millimeters", 1 },
+	{"ft2m", units_ft_m,	0, 1},
+	{"m2ft", units_m_ft,	"feet / meters", 1 },
+	{"mi2km", units_mi_km,  0, 1 },
+	{"km2mi", units_km_mi,  "miles / kilometers", 1 },
+	{"f2c", units_F_C,      0, 1 },
+	{"c2f", units_C_F,      "degrees F/C", 1 },
+	{"oz2g", units_oz_g,    0, 1 },
+	{"g2oz", units_g_oz,    "ounces / grams", 1 },
+	{"q2l", units_qt_l,     0, 1 },
+	{"l2q", units_l_qt,     "quarts / liters", 1 },
 	{"", 0, 0},
     {"Display:", 0, 0},
 	{"P", printall,		"Print whole stack according to mode" },
@@ -1871,8 +2129,8 @@ struct oper opers[] = {
 	{"b", printbin,		"Print x in float, decimal, octal, hex, binary" },
 	{"autoprint", autop,	0 },
 	{"a", autop,		"Toggle autoprinting on/off" },
-	{"dR", printraw,	"debug: raw stack contents (hidden)" },
-	{"dT", tracetoggle,	"debug: toggle tracing (hidden)" },
+	{"dR", printraw,	"HideMe" }, // raw stack contents
+	{"dT", tracetoggle,	"HideMe" }, // toggle tracing
 	{"", 0, 0},
     {"Modes:", 0, 0},
 	{"F", modefloat,	"Switch to floating point mode" },
@@ -1907,7 +2165,7 @@ int
 main(int argc, char *argv[])
 {
 	struct token tok;
-	token *t = &tok;
+	token *t;
 	static int lasttoktype;
 	char *pn;
 
@@ -1924,20 +2182,29 @@ main(int argc, char *argv[])
 	setup_width(0);
 	setup_format_string();
 
+	create_support_tokens();
+
 	/* we simply loop forever, either pushing operands or
 	 * executing operators.  the special end-of-line token lets us
 	 * do reasonable autoprinting, if the last thing on the line
 	 * was an operator.
 	 */
 	while (1) {
-		if (!gettoken(t))
-			break;
+
+		// use tokens created by infix processing first */
+		t = tpop(&infix_stack);
+		if (!t) {
+			if (!gettoken(&tok))
+				break;
+			t = &tok;
+		}
 
 		switch (t->type) {
 		case NUMERIC:
 			push(t->val.val);
 			break;
 		case OP:
+			trace(( "invoking %s\n", t->val.oper->name));
 			(void)(t->val.oper->func) ();
 			break;
 		case EOL:
