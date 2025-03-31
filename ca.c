@@ -1855,6 +1855,7 @@ create_support_tokens()
 opreturn
 close_paren(void)  /* never called, but helps with infix processing */
 {
+    printf(" mismatched or extra open parenthesis\n");
     return BADOP;
 }
 
@@ -1865,6 +1866,7 @@ open_paren(void)
 	token *t = &tok;
 	token *prev_t = NULL;
 	token *tp;
+	int paren_count = 1;
 
 	tempty(&outstack);
 	tempty(&opstack);
@@ -1899,6 +1901,7 @@ open_paren(void)
 			if (t->val.oper->func == open_paren) {
 				// Push opening parenthesis to operator stack
 				tpush(&opstack, t);
+				paren_count++;
 			} else if (t->val.oper->func == close_paren) {
 				// Process until matching opening parenthesis
 				while (1) {
@@ -1920,6 +1923,7 @@ open_paren(void)
 				if (tp && tp->val.oper->operands == 1) {
 					tpush(&outstack, tpop(&opstack));
 				}
+				paren_count--;
 
 			} else if (operands == 1) {
 
@@ -1961,6 +1965,10 @@ open_paren(void)
 			flushinput();
 			return BADOP;
 		}
+
+		if (paren_count == 0)
+			break;
+
  		prev_t = t;
 
 		tdump(&opstack);
