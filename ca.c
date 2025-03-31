@@ -1751,8 +1751,6 @@ fetch_line(void)
 			strcat(input_buf, " ");
 		}
 
-		printf("%s\n", input_buf);
-
 		no_comm(input_buf);
 
 		input_ptr = input_buf;
