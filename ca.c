@@ -72,6 +72,7 @@ int g_argc;
 char **g_argv;
 
 ldouble pi = 3.141592653589793238462643383279502884L;
+ldouble e =  2.718281828459045235360287471352662497L;
 
 /* internal representation of operands on the stack.  numbers are always
  * stored as long doubles, even when we're in integer mode.  this could
@@ -101,8 +102,8 @@ struct oper {
 	char *name;
 	opreturn(*func) (void);
 	char *help;
-	int operands;    /* only used by open_paren() */
-	int precedence;  /* only used by open_paren() */
+	int operands;    /* only used by infix code */
+	int precedence;  /* only used by infix code */
 };
 
 /* operator table */
@@ -1362,6 +1363,13 @@ push_pi(void)
 }
 
 opreturn
+push_e(void)
+{
+	push(e);
+	return GOODOP;
+}
+
+opreturn
 mark(void)
 {
 	stack_mark = stack_count;
@@ -1597,6 +1605,7 @@ parse_tok(char *p, token *t, char **nextp)
 {
 	int sign = 1;
 
+#if 0
 	/* be sure + and - are bound closely to numbers */
 	if (*p == '+' && (*(p + 1) == '.' || isdigit(*(p + 1)))) {
 		p++;
@@ -1604,6 +1613,7 @@ parse_tok(char *p, token *t, char **nextp)
 		sign = -1;
 		p++;
 	}
+#endif
 
 	if (*p == '0' && (*(p + 1) == 'x' || *(p + 1) == 'X')) {
 		// hex
@@ -1649,7 +1659,15 @@ parse_tok(char *p, token *t, char **nextp)
 		if (isalpha(*p)) {
 		    n = stralnum(p, nextp);
 		} else if (ispunct(*p)) {
-		    n = strpunct(p, nextp);
+		    /* only doubled punct opers, currently */
+		    /* someday?  <= >= == != && || */
+		    if ((p[0] == '>' && p[1] == '>') ||      //   <<
+		        (p[0] == '<' && p[1] == '<')) {      //   >>
+			    n = 2;
+		    } else {
+			    n = 1;
+		    }
+		    *nextp = p + n;
 		} else {
 			printf(" illegal character in input\n");
 			t->val.str = p;
@@ -1860,11 +1878,12 @@ close_paren(void)  /* never called, but helps with infix processing */
 opreturn
 open_paren(void)
 {
-	struct token tok;
+	struct token tok, ptok;
 	token *t = &tok;
-	token *prev_t = NULL;
 	token *tp;
 	int paren_count = 1;
+
+	ptok.type = UNKNOWN;
 
 	tempty(&outstack);
 	tempty(&opstack);
@@ -1923,17 +1942,22 @@ open_paren(void)
 				}
 				paren_count--;
 
-			} else if (operands == 1) {
+			} else if (operands == -1) { // no operands, like "pi"
+
+				tpush(&outstack, t);
+
+			} else if (operands == 1) { // one operand, like "~"
 
 				tpush(&opstack, t);
 
-			} else if (operands == 2) {
+			} else if (operands == 2) { // two operands
 				// special case:  '-' is either binary
 				// subtraction or unary "change sign". 
 				// It's unary if it comes first, or
 				// follows another operator.
 				if (t->val.oper->func == subtract &&
-					(!prev_t || (prev_t->type == OP))) {
+					(ptok.type == UNKNOWN ||
+						ptok.type == OP)) {
 					tpush(&opstack, &chsign_token);
 				} else {
 					// Handle binary operators
@@ -1967,7 +1991,7 @@ open_paren(void)
 		if (paren_count == 0)
 			break;
 
- 		prev_t = t;
+ 		ptok = *t;
 
 		tdump(&opstack);
 		tdump(&outstack);
@@ -2102,12 +2126,13 @@ struct oper opers[] = {
 	{"sto1", store,		0 },
 	{"sto2", store2,	0 },
 	{"sto3", store3,	"Save x off-stack (3 locations)" },
-	{"recall", recall,	0, 1 },
-	{"rcl", recall,		0, 1 },
-	{"rcl1", recall,	0, 1 },
-	{"rcl2", recall2,	0, 1 },
-	{"rcl3", recall3,	"Fetch x (3 locations)", 1 },
-	{"pi", push_pi,		"Push constant pi", 1 },
+	{"recall", recall,	0, -1 },
+	{"rcl", recall,		0, -1 },
+	{"rcl1", recall,	0, -1 },
+	{"rcl2", recall2,	0, -1 },
+	{"rcl3", recall3,	"Fetch x (3 locations)", -1 },
+	{"pi", push_pi,		"Push constant pi", -1 },
+	{"e", push_e,		"Push constant e", -1 },
 	{"(", open_paren,	"Take rest of line as an \"infix\" (traditional) arithmetic expression" },
 	{")", close_paren,	"HideMe" }, // this needs to be an operator, for infix to work
 	{"", 0, 0},
