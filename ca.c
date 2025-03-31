@@ -194,7 +194,7 @@ push(ldouble n)
 	} else {
 		p->val = sign_extend((long long)n & int_mask);
 		trace(("pushed masked/extended %lld/0x%llx\n",
-		       (long long)(p->val), (long long)(p->val)));
+		(long long)(p->val), (long long)(p->val)));
 	}
 
 	p->next = stack;
@@ -232,21 +232,21 @@ void
 tpush(token **tstackp, token *token)
 {
 	struct token *t;
-	
+
 	/* if we originally malloc'ed the incoming token, just reuse
 	 * it, otherwise malloc and copy.
 	 */
 	if (token->alloced) {
 		t = token;
 	} else {
-	    t = (struct token *)calloc(1, sizeof(struct token));
-	    if (!t) {
-		    perror("calloc");
-		    exit(1);
-	    }
+		t = (struct token *)calloc(1, sizeof(struct token));
+		if (!t) {
+			perror("calloc");
+			exit(1);
+		}
 
-	    *t = *token;
-	    t->alloced = 1;
+		*t = *token;
+		t->alloced = 1;
 	}
 
 	trace(("pushed an infix token to %s stack\n",
@@ -312,11 +312,11 @@ tdump(token **tstackp)
 	printf("%s stack: ", n);
 	while (t) {
 		if (t->type == NUMERIC)
-		    printf("%Lf  ", t->val.val);
+			printf("%Lf  ", t->val.val);
 		else if (t->type == OP)
-		    printf("%s  ", t->val.oper->name);
-		else 
-		    printf("t->type is %d", t->type);
+			printf("%s  ", t->val.oper->name);
+		else
+			printf("t->type is %d", t->type);
 		t = t->next;
 	}
 	printf("\n");
@@ -1198,8 +1198,8 @@ printraw(void)
 {
 	struct num *s;
 
-	printf("int_mask 0x%llx, int_sign_bit 0x%llx\n", int_mask,
-	       int_sign_bit);
+	printf("int_mask 0x%llx, int_sign_bit 0x%llx\n",
+			int_mask, int_sign_bit);
 
 	printf("stack:\n");
 	s = stack;
@@ -1211,7 +1211,7 @@ printraw(void)
 	printf("stack_count %d, stack_mark %d\n", stack_count, stack_mark);
 	printf("native sizes (bits):\n");
 	printf("%16lu   %16lu\n", (unsigned long)(8 * sizeof(long long)),
-	       (unsigned long)(8 * sizeof(long double)));
+		(unsigned long)(8 * sizeof(long double)));
 	printf("long double mantissa width %d\n", LDBL_MANT_DIG);
 
 	printf("format string for float mode: \"%s\"\n", format_string);
@@ -1371,7 +1371,7 @@ precision(void)
 	setup_format_string();
 
 	printf(" %d digit%s of total displayed precision.\n",
-	       float_digits, float_digits == 1 ? "" : "s");
+		float_digits, float_digits == 1 ? "" : "s");
 
 	return GOODOP;
 }
@@ -1393,7 +1393,7 @@ decimal_length(void)
 	setup_format_string();
 
 	printf(" %d digit%s after the decimal.\n",
-	       float_digits, float_digits == 1 ? "" : "s");
+		float_digits, float_digits == 1 ? "" : "s");
 
 	return GOODOP;
 }
@@ -1823,23 +1823,23 @@ parse_tok(char *p, token *t, char **nextp)
 	} else {
 		int n;
 		if (isalpha(*p)) {
-		    n = stralnum(p, nextp);
+			n = stralnum(p, nextp);
 		} else if (ispunct(*p)) {
-		    /* only doubled punct opers, currently */
-		    if ((p[0] == '>' && p[1] == '>') ||      //   >>
-		        (p[0] == '<' && p[1] == '<') ||      //   <<
-		        (p[0] == '>' && p[1] == '=') ||      //   >=
-		        (p[0] == '<' && p[1] == '=') ||      //   <=
-		        (p[0] == '=' && p[1] == '=') ||      //   ==
-		        (p[0] == '!' && p[1] == '=') ||      //   !=
-		        (p[0] == '&' && p[1] == '&') ||      //   &&
-		        (p[0] == '|' && p[1] == '|') ||      //   ||
-		        (p[0] == '*' && p[1] == '*')) {      //   **
-			    n = 2;
-		    } else {
-			    n = 1;
-		    }
-		    *nextp = p + n;
+			/* only doubled punct opers, currently */
+			if (    (p[0] == '>' && p[1] == '>') ||      //   >>
+				(p[0] == '<' && p[1] == '<') ||      //   <<
+				(p[0] == '>' && p[1] == '=') ||      //   >=
+				(p[0] == '<' && p[1] == '=') ||      //   <=
+				(p[0] == '=' && p[1] == '=') ||      //   ==
+				(p[0] == '!' && p[1] == '=') ||      //   !=
+				(p[0] == '&' && p[1] == '&') ||      //   &&
+				(p[0] == '|' && p[1] == '|') ||      //   ||
+				(p[0] == '*' && p[1] == '*')) {      //   **
+				n = 2;
+			} else {
+				n = 1;
+			}
+			*nextp = p + n;
 		} else {
 			printf(" illegal character in input\n");
 			t->val.str = p;
@@ -1868,7 +1868,7 @@ parse_tok(char *p, token *t, char **nextp)
 			op++;
 		}
 		if (!op->name) {
-		      unknown:
+		unknown:
 			t->val.str = p;
 			t->type = UNKNOWN;
 			return;
@@ -1956,9 +1956,9 @@ fetch_line(void)
 
 		/* prevent readline doing tab filename completion */
 		rl_bind_key_in_map('\t', rl_insert,
-				   rl_get_keymap_by_name("emacs"));
+			rl_get_keymap_by_name("emacs"));
 		rl_bind_key_in_map('\t', rl_insert,
-				   rl_get_keymap_by_name("vi-insert"));
+			rl_get_keymap_by_name("vi-insert"));
 
 		readline_init_done = 1;
 	}
@@ -2076,7 +2076,7 @@ open_paren(void)
 		switch (t->type) {
 		case NUMERIC:
 			trace(("val is %Lf\n", t->val.val));
-        		tpush(&outstack, t);
+			tpush(&outstack, t);
 			break;
 		case OP:
 			char *tname = t->val.oper->name;
@@ -2124,7 +2124,7 @@ open_paren(void)
 
 			} else if (operands == 2) { // two operands
 				// special case:  '-' is either binary
-				// subtraction or unary "change sign". 
+				// subtraction or unary "change sign".
 				// It's unary if it comes first, or
 				// follows another operator.
 				if (t->val.oper->func == subtract &&
@@ -2149,7 +2149,7 @@ open_paren(void)
 				}
 			} else {
 				printf(" '%s' unsuitable in infix expression\n",
-				    t->val.oper->name);
+					t->val.oper->name);
 			}
 			break;
 
@@ -2163,7 +2163,7 @@ open_paren(void)
 		if (paren_count == 0)
 			break;
 
- 		ptok = *t;
+		ptok = *t;
 
 		tdump(&opstack);
 		tdump(&outstack);
@@ -2183,7 +2183,7 @@ open_paren(void)
 		}
 		tpush(&outstack, t);
 	}
-	
+
 	tdump(&opstack);
 	tdump(&outstack);
 
@@ -2246,8 +2246,7 @@ Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
 		op++;
 	}
 	printf("\n%78s\n", __FILE__ " built " __DATE__ " " __TIME__);
-	printf
-	    ("\nTip:  To see this help in a pager, try running \"ca help q | less\"\n");
+	printf ("\nTip:  Use \"ca help q | less\" to view this help\n");
 	return GOODOP;
 }
 
@@ -2286,7 +2285,7 @@ struct oper opers[] = {
 	{"frac", fraction,	0, 1 },
 	{"int", integer,	"Absolute value, fractional and integer parts of x", 1 },
 	{"(", open_paren,	"Begin \"infix\" expression, ends at matching ')' or EOL" },
-	{")", close_paren,	"HideMe" }, // this needs to be an operator, for infix to work
+	{")", close_paren,	"HideMe" }, // needed for infix to work
 	{"", 0, 0},
     {"Logical operators:", 0, 0},
 	{"&&", logical_and,     0, 2, 4 },
@@ -2430,8 +2429,8 @@ main(int argc, char *argv[])
 			(void)(t->val.oper->func) ();
 			break;
 		case EOL:
-			if (!suppress_autoprint && autoprint
-			    && lasttoktype == OP) {
+			if (!suppress_autoprint && autoprint &&
+						lasttoktype == OP) {
 				print_top(mode);
 			}
 			suppress_autoprint = FALSE;
