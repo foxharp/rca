@@ -117,6 +117,7 @@ struct token {
 		char *str;
 	} val;
 	int type;
+	int alloced;
 	struct token *next;  /* so we can stack tokens, for infix processing */
 };
 
@@ -230,14 +231,24 @@ token *outstack, *opstack, *infix_stack;
 void
 tpush(token **tstackp, token *token)
 {
-	struct token *t = (struct token *)calloc(1, sizeof(struct token));
+	struct token *t;
+	
+	/* if we originally malloc'ed the incoming token, just reuse
+	 * it, otherwise malloc and copy.
+	 */
+	if (token->alloced) {
+		t = token;
+	} else {
+	    t = (struct token *)calloc(1, sizeof(struct token));
+	    if (!t) {
+		    perror("calloc");
+		    exit(1);
+	    }
 
-	if (!t) {
-		perror("calloc");
-		exit(1);
+	    *t = *token;
+	    t->alloced = 1;
 	}
 
-	*t = *token;
 	trace(("pushed an infix token to %s stack\n",
 		(*tstackp == outstack) ? "output":"operator"));
 
@@ -272,8 +283,12 @@ tpop(token **tstackp)
 void
 tempty(token **tstackp)
 {
-	while (*tstackp) {
-		*tstackp = (*tstackp)->next;
+	token *t, *nt;
+	t = *tstackp;
+	while (t) {
+		nt = t->next;
+		free(t);
+		t = nt;
 	}
 }
 
@@ -2035,7 +2050,7 @@ close_paren(void)  /* never called, but helps with infix processing */
 opreturn
 open_paren(void)
 {
-	struct token tok, ptok;
+	static struct token tok, ptok;
 	token *t = &tok;
 	token *tp;
 	int paren_count = 1;
@@ -2092,7 +2107,7 @@ open_paren(void)
 				}
 
 				// Pop the opening parenthesis
-				tpop(&opstack);
+				free(tpop(&opstack));
 				tp = tpeek(&opstack);
 				if (tp && tp->val.oper->operands == 1) {
 					tpush(&outstack, tpop(&opstack));
@@ -2397,11 +2412,14 @@ main(int argc, char *argv[])
 
 		// use tokens created by infix processing first */
 		t = tpop(&infix_stack);
-		if (!t) {
+		if (t) {
+			tok = *t;
+			free(t);
+		} else {
 			if (!gettoken(&tok))
 				break;
-			t = &tok;
 		}
+		t = &tok;
 
 		switch (t->type) {
 		case NUMERIC:
