@@ -2041,12 +2041,20 @@ create_support_tokens()
 }
 
 opreturn
-close_paren(void)  /* never called, but helps with infix processing */
+close_paren(void)
 {
     printf(" mismatched or extra open parenthesis\n");
     return BADOP;
 }
 
+/* This implementation of Dijkstra's "shunting yard" algorithm, for
+ * translating an infix expression to RPN, is based roughly on the
+ * pseudocode at Wikipedia, at brillian.org, and on several of the coded
+ * examples at the rosettacode.org.
+ *  https://en.wikipedia.org/wiki/Shunting_yard_algorithm
+ *  https://brilliant.org/wiki/shunting-yard-algorithm/
+ *  https://rosettacode.org/wiki/Parsing/Shunting-yard_algorithm
+ */
 opreturn
 open_paren(void)
 {
