@@ -440,6 +440,12 @@ rshift(void)
 
 			i = (long long)a;
 			j = (long long)b;
+			if (j < 0) {
+				printf(" shift by negative not allowed\n");
+				push(a);
+				push(b);
+				return BADOP;
+			}
 			push((i >> j) & ~int_sign_bit);
 			lastx = b;
 			return GOODOP;
@@ -460,6 +466,12 @@ lshift(void)
 
 			i = (long long)a;
 			j = (long long)b;
+			if (j < 0) {
+				printf(" shift by negative not allowed\n");
+				push(a);
+				push(b);
+				return BADOP;
+			}
 			push(i << j);
 			lastx = b;
 			return GOODOP;
