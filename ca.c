@@ -470,7 +470,7 @@ lshift(void)
 }
 
 opreturn
-and(void)
+bitwise_and(void)
 {
 	ldouble a, b;
 
@@ -490,7 +490,7 @@ and(void)
 }
 
 opreturn
-or(void)
+bitwise_or(void)
 {
 	ldouble a, b;
 
@@ -510,7 +510,7 @@ or(void)
 }
 
 opreturn
-xor(void)
+bitwise_xor(void)
 {
 	ldouble a, b;
 
@@ -570,7 +570,7 @@ clearbit(void)
 }
 
 opreturn
-not(void)
+bitwise_not(void)
 {
 	ldouble a;
 
@@ -776,6 +776,145 @@ integer(void)
 			push(floorl(a));
 		else
 			push(ceill(a));
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
+logical_and(void)
+{
+	ldouble a, b;
+
+	if (pop(&b)) {
+		if (pop(&a)) {
+			push(a && b);
+			lastx = b;
+			return GOODOP;
+		}
+	}
+	return BADOP;
+}
+
+opreturn
+logical_or(void)
+{
+	ldouble a, b;
+
+	if (pop(&b)) {
+		if (pop(&a)) {
+			push(a || b);
+			lastx = b;
+			return GOODOP;
+		}
+	}
+	return BADOP;
+}
+
+opreturn
+is_eq(void)
+{
+	ldouble a, b;
+
+	if (pop(&b)) {
+		if (pop(&a)) {
+			push(a == b);
+			lastx = b;
+			return GOODOP;
+		}
+		push(b);
+	}
+	return BADOP;
+}
+
+opreturn
+is_neq(void)
+{
+	ldouble a, b;
+
+	if (pop(&b)) {
+		if (pop(&a)) {
+			push(a != b);
+			lastx = b;
+			return GOODOP;
+		}
+		push(b);
+	}
+	return BADOP;
+}
+
+opreturn
+is_lt(void)
+{
+	ldouble a, b;
+
+	if (pop(&b)) {
+		if (pop(&a)) {
+			push(a < b);
+			lastx = b;
+			return GOODOP;
+		}
+		push(b);
+	}
+	return BADOP;
+}
+
+opreturn
+is_le(void)
+{
+	ldouble a, b;
+
+	if (pop(&b)) {
+		if (pop(&a)) {
+			push(a <= b);
+			lastx = b;
+			return GOODOP;
+		}
+		push(b);
+	}
+	return BADOP;
+}
+
+opreturn
+is_gt(void)
+{
+	ldouble a, b;
+
+	if (pop(&b)) {
+		if (pop(&a)) {
+			push(a > b);
+			lastx = b;
+			return GOODOP;
+		}
+		push(b);
+	}
+	return BADOP;
+}
+
+opreturn
+is_ge(void)
+{
+	ldouble a, b;
+
+	if (pop(&b)) {
+		if (pop(&a)) {
+			push(a >= b);
+			lastx = b;
+			return GOODOP;
+		}
+		push(b);
+	}
+	return BADOP;
+}
+
+opreturn
+logical_not(void)
+{
+	ldouble a;
+
+	if (pop(&a)) {
+		push(!(long long)a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1660,9 +1799,15 @@ parse_tok(char *p, token *t, char **nextp)
 		    n = stralnum(p, nextp);
 		} else if (ispunct(*p)) {
 		    /* only doubled punct opers, currently */
-		    /* someday?  <= >= == != && || */
-		    if ((p[0] == '>' && p[1] == '>') ||      //   <<
-		        (p[0] == '<' && p[1] == '<')) {      //   >>
+		    if ((p[0] == '>' && p[1] == '>') ||      //   >>
+		        (p[0] == '<' && p[1] == '<') ||      //   <<
+		        (p[0] == '>' && p[1] == '=') ||      //   >=
+		        (p[0] == '<' && p[1] == '=') ||      //   <=
+		        (p[0] == '=' && p[1] == '=') ||      //   ==
+		        (p[0] == '!' && p[1] == '=') ||      //   !=
+		        (p[0] == '&' && p[1] == '&') ||      //   &&
+		        (p[0] == '|' && p[1] == '|') ||      //   ||
+		        (p[0] == '*' && p[1] == '*')) {      //   **
 			    n = 2;
 		    } else {
 			    n = 1;
@@ -2038,9 +2183,8 @@ Operators replace either one or two top stack values with their result.\n\
 Numbers and operators may appear on one or more lines.\n\
 Most whitespace is optional between numbers and commands.\n\
 Numbers can include commas and $ signs (e.g., \"$3,577,455\").\n\
-Numbers are represented as long double and signed long long.\n\
-Operations that can be done in long double, are.  Others use long long.\n\
-Max width for integers is the shorter of long long or the long double mantissa.\n\
+Numbers are represented internally as long double and signed long long.\n\
+Max integer width is the shorter of long long or the long double mantissa.\n\
 Always use 0xNNN/0NNN to enter hex/octal, even in hex or octal mode.\n\
 A one line infix expression may be started with '('.  The evaluated result\n\
  goes on the stack.  For example, '(sqrt(sin(30)^2 + cos(3)^2) + 2)' will\n\
@@ -2051,6 +2195,8 @@ A one line infix expression may be started with '('.  The evaluated result\n\
 Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
 \n\
 ");
+	char cbuf[1000];
+	cbuf[0] = '\0';
 	while (op->name) {
 		if (!*op->name) {
 			putchar('\n');
@@ -2060,14 +2206,19 @@ Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
 			} else if (!op->func) {
 				printf("%s\n", op->name);
 			} else if (!op->help) {
-				printf(" %s,", op->name);
+				strcat(cbuf, " ");
+				strcat(cbuf, op->name);
+				strcat(cbuf, ",");
 			} else {
-				printf(" %s\t-- %s\n", op->name, op->help);
+				strcat(cbuf, " ");
+				strcat(cbuf, op->name);
+				printf("%20s     %s\n", cbuf, op->help);
+				cbuf[0] = '\0';
 			}
 		}
 		op++;
 	}
-	printf("%78s\n", __FILE__ " built " __DATE__ " " __TIME__);
+	printf("\n%78s\n", __FILE__ " built " __DATE__ " " __TIME__);
 	printf
 	    ("\nTip:  To see this help in a pager, try running \"ca help q | less\"\n");
 	return GOODOP;
@@ -2075,40 +2226,53 @@ Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
 
 // *INDENT-OFF*.
 struct oper opers[] = {
-    {"Operators with two operands", 0, 0},
-	{"+", add,		0, 2, 12 },
-	{"-", subtract,		"Add and subtract x and y", 2, 12 },
-	{"*", multiply,		0, 2, 13 },
-	{"x", multiply,		"Two ways to multiply x and y", 2, 13 },
-	{"/", divide,		0, 2, 13 },
-	{"%", modulo,		"Divide and modulo of y by x (arithmetic shift)", 2, 13 },
-	{"^", y_to_the_x,	"Raise y to the x'th power", 2, 14 },
-	// {"**", y_to_the_x,	"Raise y to the x'th power", 2, 14 },
-	{">>", rshift,		0, 2, 10 },
-	{"<<", lshift,		"Right/left logical shift of y by x bits", 2, 10 },
-	{"&", and,		0, 2, 7 },
-	{"|", or,		0, 2, 5 },
-	{"xor", xor,		"Bitwise AND, OR, and XOR of y and x", 2, 6 },
-	{"setb", setbit,	0, 2, 2 },
-	{"clearb", clearbit,	"Set and clear shift bit x in y", 2, 2 },
+    {"Operators with two operands:", 0, 0},
+	{"+", add,		0, 2, 22 },
+	{"-", subtract,		"Add and subtract x and y", 2, 22 },
+	{"*", multiply,		0, 2, 23 },
+	{"x", multiply,		"Two ways to multiply x and y", 2, 23 },
+	{"/", divide,		0, 2, 23 },
+	{"%", modulo,		"Divide and modulo of y by x (arithmetic shift)", 2, 23 },
+	{"**", y_to_the_x,	"Raise y to the x'th power", 2, 24 },
+	{">>", rshift,		0, 2, 11 },
+	{"<<", lshift,		"Right/left logical shift of y by x bits", 2, 11 },
+	{"&", bitwise_and,	0, 2, 18 },
+	{"|", bitwise_or,	0, 2, 16 },
+	{"^", bitwise_xor,	0, 2, 17 },
+	{"xor", bitwise_xor,	"Bitwise AND, OR, and XOR of y and x", 2, 17 },
+	{"setb", setbit,	0, 2, 16 },
+	{"clearb", clearbit,	"Set and clear bit x in y", 2, 18 },
 	{"", 0, 0},
-    {"Operators with one operand", 0, 0},
-	{"~", not,		"Bitwise NOT of x (1's complement)", 1, 3 },
+    {"Operators with one operand:", 0, 0},
+	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1 },
 	{"chs", chsign,		0, 1 },
 	{"negate", chsign,	"Change sign of x (2's complement)", 1 },
 	{"recip", recip,        0, 1 },
 	{"sqrt", squarert,      "Reciprocal and square root of x", 1 },
 	{"sin", sine,           0, 1 },
 	{"cos", cosine,         0, 1 },
-	{"tan", tangent,        0, 1 },
+	{"tan", tangent,        "", 1 },
 	{"asin", asine,         0, 1 },
 	{"acos", acosine,       0, 1 },
 	{"atan", atangent,      "Trig functions (in degrees)", 1 },
 	{"abs", absolute,	0, 1 },
 	{"frac", fraction,	0, 1 },
 	{"int", integer,	"Absolute value, fractional and integer parts of x", 1 },
+	{"(", open_paren,	"Begin \"infix\" expression, ends at matching ')' or EOL" },
+	{")", close_paren,	"HideMe" }, // this needs to be an operator, for infix to work
 	{"", 0, 0},
-    {"Stack manipulation", 0, 0},
+    {"Logical operators:", 0, 0},
+	{"&&", logical_and,     0, 2, 4 },
+	{"||", logical_or,      "Logical AND and OR", 2, 3 },
+	{"==", is_eq,           0, 2, 8 },
+	{"!=", is_neq,          0, 2, 8 },
+	{"<", is_lt,            0, 2, 9 },
+	{"<=", is_le,           0, 2, 9 },
+	{">", is_gt,            0, 2, 9 },
+	{">=", is_ge,           "Arithmetic comparisons", 2, 9 },
+	{"!", logical_not,	"Logical NOT of x", 1 },
+	{"", 0, 0},
+    {"Stack manipulation:", 0, 0},
 	{"clear", clear,	"Clear stack" },
 	{"pop", rolldown,	"Pop (and discard) x" },
 	{"push", enter,		0 },
@@ -2120,21 +2284,18 @@ struct oper opers[] = {
 	{"swap", exchange,	"Exchange x and y" },
 	{"mark", mark,		"Mark stack for later summing" },
 	{"sum", sum,		"Sum stack to \"mark\", or entire stack if no mark" },
-    {"Constants and storage", 0, 0},
+	{"", 0, 0},
+    {"Constants and storage:", 0, 0},
 	{"store", store,	0 },
-	{"sto", store,		0 },
 	{"sto1", store,		0 },
 	{"sto2", store2,	0 },
 	{"sto3", store3,	"Save x off-stack (3 locations)" },
 	{"recall", recall,	0, -1 },
-	{"rcl", recall,		0, -1 },
 	{"rcl1", recall,	0, -1 },
 	{"rcl2", recall2,	0, -1 },
 	{"rcl3", recall3,	"Fetch x (3 locations)", -1 },
 	{"pi", push_pi,		"Push constant pi", -1 },
 	{"e", push_e,		"Push constant e", -1 },
-	{"(", open_paren,	"Take rest of line as an \"infix\" (traditional) arithmetic expression" },
-	{")", close_paren,	"HideMe" }, // this needs to be an operator, for infix to work
 	{"", 0, 0},
     {"Conversions:", 0, 0},
 	{"i2mm", units_in_mm,   0, 1 },
@@ -2172,22 +2333,22 @@ struct oper opers[] = {
 	{"O", modeoct,		0 },
 	{"B", modebin,		"Switch to octal or binary modes" },
 	{"precision",		precision, 0 },
-	{"k", precision,	"Specify float output by total displayed precision (uses %g)" },
+	{"k", precision,	"Float format: number of significant digits (%g)" },
 	{"decimals",		decimal_length, 0 },
-	{"K", decimal_length,	"Specify float output by decimal length (uses %f)" },
+	{"K", decimal_length,	"Float format: digits after decimal (%f)" },
 	{"width", width,	0 },
 	{"w", width,		"Set effective \"word size\" for integer modes" },
 	{"commas", punctuation,	0 },
-	{"c", punctuation,	"Toggle comma separators in numbers on/off" },
+	{"c", punctuation,	"Toggle numeric comma separators on/off" },
 	{"mode", modeinfo,	"Display current mode parameters" },
 	{"", 0, 0},
     {"Housekeeping:", 0, 0},
 	{"?", help,		0 },
-	{"help", help,		"this list" },
+	{"help", help,		"Show this list" },
 	{"quit", quit,		0 },
 	{"q", quit,		0 },
-	{"exit", quit,		"leave" },
-	{"#", help,		"Comment. The '#' and the rest of the line will be ignored." },
+	{"exit", quit,		"Leave the calculator" },
+	{"#", help,		"Comment. The rest of the line will be ignored." },
 	{NULL, NULL, 0},
 };
 // *INDENT-ON*.
