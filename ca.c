@@ -162,6 +162,9 @@ long long int_mask;
 /* the most recent top-of-stack */
 ldouble lastx;
 
+/* copy of top-of-stack, for infix use */
+ldouble infix_stack_x;
+
 /* for store/recall */
 ldouble offstack;
 ldouble offstack2;
@@ -1543,6 +1546,13 @@ mark(void)
 }
 
 opreturn
+stack_x(void)
+{
+	push(infix_stack_x);
+	return GOODOP;
+}
+
+opreturn
 sum(void)
 {
 	opreturn r;
@@ -2072,6 +2082,10 @@ open_paren(void)
 
 	trace(("collecting infix line\n"));
 
+	if (stack)
+		pop(&infix_stack_x);
+	push(infix_stack_x);
+
 	while (1) {
 		while (isspace(*input_ptr))
 			input_ptr++;
@@ -2313,7 +2327,7 @@ struct oper opers[] = {
 	{"dup", enter,		0 },
 	{"enter", enter,	"Push (duplicate) x" },
 	{"lastx", repush,	0 },
-	{"lx", repush,		"Fetch previous x" },
+	{"lx", repush,		"Fetch previous x", 1 },
 	{"exch", exchange,	0 },
 	{"swap", exchange,	"Exchange x and y" },
 	{"mark", mark,		"Mark stack for later summing" },
@@ -2321,13 +2335,14 @@ struct oper opers[] = {
 	{"", 0, 0},
     {"Constants and storage:", 0, 0},
 	{"store", store,	0 },
-	{"sto1", store,		0 },
+	{"sto", store,		0 },
 	{"sto2", store2,	0 },
 	{"sto3", store3,	"Save x off-stack (3 locations)" },
 	{"recall", recall,	0, -1 },
-	{"rcl1", recall,	0, -1 },
+	{"rcl", recall,		0, -1 },
 	{"rcl2", recall2,	0, -1 },
 	{"rcl3", recall3,	"Fetch x (3 locations)", -1 },
+	{"X", stack_x,		"Copy top-of-stack for use in infix expressions", -1 },
 	{"pi", push_pi,		"Push constant pi", -1 },
 	{"e", push_e,		"Push constant e", -1 },
 	{"", 0, 0},
