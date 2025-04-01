@@ -105,7 +105,7 @@ struct oper {
 	opreturn(*func) (void);
 	char *help;
 	int operands;    /* only used by infix code */
-	int precedence;  /* only used by infix code */
+	int prec;  /* only used by infix code */
 };
 
 /* operator table */
@@ -628,6 +628,12 @@ chsign(void)
 }
 
 opreturn
+nop(void)
+{
+	    return GOODOP;
+}
+
+opreturn
 absolute(void)
 {
 	ldouble a;
@@ -946,7 +952,7 @@ logical_not(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		push(!(long long)a);
+		push((a == 0) ? 1 : 0);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2050,7 +2056,7 @@ gettoken(struct token *t)
 	return get_line_token(t);
 }
 
-token open_paren_token, chsign_token;
+token open_paren_token, chsign_token, nop_token;
 
 void
 create_support_tokens()
@@ -2061,6 +2067,7 @@ create_support_tokens()
     char *outp;
     parse_tok("(", &open_paren_token, &outp);
     parse_tok("chs", &chsign_token, &outp);
+    parse_tok("nop", &nop_token, &outp);
 }
 
 opreturn
@@ -2082,8 +2089,7 @@ opreturn
 open_paren(void)
 {
 	static struct token tok, ptok;
-	token *t = &tok;
-	token *tp;
+	token *t, *tp;
 	int paren_count = 1;
 
 	ptok.type = UNKNOWN;
@@ -2100,13 +2106,17 @@ open_paren(void)
 	push(infix_stack_x);
 
 	while (1) {
+		tdump(&opstack);
+		tdump(&outstack);
+
 		while (isspace(*input_ptr))
 			input_ptr++;
 
 		if (!*input_ptr)
 			break;
 
-		parse_tok(input_ptr, t, &input_ptr);
+		parse_tok(input_ptr, &tok, &input_ptr);
+		t = &tok;
 
 		switch (t->type) {
 		case NUMERIC:
@@ -2116,7 +2126,7 @@ open_paren(void)
 		case OP:
 			char *tname = t->val.oper->name;
 			int operands = t->val.oper->operands;
-			int precedence = t->val.oper->precedence;
+			int precedence = t->val.oper->prec;
 
 			trace(("oper is %s\n", tname ));
 
@@ -2154,34 +2164,48 @@ open_paren(void)
 				tpush(&outstack, t);
 
 			} else if (operands == 1) { // one operand, like "~"
-
+			unary:
+				while (tp != NULL &&
+					(tp->val.oper->func != open_paren) &&
+					(tp->val.oper->prec >= precedence))
+				{
+					tpush(&outstack, tpop(&opstack));
+					tp = tpeek(&opstack);
+				}
 				tpush(&opstack, t);
 
 			} else if (operands == 2) { // two operands
-				// special case:  '-' is either binary
-				// subtraction or unary "change sign".
-				// It's unary if it comes first, or
-				// follows another operator.
-				if (t->val.oper->func == subtract &&
-					(ptok.type == UNKNOWN ||
-						ptok.type == OP)) {
-					tpush(&opstack, &chsign_token);
-				} else {
-					// Handle binary operators
-					while (tp != NULL) {
-						if (tp->val.oper->func ==
-								open_paren)
-							break;
-						if (tp->val.oper->precedence <=
-								precedence)
-							break;
-
-						tpush(&outstack,
-								tpop(&opstack));
-						tp = tpeek(&opstack);
+				// Special cases:  '-' and '+' are
+				// either binary or unary.  They're
+				// unary if then come first, or follow
+				// another operator.  a closing paren
+				// is not an operator in this case.
+				if (ptok.type == UNKNOWN ||
+				    (ptok.type == OP &&
+					ptok.val.oper->func != close_paren)) {
+					if (t->val.oper->func == subtract) {
+						t = &chsign_token;
+						precedence = 30;
+						goto unary;
 					}
-					tpush(&opstack, t);
+					if (t->val.oper->func == add ) {
+						t = &nop_token;
+						precedence = 30;
+						goto unary;
+					}
 				}
+
+				// Handle binary operators
+				while (tp != NULL) {
+					if (tp->val.oper->func == open_paren)
+						break;
+					if (tp->val.oper->prec <= precedence)
+						break;
+
+					tpush(&outstack, tpop(&opstack));
+					tp = tpeek(&opstack);
+				}
+				tpush(&opstack, t);
 			} else {
 				printf(" '%s' unsuitable in infix expression\n",
 					t->val.oper->name);
@@ -2200,8 +2224,6 @@ open_paren(void)
 
 		ptok = *t;
 
-		tdump(&opstack);
-		tdump(&outstack);
 	}
 	tdump(&opstack);
 	tdump(&outstack);
@@ -2306,21 +2328,22 @@ struct oper opers[] = {
 	{"clearb", clearbit,	"Set and clear bit x in y", 2, 18 },
 	{"", 0, 0},
     {"Operators with one operand:", 0, 0},
-	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1 },
-	{"chs", chsign,		0, 1 },
-	{"negate", chsign,	"Change sign of x (2's complement)", 1 },
-	{"recip", recip,        0, 1 },
-	{"sqrt", squarert,      "Reciprocal and square root of x", 1 },
-	{"sin", sine,           0, 1 },
-	{"cos", cosine,         0, 1 },
-	{"tan", tangent,        "", 1 },
-	{"asin", asine,         0, 1 },
-	{"acos", acosine,       0, 1 },
-	{"atan", atangent,      "Trig functions (in degrees)", 1 },
-	{"abs", absolute,	0, 1 },
-	{"frac", fraction,	0, 1 },
-	{"int", integer,	"Absolute value, fractional and integer parts of x", 1 },
-	{"(", open_paren,	"Begin \"infix\" expression, ends at matching ')' or EOL" },
+	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 30 },
+	{"chs", chsign,		0, 1, 30 },
+	{"negate", chsign,	"Change sign of x (2's complement)", 1, 30 },
+	{"nop", nop,		"HideMe", 1, 30 }, // needed for infix
+	{"recip", recip,        0, 1, 30 },
+	{"sqrt", squarert,      "Reciprocal and square root of x", 1, 30 },
+	{"sin", sine,           0, 1, 30 },
+	{"cos", cosine,         0, 1, 30 },
+	{"tan", tangent,        "", 1, 30 },
+	{"asin", asine,         0, 1, 30 },
+	{"acos", acosine,       0, 1, 30 },
+	{"atan", atangent,      "Trig functions (in degrees)", 1, 30 },
+	{"abs", absolute,	0, 1, 30 },
+	{"frac", fraction,	0, 1, 30 },
+	{"int", integer,	"Absolute value, fractional and integer parts of x", 1, 30 },
+	{"(", open_paren,	"Begin \"infix\" expression, ends at matching ')' or EOL", 0, 40 },
 	{")", close_paren,	"HideMe" }, // needed for infix to work
 	{"", 0, 0},
     {"Logical operators:", 0, 0},
@@ -2332,7 +2355,7 @@ struct oper opers[] = {
 	{"<=", is_le,           0, 2, 9 },
 	{">", is_gt,            0, 2, 9 },
 	{">=", is_ge,           "Arithmetic comparisons", 2, 9 },
-	{"!", logical_not,	"Logical NOT of x", 1 },
+	{"!", logical_not,	"Logical NOT of x", 1, 30 },
 	{"", 0, 0},
     {"Stack manipulation:", 0, 0},
 	{"clear", clear,	"Clear stack" },
@@ -2341,7 +2364,7 @@ struct oper opers[] = {
 	{"dup", enter,		0 },
 	{"enter", enter,	"Push (duplicate) x" },
 	{"lastx", repush,	0 },
-	{"lx", repush,		"Fetch previous x", 1 },
+	{"lx", repush,		"Fetch previous x", -1 },
 	{"exch", exchange,	0 },
 	{"swap", exchange,	"Exchange x and y" },
 	{"mark", mark,		"Mark stack for later summing" },
@@ -2361,18 +2384,18 @@ struct oper opers[] = {
 	{"e", push_e,		"Push constant e", -1 },
 	{"", 0, 0},
     {"Conversions:", 0, 0},
-	{"i2mm", units_in_mm,   0, 1 },
-	{"mm2i", units_mm_in,   "inches / millimeters", 1 },
-	{"ft2m", units_ft_m,	0, 1},
-	{"m2ft", units_m_ft,	"feet / meters", 1 },
-	{"mi2km", units_mi_km,  0, 1 },
-	{"km2mi", units_km_mi,  "miles / kilometers", 1 },
-	{"f2c", units_F_C,      0, 1 },
-	{"c2f", units_C_F,      "degrees F/C", 1 },
-	{"oz2g", units_oz_g,    0, 1 },
-	{"g2oz", units_g_oz,    "ounces / grams", 1 },
-	{"q2l", units_qt_l,     0, 1 },
-	{"l2q", units_l_qt,     "quarts / liters", 1 },
+	{"i2mm", units_in_mm,   0, 1, 30 },
+	{"mm2i", units_mm_in,   "inches / millimeters", 1, 30 },
+	{"ft2m", units_ft_m,	0, 1, 30},
+	{"m2ft", units_m_ft,	"feet / meters", 1, 30 },
+	{"mi2km", units_mi_km,  0, 1, 30 },
+	{"km2mi", units_km_mi,  "miles / kilometers", 1, 30 },
+	{"f2c", units_F_C,      0, 1, 30 },
+	{"c2f", units_C_F,      "degrees F/C", 1, 30 },
+	{"oz2g", units_oz_g,    0, 1, 30 },
+	{"g2oz", units_g_oz,    "ounces / grams", 1, 30 },
+	{"q2l", units_qt_l,     0, 1, 30 },
+	{"l2q", units_l_qt,     "quarts / liters", 1, 30 },
 	{"", 0, 0},
     {"Display:", 0, 0},
 	{"P", printall,		"Print whole stack according to mode" },
