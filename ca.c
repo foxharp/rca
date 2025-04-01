@@ -233,6 +233,22 @@ pop(ldouble *f)
 
 token *outstack, *opstack, *infix_stack;
 
+char *
+stackname(token **tstackp)
+{
+	char *n;
+	if (tstackp == &opstack)
+		n = "opstack";
+	else if (tstackp == &outstack)
+		n = "outstack";
+	else if (tstackp == &infix_stack)
+		n = "infix_stack";
+	else
+		n = "unknown stack";
+	return n;
+}
+
+
 void
 tpush(token **tstackp, token *token)
 {
@@ -254,7 +270,7 @@ tpush(token **tstackp, token *token)
 		t->alloced = 1;
 	}
 
-	trace(("pushed an infix token to %s stack\n",
+	trace(("pushed token %p to %s stack\n", t,
 		(*tstackp == outstack) ? "output":"operator"));
 
 	t->next = *tstackp;
@@ -279,8 +295,7 @@ tpop(token **tstackp)
 	}
 
 	*tstackp = (*tstackp)->next;
-	trace(("popped an infix token from %s stack\n",
-		(*tstackp == outstack) ? "output":"operator"));
+	trace(("popped token %p from %s stack\n", rt, stackname(tstackp)));
 
 	return rt;
 }
@@ -304,17 +319,7 @@ tdump(token **tstackp)
 
 	token *t = *tstackp;
 
-	char *n;
-	if (tstackp == &opstack)
-		n = "opstack";
-	else if (tstackp == &outstack)
-		n = "outstack";
-	else if (tstackp == &infix_stack)
-		n = "infix_stack";
-	else
-		n = "unknown stack";
-
-	printf("%s stack: ", n);
+	printf("%s stack: ", stackname(tstackp));
 	while (t) {
 		if (t->type == NUMERIC)
 			printf("%Lf  ", t->val.val);
@@ -2140,7 +2145,7 @@ open_paren(void)
 				// Process until matching opening parenthesis
 				while (1) {
 					if (tp == NULL) {
-						printf(" mismatched parentheses\n");
+						printf(" not enough parentheses?\n");
 						return BADOP;
 					}
 
@@ -2231,15 +2236,17 @@ open_paren(void)
 	trace(("final move\n"));
 
 	while ((t = tpop(&opstack)) != NULL) {
-		if (t->val.oper->func == open_paren) {
-			if (tpeek(&opstack) != NULL) {
-				printf(" mismatched parentheses\n");
+		if (tpeek(&opstack) == NULL) {
+			if (t->val.oper->func != open_paren) {
+				printf(" Mismatched parentheses\n");
 				return BADOP;
 			}
 			break;
 		}
 		tpush(&outstack, t);
 	}
+
+	fflush(stdout);
 
 	tdump(&opstack);
 	tdump(&outstack);
