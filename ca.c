@@ -187,8 +187,8 @@ push(ldouble n)
 	struct num *p = (struct num *)calloc(1, sizeof(struct num));
 
 	if (!p) {
-		perror("calloc");
-		exit(1);
+		perror("ca: calloc failure");
+		exit(3);
 	}
 
 	if (mode == 'f') {
@@ -244,8 +244,8 @@ tpush(token **tstackp, token *token)
 	} else {
 		t = (struct token *)calloc(1, sizeof(struct token));
 		if (!t) {
-			perror("calloc");
-			exit(1);
+			perror("ca: calloc failure");
+			exit(3);
 		}
 
 		*t = *token;
@@ -1750,12 +1750,22 @@ autop(void)
 	return GOODOP;
 }
 
+void
+exitret(void)
+{
+	ldouble a = 0;
+	if (stack)
+		pop(&a);
+	exit(a == 0);  // flip status for unix convention
+}
+
 opreturn
 quit(void)
 {
 	if (!suppress_autoprint && autoprint)
 		print_top(mode);
-	exit(0);
+	exitret();
+	return GOODOP; // not reached
 }
 
 size_t stralnum(char *s, char **endptr)
@@ -1940,9 +1950,10 @@ fetch_line(void)
 		for (arg = 1; arg < g_argc; arg++)
 			blen += strlen(g_argv[arg]) + 2;
 
-		if ((input_buf = malloc(blen)) == NULL) {
-			perror("malloc");
-			exit(1);
+		input_buf = malloc(blen);
+		if (!input_buf) {
+			perror("ca: malloc failure");
+			exit(3);
 		}
 
 		*input_buf = '\0';
@@ -1980,16 +1991,16 @@ fetch_line(void)
 	if (input_buf && *input_buf)
 		add_history(input_buf);
 
-	if ((input_buf = readline("")) == NULL)
-		exit(0);
+	if ((input_buf = readline("")) == NULL)  // got EOF
+		exitret();
 
 	// readline() doesn't echo bare newlines to tty, so do it here,
 	if (*input_buf == '\0')
 		putchar('\n');
 
 #else
-	if (getline(&input_buf, &blen, stdin) < 0)
-		exit(0);
+	if (getline(&input_buf, &blen, stdin) < 0)  // EOF
+		exitret();
 
 	/* if stdin is a terminal, the command is already on-screen.
 	 * but we also want it mixed with the output if we're
@@ -2242,6 +2253,7 @@ A one line infix expression may be started with '('.  The evaluated result\n\
  (e.g., 'pi', 'recall') can be referenced in infix expressions.\n\
  The infix expression must all be on one line.\n\
 Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
+Exit code: the logical state of top-of-stack, or 3 for program error.\n\
 \n\
 ");
 	char cbuf[1000];
@@ -2468,5 +2480,5 @@ main(int argc, char *argv[])
 		lasttoktype = t->type;
 
 	}
-	exit(1);
+	exit(3);  // not reached
 }
