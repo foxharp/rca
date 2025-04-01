@@ -16,12 +16,14 @@
  *		- pgf, Tue Feb 13, 2024
  *
  *  build with:
- *	doit:      gcc -g -Wall -Wextra -o ca -D USE_READLINE -Wno-missing-field-initializers ca.c -lm -lreadline
- *	doit-norl: gcc -g -Wall -Wextra -o ca ca.c -lm
+ *    doit:      gcc -g -Wall -Wextra -o ca -D USE_READLINE ca.c -lm -lreadline
+ *    doit-norl: gcc -g -Wall -Wextra -o ca ca.c -lm
  *
  *  documentation:
  *	ca help q | less
  */
+
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 
 #include <stdlib.h>
 #include <unistd.h>
