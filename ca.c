@@ -2045,8 +2045,11 @@ get_line_token(struct token *t)
 
 	fflush(stdin);
 
-	if (!parse_tok(input_ptr, t, &input_ptr))
+	if (!parse_tok(input_ptr, t, &input_ptr)) {
+		printf(" unrecognized input '%s'\n", input_ptr);
+		flushinput();
 		return 0;
+	}
 
 	return 1;
 }
@@ -2292,7 +2295,7 @@ Entering a number pushes it on the stack.\n\
 Operators replace either one or two top stack values with their result.\n\
 Numbers and operators may appear on one or more lines.\n\
 Most whitespace is optional between numbers and commands.\n\
-Numbers can include commas and $ signs (e.g., \"$3,577,455\").\n\
+Numbers can include commas and $ signs (e.g., '$3,577,455').\n\
 Numbers are represented internally as long double and signed long long.\n\
 Max integer width is the shorter of long long or the long double mantissa.\n\
 Always use 0xNNN/0NNN to enter hex/octal, even in hex or octal mode.\n\
@@ -2302,6 +2305,7 @@ A one line infix expression may be started with '('.  The evaluated result\n\
  functions, all unit conversions, and all commands that produce constants\n\
  (e.g., 'pi', 'recall') can be referenced in infix expressions.\n\
  The infix expression must all be on one line.\n\
+'-3 2 **', and therefore also '(-3 ** 2)' gives '9', not '-9'\n\
 Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
 Exit code: the logical state of top-of-stack, or 3 for program error.\n\
 \n\
@@ -2343,12 +2347,12 @@ struct oper opers[] = {
 	{"x", multiply,		"Two ways to multiply x and y", 2, 23 },
 	{"/", divide,		0, 2, 23 },
 	{"%", modulo,		"Divide and modulo of y by x (arithmetic shift)", 2, 23 },
+	{"^", y_to_the_x,	0, 2, 24 },
 	{"**", y_to_the_x,	"Raise y to the x'th power", 2, 24 },
 	{">>", rshift,		0, 2, 11 },
 	{"<<", lshift,		"Right/left logical shift of y by x bits", 2, 11 },
 	{"&", bitwise_and,	0, 2, 18 },
 	{"|", bitwise_or,	0, 2, 16 },
-	{"^", bitwise_xor,	0, 2, 17 },
 	{"xor", bitwise_xor,	"Bitwise AND, OR, and XOR of y and x", 2, 17 },
 	{"setb", setbit,	0, 2, 16 },
 	{"clearb", clearbit,	"Set and clear bit x in y", 2, 18 },
@@ -2502,7 +2506,7 @@ main(int argc, char *argv[])
 			free(t);
 		} else {
 			if (!gettoken(&tok))
-				break;
+				continue;
 		}
 		t = &tok;
 
