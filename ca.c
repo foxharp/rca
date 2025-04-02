@@ -123,11 +123,12 @@ struct token {
 	struct token *next;  /* so we can stack tokens, for infix processing */
 };
 
-/* values for token.type */
-#define NUMERIC 0
-#define OP 1
-#define EOL 2
+/* values for token type */
 #define UNKNOWN -1
+#define NUMERIC 0
+#define SYMBOLIC 1
+#define OP 2
+#define EOL 3
 
 /* 4 major modes: float, decimal, hex, octal, binary.
  * all but float are integer modes.
@@ -1802,20 +1803,10 @@ size_t strpunct(char *s, char **endptr)
 	return ns - s;
 }
 
-void
+int
 parse_tok(char *p, token *t, char **nextp)
 {
 	int sign = 1;
-
-#if 0
-	/* be sure + and - are bound closely to numbers */
-	if (*p == '+' && (*(p + 1) == '.' || isdigit(*(p + 1)))) {
-		p++;
-	} else if (*p == '-' && (*(p + 1) == '.' || isdigit(*(p + 1)))) {
-		sign = -1;
-		p++;
-	}
-#endif
 
 	if (*p == '0' && (*(p + 1) == 'x' || *(p + 1) == 'X')) {
 		// hex
@@ -1825,7 +1816,7 @@ parse_tok(char *p, token *t, char **nextp)
 			goto unknown;
 		t->type = NUMERIC;
 		t->val.val = ln * sign;
-		return;
+		return 1;
 
 	} else if (*p == '0' && (*(p + 1) == 'b' || *(p + 1) == 'B')) {
 		// binary
@@ -1835,7 +1826,7 @@ parse_tok(char *p, token *t, char **nextp)
 			goto unknown;
 		t->type = NUMERIC;
 		t->val.val = ln * sign;
-		return;
+		return 1;
 
 	} else if (*p == '0' && ('0' <= *(p + 1) && *(p + 1) <= '7')) {
 		// octal
@@ -1845,7 +1836,7 @@ parse_tok(char *p, token *t, char **nextp)
 			goto unknown;
 		t->type = NUMERIC;
 		t->val.val = ln * sign;
-		return;
+		return 1;
 
 	} else if (isdigit(*p) || (*p == '.')) {
 		// decimal
@@ -1855,7 +1846,7 @@ parse_tok(char *p, token *t, char **nextp)
 			goto unknown;
 		t->type = NUMERIC;
 		t->val.val = dd * sign;
-		return;
+		return 1;
 	} else {
 		int n;
 		if (isalpha(*p)) {
@@ -1880,7 +1871,7 @@ parse_tok(char *p, token *t, char **nextp)
 			printf(" illegal character in input\n");
 			t->val.str = p;
 			t->type = UNKNOWN;
-			return;
+			return 0;
 		}
 
 		// command
@@ -1897,9 +1888,12 @@ parse_tok(char *p, token *t, char **nextp)
 			matchlen = strlen(op->name);
 			if (n == matchlen && !strncmp(op->name, p, matchlen)) {
 				*nextp = p + matchlen;
-				t->type = OP;
 				t->val.oper = op;
-				return;
+				if (op->operands == -1)
+				    t->type = SYMBOLIC;  // like "pi", "recall"
+				else
+				    t->type = OP;
+				return 1;
 			}
 			op++;
 		}
@@ -1907,9 +1901,10 @@ parse_tok(char *p, token *t, char **nextp)
 		unknown:
 			t->val.str = p;
 			t->type = UNKNOWN;
-			return;
+			return 0;
 		}
 	}
+	return 1;
 }
 
 static char *input_ptr = NULL;
@@ -2048,9 +2043,11 @@ get_line_token(struct token *t)
 		return 1;
 	}
 
-	parse_tok(input_ptr, t, &input_ptr);
-
 	fflush(stdin);
+
+	if (!parse_tok(input_ptr, t, &input_ptr))
+		return 0;
+
 	return 1;
 }
 
@@ -2073,9 +2070,9 @@ create_support_tokens()
      * for dealing with infix processing.
      */
     char *outp;
-    parse_tok("(", &open_paren_token, &outp);
-    parse_tok("chs", &chsign_token, &outp);
-    parse_tok("nop", &nop_token, &outp);
+    (void)parse_tok("(", &open_paren_token, &outp);
+    (void)parse_tok("chs", &chsign_token, &outp);
+    (void)parse_tok("nop", &nop_token, &outp);
 }
 
 opreturn
@@ -2123,12 +2120,19 @@ open_paren(void)
 		if (!*input_ptr)
 			break;
 
-		parse_tok(input_ptr, &tok, &input_ptr);
 		t = &tok;
+
+		if (!parse_tok(input_ptr, &tok, &input_ptr)) {
+			goto cleanup;
+		}
 
 		switch (t->type) {
 		case NUMERIC:
 			trace(("val is %Lf\n", t->val.val));
+			tpush(&outstack, t);
+			break;
+		case SYMBOLIC:
+			trace(("symbolic is %s\n", t->val.oper->name));
 			tpush(&outstack, t);
 			break;
 		case OP:
@@ -2167,10 +2171,6 @@ open_paren(void)
 				}
 				paren_count--;
 
-			} else if (operands == -1) { // no operands, like "pi"
-
-				tpush(&outstack, t);
-
 			} else if (operands == 1) { // one operand, like "~"
 			unary:
 				while (tp != NULL &&
@@ -2200,7 +2200,12 @@ open_paren(void)
 						t = &nop_token;
 						precedence = 30;
 						goto unary;
-					}
+				    }
+#if MAYBE_CAN_WORK_SOMEHOW
+				    printf(" bad operator sequence\n");
+				    flushinput();
+				    return BADOP;
+#endif
 				}
 
 				// Handle binary operators
@@ -2217,11 +2222,14 @@ open_paren(void)
 			} else {
 				printf(" '%s' unsuitable in infix expression\n",
 					t->val.oper->name);
+				flushinput();
+				return BADOP;
 			}
 			break;
 
 		default:
 		case UNKNOWN:
+		cleanup:
 			printf(" unrecognized input '%s'\n", t->val.str);
 			flushinput();
 			return BADOP;
@@ -2389,7 +2397,7 @@ struct oper opers[] = {
 	{"rcl", recall,		0, -1 },
 	{"rcl2", recall2,	0, -1 },
 	{"rcl3", recall3,	"Fetch x (3 locations)", -1 },
-	{"X", stack_x,		"Copy top-of-stack for use in infix expressions", -1 },
+	{"X", stack_x,		"Copy of top-of-stack for use in infix expressions", -1 },
 	{"pi", push_pi,		"Push constant pi", -1 },
 	{"e", push_e,		"Push constant e", -1 },
 	{"", 0, 0},
@@ -2494,13 +2502,14 @@ main(int argc, char *argv[])
 		case NUMERIC:
 			push(t->val.val);
 			break;
+		case SYMBOLIC:
 		case OP:
 			trace(( "invoking %s\n", t->val.oper->name));
 			(void)(t->val.oper->func) ();
 			break;
 		case EOL:
 			if (!suppress_autoprint && autoprint &&
-						lasttoktype == OP) {
+				(lasttoktype == OP || lasttoktype == SYMBOLIC)) {
 				print_top(mode);
 			}
 			suppress_autoprint = FALSE;
