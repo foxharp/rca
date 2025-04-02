@@ -104,8 +104,8 @@ struct oper {
 	char *name;
 	opreturn(*func) (void);
 	char *help;
-	int operands;    /* only used by infix code */
-	int prec;  /* only used by infix code */
+	int operands;    /* used only by infix code */
+	int prec;	 /* used only by infix code */
 };
 
 /* operator table */
@@ -120,7 +120,7 @@ struct token {
 	} val;
 	int type;
 	int alloced;
-	struct token *next;  /* so we can stack tokens, for infix processing */
+	struct token *next;  /* for stacking tokens when infix processing */
 };
 
 /* values for token type */
@@ -206,6 +206,16 @@ push(ldouble n)
 	p->next = stack;
 	stack = p;
 	stack_count++;
+}
+
+boolean
+peek(ldouble *f)
+{
+	if (!stack)
+	    return FALSE;
+
+	*f = stack->val;
+	return TRUE;
 }
 
 boolean
@@ -1907,14 +1917,6 @@ parse_tok(char *p, token *t, char **nextp)
 	return 1;
 }
 
-static char *input_ptr = NULL;
-
-void
-flushinput(void)
-{
-	input_ptr = NULL;
-}
-
 void
 no_comm(char *cp)
 {
@@ -1936,6 +1938,14 @@ no_comm(char *cp)
 	ncp = cp;
 	while ((ncp = strchr(ncp, '$')) != NULL)
 		memmove(ncp, ncp + 1, strlen(ncp));
+}
+
+static char *input_ptr = NULL;
+
+void
+flushinput(void)
+{
+	input_ptr = NULL;
 }
 
 /* on return, the global input_ptr is a string containing commands
@@ -2069,8 +2079,8 @@ token open_paren_token, chsign_token, nop_token;
 void
 create_support_tokens()
 {
-    /* we need a couple of token references for later on, specifically
-     * for dealing with infix processing.
+    /* we need a couple of token identifiers for later on,
+     * specifically for dealing with infix processing.
      */
     char *outp;
     (void)parse_tok("(", &open_paren_token, &outp);
@@ -2087,11 +2097,13 @@ close_paren(void)
 
 /* This implementation of Dijkstra's "shunting yard" algorithm, for
  * translating an infix expression to RPN, is based roughly on the
- * pseudocode at Wikipedia, at brillian.org, and on several of the coded
+ * pseudocode at Wikipedia, at brilliant.org, and on several of the coded
  * examples at the rosettacode.org.
  *  https://en.wikipedia.org/wiki/Shunting_yard_algorithm
  *  https://brilliant.org/wiki/shunting-yard-algorithm/
  *  https://rosettacode.org/wiki/Parsing/Shunting-yard_algorithm
+ * Also (and perhaps mostly!) on pseudo-code offered up by Google's AI
+ * in response to a search.  See shunting.pseudocode in source dir.
  */
 opreturn
 open_paren(void)
@@ -2105,13 +2117,13 @@ open_paren(void)
 	tempty(&outstack);
 	tempty(&opstack);
 
-	tpush(&opstack, &open_paren_token);
+	// push the '(' token that the user typed, but won't be parsed.
+	tpush(&opstack, &open_paren_token);  
 
 	trace(("collecting infix line\n"));
 
-	if (stack)
-		pop(&infix_stack_x);
-	push(infix_stack_x);
+	if (!peek(&infix_stack_x))
+		infix_stack_x = 0;
 
 	while (1) {
 		tdump(&opstack);
@@ -2340,7 +2352,17 @@ Exit code: the logical state of top-of-stack, or 3 for program error.\n\
 
 // *INDENT-OFF*.
 struct oper opers[] = {
+//       +++++++++++++++++++++++++++++++++ section header if no function ptr
+//       |                           +++++ function pointer
+//       V                           V
     {"Operators with two operands:", 0, 0},
+//        +++++++++++++++++++++++++++++++++ operator names
+//        |    ++++++++++++++++++++++++++++ function pointer
+//        |    |                ++++++++++ help (if 0, shares next cmd's help)
+//        |    |                |  +++++++ number of operands (-1 for none)
+//        |    |                |  |  ++++ operator precedence
+//        |    |                |  |  | (operands and prec. only used by infix)
+//        V    V                V  V  V                             
 	{"+", add,		0, 2, 22 },
 	{"-", subtract,		"Add and subtract x and y", 2, 22 },
 	{"*", multiply,		0, 2, 23 },
@@ -2356,7 +2378,7 @@ struct oper opers[] = {
 	{"xor", bitwise_xor,	"Bitwise AND, OR, and XOR of y and x", 2, 17 },
 	{"setb", setbit,	0, 2, 16 },
 	{"clearb", clearbit,	"Set and clear bit x in y", 2, 18 },
-	{"", 0, 0},
+	{"", 0, 0},   // all null causes blank line in output
     {"Operators with one operand:", 0, 0},
 	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 30 },
 	{"chs", chsign,		0, 1, 30 },
