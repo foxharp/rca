@@ -304,7 +304,10 @@ void
 tempty(token **tstackp)
 {
 	token *t, *nt;
+
 	t = *tstackp;
+	*tstackp = NULL;
+
 	while (t) {
 		nt = t->next;
 		free(t);
