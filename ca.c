@@ -2189,7 +2189,7 @@ open_paren(void)
 				// another operator.  a closing paren
 				// is not an operator in this case.
 				if (ptok.type == UNKNOWN ||
-				    (ptok.type == OP &&
+				    		(ptok.type == OP &&
 					ptok.val.oper->func != close_paren)) {
 					if (t->val.oper->func == subtract) {
 						t = &chsign_token;
@@ -2200,12 +2200,15 @@ open_paren(void)
 						t = &nop_token;
 						precedence = 30;
 						goto unary;
-				    }
-#if MAYBE_CAN_WORK_SOMEHOW
-				    printf(" bad operator sequence\n");
-				    flushinput();
-				    return BADOP;
-#endif
+					}
+				}
+
+				/* two two operand ops in a row? */
+				if (ptok.type == OP &&
+					ptok.val.oper->func != close_paren) {
+					printf(" bad operator sequence\n");
+					flushinput();
+					return BADOP;
 				}
 
 				// Handle binary operators

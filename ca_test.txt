@@ -387,7 +387,7 @@ sum
  would divide by zero
  0
 (4 + * 5
- 20 #  hmmm
+ bad operator sequence
 (3 setb 2)
  7
 (0xff clearb 3) h
@@ -397,3 +397,4 @@ sum
 ((2+3)*4**2)
  80
 q
+ 80
