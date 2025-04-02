@@ -2091,7 +2091,9 @@ create_support_tokens()
 opreturn
 close_paren(void)
 {
-    printf(" mismatched or extra open parenthesis\n");
+    // this has to be a warning -- the command in error is already
+    // finished, so we can't cancel it.
+    printf(" warning: mismatched/extra parentheses\n");
     return BADOP;
 }
 
@@ -2143,11 +2145,16 @@ open_paren(void)
 
 		switch (t->type) {
 		case NUMERIC:
-			trace(("val is %Lf\n", t->val.val));
-			tpush(&outstack, t);
-			break;
 		case SYMBOLIC:
-			trace(("symbolic is %s\n", t->val.oper->name));
+			if (t->type == NUMERIC)
+			    trace(("val is %Lf\n", t->val.val));
+			else
+			    trace(("symbolic is %s\n", t->val.oper->name));
+			if (ptok.type == NUMERIC || ptok.type == SYMBOLIC) {
+				printf(" bad expression sequence\n");
+				flushinput();
+				return BADOP;
+			}
 			tpush(&outstack, t);
 			break;
 		case OP:
@@ -2167,7 +2174,7 @@ open_paren(void)
 				// Process until matching opening parenthesis
 				while (1) {
 					if (tp == NULL) {
-						printf(" not enough parentheses?\n");
+						printf(" missing parentheses?\n");
 						return BADOP;
 					}
 
@@ -2267,11 +2274,18 @@ open_paren(void)
 	tdump(&opstack);
 	tdump(&outstack);
 
+	if (paren_count > 1) {
+		printf(" missing parentheses\n");
+		flushinput();
+		return BADOP;
+	}
+
 	trace(("final move\n"));
 
 	while ((t = tpop(&opstack)) != NULL) {
 		if (tpeek(&opstack) == NULL) {
 			if (t->val.oper->func != open_paren) {
+				// "can't happen"
 				printf(" Mismatched parentheses\n");
 				return BADOP;
 			}
