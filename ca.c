@@ -2215,7 +2215,12 @@ open_paren(void)
 				while (tp != NULL) {
 					if (tp->val.oper->func == open_paren)
 						break;
-					if (tp->val.oper->prec <= precedence)
+					/* left-associative by default */
+					if (tp->val.oper->prec < precedence)
+						break;
+					/* a ** b is right-associative */
+					if (tp->val.oper->prec <= precedence &&
+					    tp->val.oper->func == y_to_the_x)
 						break;
 
 					tpush(&outstack, tpop(&opstack));
