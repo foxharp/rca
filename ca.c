@@ -1,4 +1,8 @@
 /*
+ *  build with:
+ *    doit:      gcc -g -Wall -Wextra -o ca -D USE_READLINE ca.c -lm -lreadline
+ *    doit-norl: gcc -g -Wall -Wextra -o ca ca.c -lm
+ *
  *	This program is a mediocre but practical stack-based floating
  *	point calculator.  It resembles the UNIX 'dc' command in usage,
  *	but is not as full-featured (no variables or arrays) and is not
@@ -27,11 +31,6 @@
  *	something like 'if ca "($foo <= pi * 2)"; then ...' can be used in
  *	the shell.
  *		- pgf, Thu Apr 3, 2025
- *
- *
- *  build with:
- *    doit:      gcc -g -Wall -Wextra -o ca -D USE_READLINE ca.c -lm -lreadline
- *    doit-norl: gcc -g -Wall -Wextra -o ca ca.c -lm
  *
  *  documentation:
  *	ca help q | less
@@ -2055,8 +2054,11 @@ fetch_line(void)
 }
 
 int
-get_line_token(struct token *t)
+gettoken(struct token *t)
 {
+	if (input_ptr == NULL)
+		if (!fetch_line())
+			return 0;
 
 	while (isspace(*input_ptr))
 		input_ptr++;
@@ -2076,16 +2078,6 @@ get_line_token(struct token *t)
 	}
 
 	return 1;
-}
-
-int
-gettoken(struct token *t)
-{
-	if (input_ptr == NULL)
-		if (!fetch_line())
-			return 0;
-
-	return get_line_token(t);
 }
 
 token open_paren_token, chsign_token, nop_token;
