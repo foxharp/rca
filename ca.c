@@ -23,7 +23,7 @@
  *	addition of "infix" operations:  a one-line parenthetical expression
  *	using traditional syntax will be evaluated, and its result left on
  *	the stack.  All of the operators available to the RPN can be used,
- *	with the addition of "X", for referencing the current top of stack. 
+ *	with the addition of "X", for referencing the current top of stack.
  *	So expressions like ((X << 3) ** 2) will work.  Logical operators
  *	have been added as well:  "(X <= pi * 2)" results in 0 or 1.  (That
  *	could be written "pi 2 * >" in RPN notation.)  In addition, ca will
@@ -35,8 +35,6 @@
  *  documentation:
  *	ca help q | less
  */
-
-#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -178,8 +176,8 @@ long long int_mask;
 /* the most recent top-of-stack */
 ldouble lastx;
 
-/* copy of top-of-stack, for infix use */
-ldouble infix_stack_x;
+/* copy of RPN top-of-stack, for infix use */
+ldouble infix_X;
 
 /* for store/recall */
 ldouble offstack;
@@ -255,16 +253,16 @@ pop(ldouble *f)
 }
 
 
-token *outstack, *opstack, *infix_stack;
+token *out_stack, *oper_stack, *infix_stack;
 
 char *
 stackname(token **tstackp)
 {
 	char *n;
-	if (tstackp == &opstack)
-		n = "opstack";
-	else if (tstackp == &outstack)
-		n = "outstack";
+	if (tstackp == &oper_stack)
+		n = "oper_stack";
+	else if (tstackp == &out_stack)
+		n = "out_stack";
 	else if (tstackp == &infix_stack)
 		n = "infix_stack";
 	else
@@ -295,7 +293,7 @@ tpush(token **tstackp, token *token)
 	}
 
 	trace(("pushed token %p to %s stack\n", t,
-		(*tstackp == outstack) ? "output":"operator"));
+		(*tstackp == out_stack) ? "output":"operator"));
 
 	t->next = *tstackp;
 	*tstackp = t;
@@ -1588,7 +1586,7 @@ mark(void)
 opreturn
 stack_x(void)
 {
-	push(infix_stack_x);
+	push(infix_X);
 	return GOODOP;
 }
 
@@ -1875,7 +1873,8 @@ parse_tok(char *p, token *t, char **nextp)
 		if (isalpha(*p)) {
 			n = stralnum(p, nextp);
 		} else if (ispunct(*p)) {
-			/* only doubled punct opers, currently */
+			/* parser hack:  hard-coded list of
+			 * double punctuation operators */
 			if (    (p[0] == '>' && p[1] == '>') ||      //   >>
 				(p[0] == '<' && p[1] == '<') ||      //   <<
 				(p[0] == '>' && p[1] == '=') ||      //   >=
@@ -2083,24 +2082,24 @@ gettoken(struct token *t)
 token open_paren_token, chsign_token, nop_token;
 
 void
-create_support_tokens()
+create_infix_support_tokens()
 {
-    /* we need a couple of token identifiers for later on,
-     * specifically for dealing with infix processing.
-     */
-    char *outp;
-    (void)parse_tok("(", &open_paren_token, &outp);
-    (void)parse_tok("chs", &chsign_token, &outp);
-    (void)parse_tok("nop", &nop_token, &outp);
+	/* we need a couple of token identifiers for later on,
+	 * specifically for dealing with infix processing.
+	 */
+	char *outp;
+	(void)parse_tok("(", &open_paren_token, &outp);
+	(void)parse_tok("chs", &chsign_token, &outp);
+	(void)parse_tok("nop", &nop_token, &outp);
 }
 
 opreturn
 close_paren(void)
 {
-    // this has to be a warning -- the command in error is already
-    // finished, so we can't cancel it.
-    printf(" warning: mismatched/extra parentheses\n");
-    return BADOP;
+	// this has to be a warning -- the command in error is already
+	// finished, so we can't cancel it.
+	printf(" warning: mismatched/extra parentheses\n");
+	return BADOP;
 }
 
 /* This implementation of Dijkstra's "shunting yard" algorithm, for
@@ -2122,20 +2121,22 @@ open_paren(void)
 
 	ptok.type = UNKNOWN;
 
-	tempty(&outstack);
-	tempty(&opstack);
+	tempty(&out_stack);
+	tempty(&oper_stack);
 
 	// push the '(' token that the user typed, but won't be parsed.
-	tpush(&opstack, &open_paren_token);  
+	tpush(&oper_stack, &open_paren_token);
 
 	trace(("collecting infix line\n"));
 
-	if (!peek(&infix_stack_x))
-		infix_stack_x = 0;
+	// set the source for the 'X' operator to the current top
+	// of the RPN stack, or zero if that stack is empty.
+	if (!peek(&infix_X))
+		infix_X = 0;
 
 	while (1) {
-		tdump(&opstack);
-		tdump(&outstack);
+		tdump(&oper_stack);
+		tdump(&out_stack);
 
 		while (isspace(*input_ptr))
 			input_ptr++;
@@ -2161,7 +2162,7 @@ open_paren(void)
 				flushinput();
 				return BADOP;
 			}
-			tpush(&outstack, t);
+			tpush(&out_stack, t);
 			break;
 		case OP:
 			char *tname = t->val.oper->name;
@@ -2170,11 +2171,11 @@ open_paren(void)
 
 			trace(("oper is %s\n", tname ));
 
-			tp = tpeek(&opstack);
+			tp = tpeek(&oper_stack);
 
 			if (t->val.oper->func == open_paren) {
 				// Push opening parenthesis to operator stack
-				tpush(&opstack, t);
+				tpush(&oper_stack, t);
 				paren_count++;
 			} else if (t->val.oper->func == close_paren) {
 				// Process until matching opening parenthesis
@@ -2187,15 +2188,15 @@ open_paren(void)
 					if (tp->val.oper->func == open_paren)
 						break;
 
-					tpush(&outstack, tpop(&opstack));
-					tp = tpeek(&opstack);
+					tpush(&out_stack, tpop(&oper_stack));
+					tp = tpeek(&oper_stack);
 				}
 
 				// Pop the opening parenthesis
-				free(tpop(&opstack));
-				tp = tpeek(&opstack);
+				free(tpop(&oper_stack));
+				tp = tpeek(&oper_stack);
 				if (tp && tp->val.oper->operands == 1) {
-					tpush(&outstack, tpop(&opstack));
+					tpush(&out_stack, tpop(&oper_stack));
 				}
 				paren_count--;
 
@@ -2205,10 +2206,10 @@ open_paren(void)
 					(tp->val.oper->func != open_paren) &&
 					(tp->val.oper->prec >= precedence))
 				{
-					tpush(&outstack, tpop(&opstack));
-					tp = tpeek(&opstack);
+					tpush(&out_stack, tpop(&oper_stack));
+					tp = tpeek(&oper_stack);
 				}
-				tpush(&opstack, t);
+				tpush(&oper_stack, t);
 
 			} else if (operands == 2) { // two operands
 				// Special cases:  '-' and '+' are
@@ -2251,10 +2252,10 @@ open_paren(void)
 					    tp->val.oper->func == y_to_the_x)
 						break;
 
-					tpush(&outstack, tpop(&opstack));
-					tp = tpeek(&opstack);
+					tpush(&out_stack, tpop(&oper_stack));
+					tp = tpeek(&oper_stack);
 				}
-				tpush(&opstack, t);
+				tpush(&oper_stack, t);
 			} else {
 				printf(" '%s' unsuitable in infix expression\n",
 					t->val.oper->name);
@@ -2277,8 +2278,8 @@ open_paren(void)
 		ptok = *t;
 
 	}
-	tdump(&opstack);
-	tdump(&outstack);
+	tdump(&oper_stack);
+	tdump(&out_stack);
 
 	if (paren_count) {
 		printf(" missing parentheses\n");
@@ -2286,27 +2287,26 @@ open_paren(void)
 		return BADOP;
 	}
 
-	trace(("final move\n"));
+	trace(("final move to out_stack\n"));
 
-	while ((t = tpop(&opstack)) != NULL) {
-		if (tpeek(&opstack) == NULL) {
-			if (t->val.oper->func != open_paren) {
-				// "can't happen"
-				printf(" Mismatched parentheses\n");
-				return BADOP;
-			}
-			break;
-		}
-		tpush(&outstack, t);
+	/* move what's on the operator stack to the output stack */
+	while ((t = tpop(&oper_stack)) != NULL) {
+		tpush(&out_stack, t);
 	}
+
 
 	fflush(stdout);
 
-	tdump(&opstack);
-	tdump(&outstack);
+	tdump(&oper_stack);
+	tdump(&out_stack);
 
+	/* and with that, the shunting yard is finished.
+	 * unfortunately, the output stack is in the wrong order.  so
+	 * we do one more transfer to reverse it.  gettoken() will
+	 * pull from this copy.
+	 */
 	trace(("moving to infix stack\n"));
-	while((t = tpop(&outstack)) != NULL) {
+	while((t = tpop(&out_stack)) != NULL) {
 		tpush(&infix_stack, t);
 	}
 	tdump(&infix_stack);
@@ -2332,11 +2332,11 @@ ca -- a stack based calculator\n\
  Numbers are represented internally as long double and signed long long.\n\
  Max integer width is the shorter of long long or the long double mantissa.\n\
  Always use 0xNNN/0NNN to enter hex/octal, even in hex or octal mode.\n\
- A one line infix expression may be started with '('.  The evaluated result\n\
+ An infix expression may be started with '('.  The evaluated result\n\
   goes on the stack.  For example, '(sqrt(sin(30)^2 + cos(30)^2) + 2)' will\n\
   push the value '3'.  All operators and functions, all unit conversions, and\n\
   all commands that produce constants (e.g., 'pi', 'recall') can be referenced\n\
-  in infix expressions.  The expression must all be on one line.\n\
+  in infix expressions.  The infix expression must all be entered on one line.\n\
  Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath. \n\
  On exit, ca returns 0 if the top of stack is non-zero, else it returns 1,\n\
  or 3 in the case of program error.\n\
@@ -2370,19 +2370,23 @@ ca -- a stack based calculator\n\
 	return GOODOP;
 }
 
+/* the opers[] table doesn't initialize everything explicitly */
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+
 // *INDENT-OFF*.
 struct oper opers[] = {
-//       +++++++++++++++++++++++++++++++++ section header if no function ptr
-//       |                           +++++ function pointer
+//       +-------------------------------- section header if no function ptr
+//       |                           +---- function pointer
+//       |                           |
 //       V                           V
     {"Operators with two operands:", 0, 0},
-//        +++++++++++++++++++++++++++++++++ operator names
-//        |    ++++++++++++++++++++++++++++ function pointer
-//        |    |                ++++++++++ help (if 0, shares next cmd's help)
-//        |    |                |  +++++++ number of operands (-1 for none)
-//        |    |                |  |  ++++ operator precedence
-//        |    |                |  |  | (operands and prec. only used by infix)
-//        V    V                V  V  V                             
+//        +------------------------------- operator names
+//        |    +-------------------------- function pointer
+//        |    |                +--------- help (if 0, shares next cmd's help)
+//        |    |                |  +------ # of operands (-1 for none)
+//        |    |                |  |  +--- operator precedence
+//        |    |                |  |  |         (# of operands and precedence
+//        V    V                V  V  V           used only by infix code)
 	{"+", add,		0, 2, 22 },
 	{"-", subtract,		"Add and subtract x and y", 2, 22 },
 	{"*", multiply,		0, 2, 23 },
@@ -2398,7 +2402,7 @@ struct oper opers[] = {
 	{"xor", bitwise_xor,	"Bitwise AND, OR, and XOR of y and x", 2, 17 },
 	{"setb", setbit,	0, 2, 16 },
 	{"clearb", clearbit,	"Set and clear bit x in y", 2, 18 },
-	{"", 0, 0},   // all null causes blank line in output
+	{"", 0, 0},		// all-null entries cause blank line in output
     {"Operators with one operand:", 0, 0},
 	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 30 },
 	{"chs", chsign,		0, 1, 30 },
@@ -2451,7 +2455,7 @@ struct oper opers[] = {
 	{"rcl", recall,		0, -1 },
 	{"rcl2", recall2,	0, -1 },
 	{"rcl3", recall3,	"Fetch x (3 locations)", -1 },
-	{"X", stack_x,		"Copy of top-of-stack for use in infix expressions", -1 },
+	{"X", stack_x,		"Copy of x for use in infix expressions", -1 },
 	{"pi", push_pi,		"Push constant pi", -1 },
 	{"e", push_e,		"Push constant e", -1 },
 	{"", 0, 0},
@@ -2532,7 +2536,7 @@ main(int argc, char *argv[])
 	setup_width(0);
 	setup_format_string();
 
-	create_support_tokens();
+	create_infix_support_tokens();
 
 	/* we simply loop forever, either pushing operands or
 	 * executing operators.  the special end-of-line token lets us
