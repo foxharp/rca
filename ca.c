@@ -15,6 +15,20 @@
  *	readline support, for good measure.
  *		- pgf, Tue Feb 13, 2024
  *
+ *	The big new feature everyone is talking about these days is the
+ *	addition of "infix" operations:  a one-line parenthetical expression
+ *	using traditional syntax will be evaluated, and its result left on
+ *	the stack.  All of the operators available to the RPN can be used,
+ *	with the addition of "X", for referencing the current top of stack. 
+ *	So expressions like ((X << 3) ** 2) will work.  Logical operators
+ *	have been added as well:  "(X <= pi * 2)" results in 0 or 1.  (That
+ *	could be written "pi 2 * >" in RPN notation.)  In addition, ca will
+ *	use the logical value of its last result as its exit value, so
+ *	something like 'if ca "($foo <= pi * 2)"; then ...' can be used in
+ *	the shell.
+ *		- pgf, Thu Apr 3, 2025
+ *
+ *
  *  build with:
  *    doit:      gcc -g -Wall -Wextra -o ca -D USE_READLINE ca.c -lm -lreadline
  *    doit-norl: gcc -g -Wall -Wextra -o ca ca.c -lm
