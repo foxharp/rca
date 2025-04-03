@@ -5,6 +5,7 @@ all:
 
 test:
 	egrep -v '^ ' ca_test.txt | ca | diff -u ca_test.txt -
+	@ echo test succeeded
 
 newtest:
 	egrep -v '^ ' ca_test.txt | ca > new_ca_test.txt

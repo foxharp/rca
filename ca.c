@@ -2280,7 +2280,7 @@ open_paren(void)
 	tdump(&opstack);
 	tdump(&outstack);
 
-	if (paren_count > 1) {
+	if (paren_count) {
 		printf(" missing parentheses\n");
 		flushinput();
 		return BADOP;
@@ -2322,24 +2322,24 @@ help(void)
 
 	op = opers;
 	printf("\
-Any arguments on the command line are used as initial calculator input.\n\
-Entering a number pushes it on the stack.\n\
-Operators replace either one or two top stack values with their result.\n\
-Numbers and operators may appear on one or more lines.\n\
-Most whitespace is optional between numbers and commands.\n\
-Numbers can include commas and $ signs (e.g., '$3,577,455').\n\
-Numbers are represented internally as long double and signed long long.\n\
-Max integer width is the shorter of long long or the long double mantissa.\n\
-Always use 0xNNN/0NNN to enter hex/octal, even in hex or octal mode.\n\
-A one line infix expression may be started with '('.  The evaluated result\n\
- goes on the stack.  For example, '(sqrt(sin(30)^2 + cos(3)^2) + 2)' will\n\
- push the value '3'.  The trailing ')' is optional.  All operators and\n\
- functions, all unit conversions, and all commands that produce constants\n\
- (e.g., 'pi', 'recall') can be referenced in infix expressions.\n\
- The infix expression must all be on one line.\n\
-'-3 2 **', and therefore also '(-3 ** 2)' gives '9', not '-9'\n\
-Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
-Exit code: the logical state of top-of-stack, or 3 for program error.\n\
+ca -- a stack based calculator\n\
+ Any arguments on the command line are used as initial calculator input.\n\
+ Entering a number pushes it on the stack.\n\
+ Operators replace either one or two top stack values with their result.\n\
+ Most whitespace is optional between number and operators, and can consist\n\
+  of spaces, tabs, or newlines.\n\
+ Numbers can include commas and $ signs (e.g., '$3,577,455').\n\
+ Numbers are represented internally as long double and signed long long.\n\
+ Max integer width is the shorter of long long or the long double mantissa.\n\
+ Always use 0xNNN/0NNN to enter hex/octal, even in hex or octal mode.\n\
+ A one line infix expression may be started with '('.  The evaluated result\n\
+  goes on the stack.  For example, '(sqrt(sin(30)^2 + cos(30)^2) + 2)' will\n\
+  push the value '3'.  All operators and functions, all unit conversions, and\n\
+  all commands that produce constants (e.g., 'pi', 'recall') can be referenced\n\
+  in infix expressions.  The expression must all be on one line.\n\
+ Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath. \n\
+ On exit, ca returns 0 if the top of stack is non-zero, else it returns 1,\n\
+ or 3 in the case of program error.\n\
 \n\
 ");
 	char cbuf[1000];
