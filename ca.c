@@ -1825,9 +1825,24 @@ size_t strpunct(char *s, char **endptr)
 }
 
 int
-parse_tok(char *p, token *t, char **nextp)
+parse_tok(char *p, token *t, char **nextp, int signed_ints)
 {
 	int sign = 1;
+
+	/* when parsing infix, we must treat "-3" as a unary negation
+	 * operator, followed by the positive number "3".  That's
+	 * special-cased in open_paren().  In RPN, it must be treated
+	 * as negative 3.
+	 */
+	if (signed_ints) {
+		/* be sure + and - are bound closely to numbers */
+		if (*p == '+' && (*(p + 1) == '.' || isdigit(*(p + 1)))) {
+			p++;
+		} else if (*p == '-' && (*(p + 1) == '.' || isdigit(*(p + 1)))) {
+			sign = -1;
+			p++;
+		}
+	}
 
 	if (*p == '0' && (*(p + 1) == 'x' || *(p + 1) == 'X')) {
 		// hex
@@ -2070,7 +2085,7 @@ gettoken(struct token *t)
 
 	fflush(stdin);
 
-	if (!parse_tok(input_ptr, t, &input_ptr)) {
+	if (!parse_tok(input_ptr, t, &input_ptr, 1)) {
 		printf(" unrecognized input '%s'\n", input_ptr);
 		flushinput();
 		return 0;
@@ -2088,9 +2103,9 @@ create_infix_support_tokens()
 	 * specifically for dealing with infix processing.
 	 */
 	char *outp;
-	(void)parse_tok("(", &open_paren_token, &outp);
-	(void)parse_tok("chs", &chsign_token, &outp);
-	(void)parse_tok("nop", &nop_token, &outp);
+	(void)parse_tok("(", &open_paren_token, &outp, 0);
+	(void)parse_tok("chs", &chsign_token, &outp, 0);
+	(void)parse_tok("nop", &nop_token, &outp, 0);
 }
 
 opreturn
@@ -2146,7 +2161,7 @@ open_paren(void)
 
 		t = &tok;
 
-		if (!parse_tok(input_ptr, &tok, &input_ptr)) {
+		if (!parse_tok(input_ptr, &tok, &input_ptr, 0)) {
 			goto cleanup;
 		}
 
