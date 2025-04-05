@@ -10,11 +10,13 @@ test:
 newtest:
 	egrep -v '^ ' ca_test.txt | ca > new_ca_test.txt
 	
-publish:
+publish_prepare:
 	( \
 	echo $$(date +"// published %Y/%m/%d-%T -- ") $$(git rev-parse --short HEAD) ; \
 	cat ca.c; \
 	) > publish_me.c
+
+publish: publish_prepare
 	scp publish_me.c \
 	  webcontent:/opt/very_public/www/projects.foxharp.net/software/ca.c.txt
 	ssh webcontent web_publish projects
