@@ -2132,6 +2132,7 @@ open_paren(void)
 {
 	static struct token tok, ptok;
 	token *t, *tp;
+	int operands, precedence;
 	int paren_count = 1;
 
 	ptok.type = UNKNOWN;
@@ -2180,11 +2181,10 @@ open_paren(void)
 			tpush(&out_stack, t);
 			break;
 		case OP:
-			char *tname = t->val.oper->name;
-			int operands = t->val.oper->operands;
-			int precedence = t->val.oper->prec;
+			operands = t->val.oper->operands;
+			precedence = t->val.oper->prec;
 
-			trace(("oper is %s\n", tname ));
+			trace(("oper is %s\n", t->val.oper->name ));
 
 			tp = tpeek(&oper_stack);
 
