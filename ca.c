@@ -819,6 +819,24 @@ atangent(void)
 }
 
 opreturn
+atangent2(void)
+{
+	ldouble a,b;
+
+	if (mode != 'f')
+		return trig_no_sense();
+
+	if (pop(&b)) {
+		if (pop(&a)) {
+			push((180.0 * atan2(a,b)) / pi);
+			lastx = b;
+			return GOODOP;
+		}
+	}
+	return BADOP;
+}
+
+opreturn
 fraction(void)
 {
 	ldouble a;
@@ -2431,6 +2449,8 @@ struct oper opers[] = {
 	{"asin", asine,         0, 1, 30 },
 	{"acos", acosine,       0, 1, 30 },
 	{"atan", atangent,      "Trig functions (in degrees)", 1, 30 },
+	{"atan2", atangent2,    "Arctan of y/x (i.e., 2 operands, in degrees)", 2, 30 },
+
 	{"abs", absolute,	0, 1, 30 },
 	{"frac", fraction,	0, 1, 30 },
 	{"int", integer,	"Absolute value, fractional and integer parts of x", 1, 30 },
