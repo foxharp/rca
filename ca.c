@@ -152,6 +152,10 @@ boolean autoprint = TRUE;
 /* to temporarily suppress autoprint, e.g., right after printing */
 boolean suppress_autoprint = FALSE;
 
+/* informative feedback is only printed if the command generating it
+ * is followed by a newline */
+char pending_info[1024];
+
 /* if true, will decorate numbers, like "1,333,444".  */
 boolean punct = TRUE;
 
@@ -1291,7 +1295,9 @@ opreturn
 punctuation(void)
 {
 	punct = !punct;
-	printf(" numeric punctuation is now %s\n", punct ? "on" : "off");
+	// info
+	snprintf(pending_info, sizeof(pending_info),
+		" numeric punctuation is now %s\n", punct ? "on" : "off");
 	return GOODOP;
 }
 
@@ -1429,7 +1435,9 @@ precision(void)
 
 	setup_format_string();
 
-	printf(" %d digit%s of total displayed precision.\n",
+	// info
+	snprintf(pending_info, sizeof(pending_info),
+		" %d digit%s of total displayed precision.\n",
 		float_digits, float_digits == 1 ? "" : "s");
 
 	return GOODOP;
@@ -1451,7 +1459,9 @@ decimal_length(void)
 
 	setup_format_string();
 
-	printf(" %d digit%s after the decimal.\n",
+	// info
+	snprintf(pending_info, sizeof(pending_info),
+		" %d digit%s after the decimal.\n",
 		float_digits, float_digits == 1 ? "" : "s");
 
 	return GOODOP;
@@ -1504,10 +1514,16 @@ width(void)
 
 	setup_width(bits);
 
-	printf(" Words are %d bits wide.", int_width);
-	if (mode == 'f')
-		printf("  (Ignored in float mode!)");
-	putchar('\n');
+	// info
+	snprintf(pending_info, sizeof(pending_info),
+		" Words are %d bits wide.%s\n", int_width,
+			(mode == 'f') ? "  (Ignored in float mode!)":"");
+	// This is sort of an "info" message, except that it also
+	// does a big printall() down below.  So we'll keep printing
+	// it mid-commandline, for now.
+	if (*pending_info)
+		printf("%s", pending_info);
+	*pending_info = '\0';
 
 	/* need to mask and sign extend anything on the stack if we've
 	 * shortened word length.
@@ -1802,7 +1818,9 @@ opreturn
 autop(void)
 {
 	autoprint = !autoprint;
-	printf(" autoprinting is now %s\n", autoprint ? "on" : "off");
+	// info
+	snprintf(pending_info, sizeof(pending_info),
+		" autoprinting is now %s\n", autoprint ? "on" : "off");
 	return GOODOP;
 }
 
@@ -2591,6 +2609,9 @@ main(int argc, char *argv[])
 		}
 		t = &tok;
 
+		if (t->type != EOL)
+			*pending_info = '\0';
+
 		switch (t->type) {
 		case NUMERIC:
 			push(t->val.val);
@@ -2601,6 +2622,9 @@ main(int argc, char *argv[])
 			(void)(t->val.oper->func) ();
 			break;
 		case EOL:
+			if (*pending_info)
+				printf("%s", pending_info);
+			*pending_info = '\0';
 			if (!suppress_autoprint && autoprint &&
 				(lasttoktype == OP || lasttoktype == SYMBOLIC)) {
 				print_top(mode);
