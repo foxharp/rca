@@ -502,6 +502,8 @@ atan
 7k
  7 digits of total displayed precision.
  -115
+( i2mm -.75 )
+ -19.05
 40 i2mm
  1,016
 c

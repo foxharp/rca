@@ -1862,7 +1862,7 @@ size_t strpunct(char *s, char **endptr)
 }
 
 int
-parse_tok(char *p, token *t, char **nextp, int signed_ints)
+parse_tok(char *p, token *t, char **nextp, int rpn_signed_ints)
 {
 	int sign = 1;
 
@@ -1871,7 +1871,7 @@ parse_tok(char *p, token *t, char **nextp, int signed_ints)
 	 * special-cased in open_paren().  In RPN, it must be treated
 	 * as negative 3.
 	 */
-	if (signed_ints) {
+	if (rpn_signed_ints) {
 		/* be sure + and - are bound closely to numbers */
 		if (*p == '+' && (*(p + 1) == '.' || isdigit(*(p + 1)))) {
 			p++;
@@ -2274,12 +2274,12 @@ open_paren(void)
 					ptok.val.oper->func != close_paren)) {
 					if (t->val.oper->func == subtract) {
 						t = &chsign_token;
-						precedence = 30;
+						precedence = 31;
 						goto unary;
 					}
 					if (t->val.oper->func == add ) {
 						t = &nop_token;
-						precedence = 30;
+						precedence = 31;
 						goto unary;
 					}
 				}
@@ -2457,9 +2457,9 @@ struct oper opers[] = {
 	{"", 0, 0},		// all-null entries cause blank line in output
     {"Operators with one operand:", 0, 0},
 	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 30 },
-	{"chs", chsign,		0, 1, 30 },
+	{"chs", chsign,		0, 1, 31 },  // precedence unused, see special case in open_paren()
 	{"negate", chsign,	"Change sign of x (2's complement)", 1, 30 },
-	{"nop", nop,		"HideMe", 1, 30 }, // needed for infix
+	{"nop", nop,		"HideMe", 1, 31 }, // needed for infix
 	{"recip", recip,        0, 1, 30 },
 	{"sqrt", squarert,      "Reciprocal and square root of x", 1, 30 },
 	{"sin", sine,           0, 1, 30 },
