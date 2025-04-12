@@ -1829,9 +1829,13 @@ void
 exitret(void)
 {
 	ldouble a = 0;
-	if (stack)
+	if (stack) {
 		pop(&a);
-	exit(a == 0);  // flip status for unix convention
+		exit(a == 0);  // flip status per unix convention
+	} else {
+		exit(2);
+	}
+
 }
 
 opreturn
@@ -2391,7 +2395,7 @@ ca -- a stack based calculator\n\
   in infix expressions.  The infix expression must all be entered on one line.\n\
  Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath. \n\
  On exit, ca returns 0 if the top of stack is non-zero, else it returns 1,\n\
- or 3 in the case of program error.\n\
+ or 2 if stack is empty, and 3 in the case of program error.\n\
 \n\
 ");
 	char cbuf[1000];
