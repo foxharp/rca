@@ -23,4 +23,13 @@ publish: publish_prepare
 	@echo Available here: https://projects.foxharp.net/software/ca.c.txt
 
 
-	
+install:
+	wake_host basil clover; sleep 3
+	for x in grass hemlock chive flax colo basil clover; \
+	do \
+	 	$$x put ca bin ; \
+	done
+	lumber put ca.c .
+	lumber run doit ca.c
+	lumber run mv ca bin
+
