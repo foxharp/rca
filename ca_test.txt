@@ -499,7 +499,19 @@ atan
  2.145
 10 chs * 10 chs atan2
  -115.000
-
-
+7k
+ 7 digits of total displayed precision.
+ -115
+40 i2mm
+ 1,016
+c
+ numeric punctuation is now off
+ 1016
+3K
+ 3 digits after the decimal.
+ 1016.000
+c
+ numeric punctuation is now on
+ 1,016.000
 q
- -115.000
+ 1,016.000

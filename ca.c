@@ -1291,16 +1291,6 @@ tracetoggle(void)
 	return GOODOP;
 }
 
-opreturn
-punctuation(void)
-{
-	punct = !punct;
-	// info
-	snprintf(pending_info, sizeof(pending_info),
-		" numeric punctuation is now %s\n", punct ? "on" : "off");
-	return GOODOP;
-}
-
 static char *
 mode2name(void)
 {
@@ -1440,6 +1430,17 @@ precision(void)
 		" %d digit%s of total displayed precision.\n",
 		float_digits, float_digits == 1 ? "" : "s");
 
+	return GOODOP;
+}
+
+opreturn
+punctuation(void)
+{
+	punct = !punct;
+	// info
+	snprintf(pending_info, sizeof(pending_info),
+		" numeric punctuation is now %s\n", punct ? "on" : "off");
+	setup_format_string();
 	return GOODOP;
 }
 
