@@ -24,7 +24,7 @@
  *	using traditional syntax will be evaluated, and its result left on
  *	the stack.  All of the operators available to the RPN can be used,
  *	with the addition of "X", for referencing the current top of stack.
- *	So expressions like ((X << 3) ** 2) will work.  Logical operators
+*	So expressions like ((X << 3) ** 2) will work.  Logical operators
  *	have been added as well:  "(X <= pi * 2)" results in 0 or 1.  (That
  *	could be written "pi 2 * >" in RPN notation.)  In addition, ca will
  *	use the logical value of its last result as its exit value, so
@@ -2277,20 +2277,20 @@ open_paren(void)
 			} else if (operands == 2) { // two operands
 				// Special cases:  '-' and '+' are
 				// either binary or unary.  They're
-				// unary if then come first, or follow
-				// another operator.  a closing paren
+				// unary if they come first, or follow
+				// another operator.  A closing paren
 				// is not an operator in this case.
 				if (ptok.type == UNKNOWN ||
 				    		(ptok.type == OP &&
 					ptok.val.oper->func != close_paren)) {
 					if (t->val.oper->func == subtract) {
 						t = &chsign_token;
-						precedence = 31;
+						precedence = t->val.oper->prec;
 						goto unary;
 					}
 					if (t->val.oper->func == add ) {
 						t = &plus_token;
-						precedence = 31;
+						precedence = t->val.oper->prec;
 						goto unary;
 					}
 				}
@@ -2377,6 +2377,58 @@ open_paren(void)
 	return GOODOP;
 }
 
+
+opreturn
+precedence(void)
+{
+	int prec;
+	oper *op;
+	char *prec_ops[40] = {0};
+
+	op = opers;
+	while (op->name) {
+		if (op->name[0] && op->func && op->prec > 0) {
+			if (op->prec >= 40) {
+				printf("%s precedence too large: %d\n",
+				    op->name, op->prec);
+			}
+			if (!prec_ops[op->prec])
+				prec_ops[op->prec] = (char *)calloc(1, 500);
+			strcat(prec_ops[op->prec], op->name);
+			strcat(prec_ops[op->prec], " ");
+		}
+		op++;
+	}
+
+	for (prec = 0; prec < 40; prec++) {
+		if (prec_ops[prec])
+			printf("%d	%s\n", prec, prec_ops[prec]);
+	}
+
+	return GOODOP;
+}
+
+opreturn
+table(void)
+{
+	oper *op, *lastop = NULL;
+	char *indent;
+
+	op = opers;
+
+	while (op->name) {
+		if (op->func ) {
+			indent="";
+			if (lastop && lastop->func == op->func )
+				indent="  ";
+			printf("%s%s\t%d\t%d\t%s\n", indent,
+				op->name, op->operands, op->prec, op->help ?: "");
+		}
+		lastop = op;
+		op++;
+	}
+	return GOODOP;
+}
 
 opreturn
 help(void)
@@ -2484,7 +2536,7 @@ struct oper opers[] = {
 	{"abs", absolute,	0, 1, 30 },
 	{"frac", fraction,	0, 1, 30 },
 	{"int", integer,	"Absolute value, fractional and integer parts of x", 1, 30 },
-	{"(", open_paren,	"Begin \"infix\" expression, ends at matching ')' or EOL", 0, 40 },
+	{"(", open_paren,	"Begin \"infix\" expression, ends at matching ')' or EOL", 0, 39 },
 	{")", close_paren,	"HideMe" }, // needed for infix to work
 	{"", 0, 0},
     {"Logical operators:", 0, 0},
@@ -2572,6 +2624,8 @@ struct oper opers[] = {
     {"Housekeeping:", 0, 0},
 	{"?", help,		0 },
 	{"help", help,		"Show this list" },
+	{"dH", table,		"HideMe" },  // raw command table
+	{"dP", precedence,	"HideMe" },  // precedence list
 	{"quit", quit,		0 },
 	{"q", quit,		0 },
 	{"exit", quit,		"Leave the calculator" },
