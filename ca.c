@@ -24,7 +24,7 @@
  *	using traditional syntax will be evaluated, and its result left on
  *	the stack.  All of the operators available to the RPN can be used,
  *	with the addition of "X", for referencing the current top of stack.
-*	So expressions like ((X << 3) ** 2) will work.  Logical operators
+ *	So expressions like ((X << 3) ** 2) will work.  Logical operators
  *	have been added as well:  "(X <= pi * 2)" results in 0 or 1.  (That
  *	could be written "pi 2 * >" in RPN notation.)  In addition, ca will
  *	use the logical value of its last result as its exit value, so
@@ -2510,8 +2510,8 @@ struct oper opers[] = {
 	{"%", modulo,		"Divide and modulo of y by x (arithmetic shift)", 2, 23 },
 	{"^", y_to_the_x,	0, 2, 24 },
 	{"**", y_to_the_x,	"Raise y to the x'th power", 2, 24 },
-	{">>", rshift,		0, 2, 11 },
-	{"<<", lshift,		"Right/left logical shift of y by x bits", 2, 11 },
+	{">>", rshift,		0, 2, 19 },
+	{"<<", lshift,		"Right/left logical shift of y by x bits", 2, 19 },
 	{"&", bitwise_and,	0, 2, 18 },
 	{"|", bitwise_or,	0, 2, 16 },
 	{"xor", bitwise_xor,	"Bitwise AND, OR, and XOR of y and x", 2, 17 },
@@ -2519,9 +2519,9 @@ struct oper opers[] = {
 	{"clearb", clearbit,	"Set and clear bit x in y", 2, 18 },
 	{"", 0, 0},		// all-null entries cause blank line in output
     {"Operators with one operand:", 0, 0},
-	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 30 },
+	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 31 },
 	{"chs", chsign,		0, 1, 31 },  // precedence unused, see special case in open_paren()
-	{"negate", chsign,	"Change sign of x (2's complement)", 1, 30 },
+	{"negate", chsign,	"Change sign of x (2's complement)", 1, 31 },
 	{"plus", plus,		"HideMe", 1, 31 }, // needed for infix
 	{"recip", recip,        0, 1, 30 },
 	{"sqrt", squarert,      "Reciprocal and square root of x", 1, 30 },
@@ -2548,7 +2548,7 @@ struct oper opers[] = {
 	{"<=", is_le,           0, 2, 9 },
 	{">", is_gt,            0, 2, 9 },
 	{">=", is_ge,           "Arithmetic comparisons", 2, 9 },
-	{"!", logical_not,	"Logical NOT of x", 1, 30 },
+	{"!", logical_not,	"Logical NOT of x", 1, 31 },
 	{"", 0, 0},
     {"Stack manipulation:", 0, 0},
 	{"clear", clear,	"Clear stack" },
