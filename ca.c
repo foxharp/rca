@@ -2244,6 +2244,13 @@ open_paren(void)
 					if (tp->val.oper->func == open_paren)
 						break;
 
+				    	if (ptok.type == OP &&
+					    ptok.val.oper->operands > 0) {
+						printf(" error: missing operand(s) for %s\n",
+							tp->val.oper->name);
+						return BADOP;
+					}
+
 					tpush(&out_stack, tpop(&oper_stack));
 					tp = tpeek(&oper_stack);
 				}
