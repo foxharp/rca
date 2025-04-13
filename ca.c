@@ -662,7 +662,7 @@ chsign(void)
 }
 
 opreturn
-nop(void)
+plus(void)
 {
 	    return GOODOP;
 }
@@ -2135,7 +2135,7 @@ gettoken(struct token *t)
 	return 1;
 }
 
-token open_paren_token, chsign_token, nop_token;
+token open_paren_token, chsign_token, plus_token;
 
 void
 create_infix_support_tokens()
@@ -2146,7 +2146,7 @@ create_infix_support_tokens()
 	char *outp;
 	(void)parse_tok("(", &open_paren_token, &outp, 0);
 	(void)parse_tok("chs", &chsign_token, &outp, 0);
-	(void)parse_tok("nop", &nop_token, &outp, 0);
+	(void)parse_tok("plus", &plus_token, &outp, 0);
 }
 
 opreturn
@@ -2282,7 +2282,7 @@ open_paren(void)
 						goto unary;
 					}
 					if (t->val.oper->func == add ) {
-						t = &nop_token;
+						t = &plus_token;
 						precedence = 31;
 						goto unary;
 					}
@@ -2463,7 +2463,7 @@ struct oper opers[] = {
 	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 30 },
 	{"chs", chsign,		0, 1, 31 },  // precedence unused, see special case in open_paren()
 	{"negate", chsign,	"Change sign of x (2's complement)", 1, 30 },
-	{"nop", nop,		"HideMe", 1, 31 }, // needed for infix
+	{"plus", plus,		"HideMe", 1, 31 }, // needed for infix
 	{"recip", recip,        0, 1, 30 },
 	{"sqrt", squarert,      "Reciprocal and square root of x", 1, 30 },
 	{"sin", sine,           0, 1, 30 },
