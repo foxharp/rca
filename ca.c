@@ -2383,12 +2383,13 @@ precedence(void)
 {
 	int prec;
 	oper *op;
-	char *prec_ops[40] = {0};
+#define NUM_PRECEDENCE 30
+	char *prec_ops[NUM_PRECEDENCE] = {0};
 
 	op = opers;
 	while (op->name) {
 		if (op->name[0] && op->func && op->prec > 0) {
-			if (op->prec >= 40) {
+			if (op->prec >= NUM_PRECEDENCE) {
 				printf("%s precedence too large: %d\n",
 				    op->name, op->prec);
 			}
@@ -2400,7 +2401,7 @@ precedence(void)
 		op++;
 	}
 
-	for (prec = 0; prec < 40; prec++) {
+	for (prec = NUM_PRECEDENCE-1; prec >=0; prec--) {
 		if (prec_ops[prec])
 			printf("%d	%s\n", prec, prec_ops[prec]);
 	}
@@ -2409,19 +2410,19 @@ precedence(void)
 }
 
 opreturn
-table(void)
+commands(void)
 {
 	oper *op, *lastop = NULL;
-	char *indent;
 
 	op = opers;
 
 	while (op->name) {
 		if (op->func ) {
-			indent="";
 			if (lastop && lastop->func == op->func )
-				indent="  ";
-			printf("%s%s\t%d\t%d\t%s\n", indent,
+				printf("%10s\t%d\t%d\t%s\n",
+				op->name, op->operands, op->prec, op->help ?: "");
+			else
+				printf("%-10s\t%d\t%d\t%s\n",
 				op->name, op->operands, op->prec, op->help ?: "");
 		}
 		lastop = op;
@@ -2463,7 +2464,7 @@ ca -- a stack based calculator\n\
 		if (!*op->name) {
 			putchar('\n');
 		} else {
-			if (op->help && !strcmp(op->help, "HideMe")) {
+			if (op->help && !strncmp(op->help, "HideMe", 6)) {
 				/* hidden command */ ;
 			} else if (!op->func) {
 				printf("%s\n", op->name);
@@ -2502,53 +2503,53 @@ struct oper opers[] = {
 //        |    |                |  |  +--- operator precedence
 //        |    |                |  |  |         (# of operands and precedence
 //        V    V                V  V  V           used only by infix code)
-	{"+", add,		0, 2, 22 },
-	{"-", subtract,		"Add and subtract x and y", 2, 22 },
-	{"*", multiply,		0, 2, 23 },
-	{"x", multiply,		"Two ways to multiply x and y", 2, 23 },
-	{"/", divide,		0, 2, 23 },
-	{"%", modulo,		"Divide and modulo of y by x (arithmetic shift)", 2, 23 },
-	{"^", y_to_the_x,	0, 2, 24 },
-	{"**", y_to_the_x,	"Raise y to the x'th power", 2, 24 },
-	{">>", rshift,		0, 2, 19 },
-	{"<<", lshift,		"Right/left logical shift of y by x bits", 2, 19 },
-	{"&", bitwise_and,	0, 2, 18 },
-	{"|", bitwise_or,	0, 2, 16 },
-	{"xor", bitwise_xor,	"Bitwise AND, OR, and XOR of y and x", 2, 17 },
-	{"setb", setbit,	0, 2, 16 },
-	{"clearb", clearbit,	"Set and clear bit x in y", 2, 18 },
+	{"+", add,		0, 2, 18 },
+	{"-", subtract,		"Add and subtract x and y", 2, 18 },
+	{"*", multiply,		0, 2, 20 },
+	{"x", multiply,		"Two ways to multiply x and y", 2, 20 },
+	{"/", divide,		0, 2, 20 },
+	{"%", modulo,		"Divide and modulo of y by x (arithmetic shift)", 2, 20 },
+	{"^", y_to_the_x,	0, 2, 22 },
+	{"**", y_to_the_x,	"Raise y to the x'th power", 2, 22 },
+	{">>", rshift,		0, 2, 16 },
+	{"<<", lshift,		"Right/left logical shift of y by x bits", 2, 16 },
+	{"&", bitwise_and,	0, 2, 14 },
+	{"|", bitwise_or,	0, 2, 10 },
+	{"xor", bitwise_xor,	"Bitwise AND, OR, and XOR of y and x", 2, 12 },
+	{"setb", setbit,	0, 2, 10 },
+	{"clearb", clearbit,	"Set and clear bit x in y", 2, 14 },
 	{"", 0, 0},		// all-null entries cause blank line in output
     {"Operators with one operand:", 0, 0},
-	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 31 },
-	{"chs", chsign,		0, 1, 31 },  // precedence unused, see special case in open_paren()
-	{"negate", chsign,	"Change sign of x (2's complement)", 1, 31 },
-	{"plus", plus,		"HideMe", 1, 31 }, // needed for infix
-	{"recip", recip,        0, 1, 30 },
-	{"sqrt", squarert,      "Reciprocal and square root of x", 1, 30 },
-	{"sin", sine,           0, 1, 30 },
-	{"cos", cosine,         0, 1, 30 },
-	{"tan", tangent,        "", 1, 30 },
-	{"asin", asine,         0, 1, 30 },
-	{"acos", acosine,       0, 1, 30 },
-	{"atan", atangent,      "Trig functions (in degrees)", 1, 30 },
-	{"atan2", atangent2,    "Arctan of y/x (i.e., 2 operands, in degrees)", 2, 30 },
+	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 26 },
+	{"chs", chsign,		0, 1, 26 },  // precedence unused, see special case in open_paren()
+	{"negate", chsign,	"Change sign of x (2's complement)", 1, 26 },
+	{"plus", plus,		"HideMe, plus sign, needed for infix", 1, 26 }, // needed for infix
+	{"recip", recip,        0, 1, 24 },
+	{"sqrt", squarert,      "Reciprocal and square root of x", 1, 24 },
+	{"sin", sine,           0, 1, 24 },
+	{"cos", cosine,         0, 1, 24 },
+	{"tan", tangent,        "", 1, 24 },
+	{"asin", asine,         0, 1, 24 },
+	{"acos", acosine,       0, 1, 24 },
+	{"atan", atangent,      "Trig functions (in degrees)", 1, 24 },
+	{"atan2", atangent2,    "Arctan of y/x (i.e., 2 operands, in degrees)", 2, 24 },
 
-	{"abs", absolute,	0, 1, 30 },
-	{"frac", fraction,	0, 1, 30 },
-	{"int", integer,	"Absolute value, fractional and integer parts of x", 1, 30 },
-	{"(", open_paren,	"Begin \"infix\" expression, ends at matching ')' or EOL", 0, 39 },
-	{")", close_paren,	"HideMe" }, // needed for infix to work
+	{"abs", absolute,	0, 1, 24 },
+	{"frac", fraction,	0, 1, 24 },
+	{"int", integer,	"Absolute value, fractional and integer parts of x", 1, 24 },
+	{"(", open_paren,	0, 0, 28 },
+	{")", close_paren,	"Begin and end \"infix\" expression", 0},
 	{"", 0, 0},
     {"Logical operators:", 0, 0},
 	{"&&", logical_and,     0, 2, 4 },
-	{"||", logical_or,      "Logical AND and OR", 2, 3 },
-	{"==", is_eq,           0, 2, 8 },
-	{"!=", is_neq,          0, 2, 8 },
-	{"<", is_lt,            0, 2, 9 },
-	{"<=", is_le,           0, 2, 9 },
-	{">", is_gt,            0, 2, 9 },
-	{">=", is_ge,           "Arithmetic comparisons", 2, 9 },
-	{"!", logical_not,	"Logical NOT of x", 1, 31 },
+	{"||", logical_or,      "Logical AND and OR", 2, 2 },
+	{"==", is_eq,           0, 2, 6 },
+	{"!=", is_neq,          0, 2, 6 },
+	{"<", is_lt,            0, 2, 8 },
+	{"<=", is_le,           0, 2, 8 },
+	{">", is_gt,            0, 2, 8 },
+	{">=", is_ge,           "Arithmetic comparisons", 2, 8 },
+	{"!", logical_not,	"Logical NOT of x", 1, 26 },
 	{"", 0, 0},
     {"Stack manipulation:", 0, 0},
 	{"clear", clear,	"Clear stack" },
@@ -2577,18 +2578,18 @@ struct oper opers[] = {
 	{"e", push_e,		"Push constant e", -1 },
 	{"", 0, 0},
     {"Conversions:", 0, 0},
-	{"i2mm", units_in_mm,   0, 1, 30 },
-	{"mm2i", units_mm_in,   "inches / millimeters", 1, 30 },
-	{"ft2m", units_ft_m,	0, 1, 30},
-	{"m2ft", units_m_ft,	"feet / meters", 1, 30 },
-	{"mi2km", units_mi_km,  0, 1, 30 },
-	{"km2mi", units_km_mi,  "miles / kilometers", 1, 30 },
-	{"f2c", units_F_C,      0, 1, 30 },
-	{"c2f", units_C_F,      "degrees F/C", 1, 30 },
-	{"oz2g", units_oz_g,    0, 1, 30 },
-	{"g2oz", units_g_oz,    "ounces / grams", 1, 30 },
-	{"q2l", units_qt_l,     0, 1, 30 },
-	{"l2q", units_l_qt,     "quarts / liters", 1, 30 },
+	{"i2mm", units_in_mm,   0, 1, 24 },
+	{"mm2i", units_mm_in,   "inches / millimeters", 1, 24 },
+	{"ft2m", units_ft_m,	0, 1, 24},
+	{"m2ft", units_m_ft,	"feet / meters", 1, 24 },
+	{"mi2km", units_mi_km,  0, 1, 24 },
+	{"km2mi", units_km_mi,  "miles / kilometers", 1, 24 },
+	{"f2c", units_F_C,      0, 1, 24 },
+	{"c2f", units_C_F,      "degrees F/C", 1, 24 },
+	{"oz2g", units_oz_g,    0, 1, 24 },
+	{"g2oz", units_g_oz,    "ounces / grams", 1, 24 },
+	{"q2l", units_qt_l,     0, 1, 24 },
+	{"l2q", units_l_qt,     "quarts / liters", 1, 24 },
 	{"", 0, 0},
     {"Display:", 0, 0},
 	{"P", printall,		"Print whole stack according to mode" },
@@ -2600,8 +2601,8 @@ struct oper opers[] = {
 	{"b", printbin,		"Print x in float, decimal, octal, hex, binary" },
 	{"autoprint", autop,	0 },
 	{"a", autop,		"Toggle autoprinting on/off" },
-	{"dR", printraw,	"HideMe" }, // raw stack contents
-	{"dT", tracetoggle,	"HideMe" }, // toggle tracing
+	{"raw", printraw,	"HideMe, print raw stack contents" },
+	{"tracing", tracetoggle,"HideMe, toggle debug tracing" },
 	{"", 0, 0},
     {"Modes:", 0, 0},
 	{"F", modefloat,	"Switch to floating point mode" },
@@ -2624,8 +2625,8 @@ struct oper opers[] = {
     {"Housekeeping:", 0, 0},
 	{"?", help,		0 },
 	{"help", help,		"Show this list" },
-	{"dH", table,		"HideMe" },  // raw command table
-	{"dP", precedence,	"HideMe" },  // precedence list
+	{"precedence", precedence, "List infix operator precedence" },
+	{"commands", commands,	"HideMe, show raw command table" },  // raw command table
 	{"quit", quit,		0 },
 	{"q", quit,		0 },
 	{"exit", quit,		"Leave the calculator" },
