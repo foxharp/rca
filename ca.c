@@ -2127,8 +2127,8 @@ gettoken(struct token *t)
 	fflush(stdin);
 
 	if (!parse_tok(input_ptr, t, &input_ptr, 1)) {
-		printf(" unrecognized input '%s'\n", input_ptr);
-		flushinput();
+		printf(" error: unrecognized input '%s'\n", input_ptr);
+		// flushinput();
 		return 0;
 	}
 
@@ -2215,8 +2215,8 @@ open_paren(void)
 			else
 			    trace(("symbolic is %s\n", t->val.oper->name));
 			if (ptok.type == NUMERIC || ptok.type == SYMBOLIC) {
-				printf(" bad expression sequence\n");
-				flushinput();
+				printf(" error: bad expression sequence\n");
+				// flushinput();
 				return BADOP;
 			}
 			tpush(&out_stack, t);
@@ -2237,7 +2237,7 @@ open_paren(void)
 				// Process until matching opening parenthesis
 				while (1) {
 					if (tp == NULL) {
-						printf(" missing parentheses?\n");
+						printf(" error: missing parentheses?\n");
 						return BADOP;
 					}
 
@@ -2291,8 +2291,8 @@ open_paren(void)
 				/* two two operand ops in a row? */
 				if (ptok.type == OP &&
 					ptok.val.oper->func != close_paren) {
-					printf(" bad operator sequence\n");
-					flushinput();
+					printf(" error: bad operator sequence\n");
+					// flushinput();
 					return BADOP;
 				}
 
@@ -2313,9 +2313,9 @@ open_paren(void)
 				}
 				tpush(&oper_stack, t);
 			} else {
-				printf(" '%s' unsuitable in infix expression\n",
+				printf(" error: '%s' unsuitable in infix expression\n",
 					t->val.oper->name);
-				flushinput();
+				// flushinput();
 				return BADOP;
 			}
 			break;
@@ -2323,8 +2323,8 @@ open_paren(void)
 		default:
 		case UNKNOWN:
 		cleanup:
-			printf(" unrecognized input '%s'\n", t->val.str);
-			flushinput();
+			printf(" error: unrecognized input '%s'\n", t->val.str);
+			// flushinput();
 			return BADOP;
 		}
 
@@ -2338,8 +2338,8 @@ open_paren(void)
 	tdump(&out_stack);
 
 	if (paren_count) {
-		printf(" missing parentheses\n");
-		flushinput();
+		printf(" error: missing parentheses\n");
+		// flushinput();
 		return BADOP;
 	}
 
@@ -2638,8 +2638,8 @@ main(int argc, char *argv[])
 			break;
 		default:
 		case UNKNOWN:
-			printf(" unrecognized input '%s'\n", t->val.str);
-			flushinput();
+			printf(" error: unrecognized input '%s'\n", t->val.str);
+			// flushinput();
 			break;
 		}
 
