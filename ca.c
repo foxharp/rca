@@ -2431,8 +2431,7 @@ commands(void)
 	return GOODOP;
 }
 
-opreturn
-help(void)
+opreturn showhelp(int show_hidden)
 {
 	oper *op;
 
@@ -2464,7 +2463,8 @@ ca -- a stack based calculator\n\
 		if (!*op->name) {
 			putchar('\n');
 		} else {
-			if (op->help && !strncmp(op->help, "HideMe", 6)) {
+			if (op->help && !show_hidden &&
+					strncmp(op->help, "HideMe", 6) == 0) {
 				/* hidden command */ ;
 			} else if (!op->func) {
 				printf("%s\n", op->name);
@@ -2484,6 +2484,18 @@ ca -- a stack based calculator\n\
 	printf("\n%78s\n", __FILE__ " built " __DATE__ " " __TIME__);
 	printf ("\nTip:  Use \"ca help q | less\" to view this help\n");
 	return GOODOP;
+}
+
+opreturn
+help(void)
+{
+	return showhelp(0);
+}
+
+opreturn
+Help(void)
+{
+	return showhelp(1);
 }
 
 /* the opers[] table doesn't initialize everything explicitly */
@@ -2625,6 +2637,7 @@ struct oper opers[] = {
     {"Housekeeping:", 0, 0},
 	{"?", help,		0 },
 	{"help", help,		"Show this list" },
+	{"Help", Help,		"Show this list, including hidden commands" },
 	{"precedence", precedence, "List infix operator precedence" },
 	{"commands", commands,	"HideMe, show raw command table" },  // raw command table
 	{"quit", quit,		0 },
