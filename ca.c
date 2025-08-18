@@ -1788,6 +1788,34 @@ units_g_oz(void)
 }
 
 opreturn
+units_oz_ml(void)
+{
+	ldouble a;
+
+	if (pop(&a)) {
+		a *= 29.5735;
+		push(a);
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
+units_ml_oz(void)
+{
+	ldouble a;
+
+	if (pop(&a)) {
+		a /= 29.5735;
+		push(a);
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
 units_mi_km(void)
 {
 	ldouble a;
@@ -2600,6 +2628,8 @@ struct oper opers[] = {
 	{"c2f", units_C_F,      "degrees F/C", 1, 24 },
 	{"oz2g", units_oz_g,    0, 1, 24 },
 	{"g2oz", units_g_oz,    "ounces / grams", 1, 24 },
+	{"oz2ml", units_oz_ml,    0, 1, 24 },
+	{"ml2oz", units_ml_oz,    "ounces / milliliters", 1, 24 },
 	{"q2l", units_qt_l,     0, 1, 24 },
 	{"l2q", units_l_qt,     "quarts / liters", 1, 24 },
 	{"", 0, 0},
