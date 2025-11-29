@@ -1458,7 +1458,13 @@ precision(void)
 opreturn
 punctuation(void)
 {
-	punct = !punct;
+	ldouble wantcommas;
+
+	if (!pop(&wantcommas))
+		return BADOP;
+
+	punct = (wantcommas != 0);
+
 	// info
 	snprintf(pending_info, sizeof(pending_info),
 		" numeric punctuation is now %s\n", punct ? "on" : "off");
@@ -2686,7 +2692,7 @@ struct oper opers[] = {
 	{"width", width,	0 },
 	{"w", width,		"Set effective \"word size\" for integer modes" },
 	{"commas", punctuation,	0 },
-	{"c", punctuation,	"Toggle numeric comma separators on/off" },
+	{"c", punctuation,	"Set comma separators on or off" },
 	{"mode", modeinfo,	"Display current mode parameters" },
 	{"", 0, 0},
     {"Housekeeping:", 0, 0},

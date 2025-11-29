@@ -151,7 +151,7 @@ h
  0x8765,0000
 b
  0b00000000,00000000,00000000,00000000,10000111,01100101,00000000,00000000
-commas
+0 commas
  numeric punctuation is now off
  0x87650000
 16w
@@ -162,7 +162,7 @@ h
 B
  Mode is binary.  Integer math with 16 bits.
  0b0000000000000000
-c
+1 c
  numeric punctuation is now on
  0b00000000,00000000
 b
@@ -193,7 +193,7 @@ D
  0
  -2,023,424,000
  314,159
-c
+0 c
  numeric punctuation is now off
  314159
 
@@ -225,7 +225,7 @@ O
  020100000000
 h
  0x81000000
-c
+1 c
  numeric punctuation is now on
  020,100,000,000
 h
@@ -511,13 +511,13 @@ atan
  -19.05
 40 i2mm
  1,016
-c
+0 c
  numeric punctuation is now off
  1016
 3K
  3 digits after the decimal.
  1016.000
-c
+1 c
  numeric punctuation is now on
  1,016.000
 q
