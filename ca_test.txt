@@ -35,6 +35,9 @@ P
 4 <<
  4,096
 
+foobar
+ error: unrecognized input 'foobar'
+
 H
  Mode is hex.  Integer math with 64 bits.
  0x1

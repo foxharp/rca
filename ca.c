@@ -2168,6 +2168,7 @@ fetch_line(void)
 int
 gettoken(struct token *t)
 {
+	char *next_input_ptr;
 	if (input_ptr == NULL)
 		if (!fetch_line())
 			return 0;
@@ -2183,12 +2184,14 @@ gettoken(struct token *t)
 
 	fflush(stdin);
 
-	if (!parse_tok(input_ptr, t, &input_ptr, 1)) {
+	if (!parse_tok(input_ptr, t, &next_input_ptr, 1)) {
 		printf(" error: unrecognized input '%s'\n", input_ptr);
 		might_errexit();
+		input_ptr = next_input_ptr;
 		return 0;
 	}
 
+	input_ptr = next_input_ptr;
 	return 1;
 }
 
