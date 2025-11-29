@@ -1277,6 +1277,8 @@ printraw(void)
 		(unsigned long)(8 * sizeof(long double)));
 	printf("long double mantissa width %d\n", LDBL_MANT_DIG);
 
+	printf("float_digits is %d, float_specifier is %c\n",
+		float_digits, float_specifier);
 	printf("format string for float mode: \"%s\"\n", format_string);
 
 	suppress_autoprint = TRUE;
@@ -1387,8 +1389,10 @@ setup_format_string(void)
 {
 	/* The floating print options include
 	   - commas or not
-	   - alternate form or not (we use it with %f, but not %g)
 	   - %f or %g
+	   - we used to use alternate form ('%#') with %f, but not %g, but I
+		don't recall why.  so we don't anymore.  this lets '0 K'
+		cause an integral value to print without decimal point.
 	   Also:
 	   - precision
 	   but happily that's provided via the '*' specifier at printf time.
@@ -1398,12 +1402,12 @@ setup_format_string(void)
 
 	if (punct) {
 		if (float_specifier == 'f')
-			format_string = " %'#.*Lf\n";
+			format_string = " %'.*Lf\n";
 		else
 			format_string = " %'.*Lg\n";
 	} else {
 		if (float_specifier == 'f')
-			format_string = " %#.*Lf\n";
+			format_string = " %.*Lf\n";
 		else
 			format_string = " %.*Lg\n";
 	}
@@ -1418,6 +1422,7 @@ precision(void)
 		return BADOP;
 
 	float_digits = abs((int)digits);
+	// this is total digits, so '0' doesn't make sense
 	if (float_digits < 1)
 		float_digits = 1;
 
@@ -1453,8 +1458,7 @@ decimal_length(void)
 		return BADOP;
 
 	float_digits = abs((int)digits);
-	if (float_digits < 1)
-		float_digits = 1;
+	// this is digits after decimal, so '0' is okay
 
 	float_specifier = 'f';
 

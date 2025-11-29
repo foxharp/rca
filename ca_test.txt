@@ -295,8 +295,8 @@ pi
  1 digit after the decimal.
  3,141,592,653,589,793.2
 0K
- 1 digit after the decimal.
- 3,141,592,653,589,793.2
+ 0 digits after the decimal.
+ 3,141,592,653,589,793
 15k
  15 digits of total displayed precision.
  3.14159265358979e+15
