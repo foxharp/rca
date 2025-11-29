@@ -24,7 +24,7 @@ publish: publish_prepare
 
 
 install:
-	wake_host basil clover; sleep 3
+	wake_host chive clover; sleep 3
 	for x in grass hemlock chive flax colo basil clover; \
 	do \
 	 	$$x put ca bin ; \
