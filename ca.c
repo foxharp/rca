@@ -146,6 +146,9 @@ struct token {
  */
 int mode = 'f';			/* 'f', 'd', 'h', 'o', 'b' */
 
+/* if true, exit(4) on error, warning, or access to empty operand stack */
+boolean exit_on_error = FALSE;
+
 /* if true, print the top of stack after any line that ends with an operator */
 boolean autoprint = TRUE;
 
@@ -187,6 +190,19 @@ ldouble infix_X;
 ldouble offstack;
 ldouble offstack2;
 ldouble offstack3;
+
+opreturn
+enable_errexit(void)
+{
+    exit_on_error = TRUE;
+    return GOODOP;
+}
+
+void
+might_errexit(void)
+{
+    if (exit_on_error) exit(4);
+}
 
 long long
 sign_extend(ldouble a)
@@ -241,6 +257,7 @@ pop(ldouble *f)
 	p = stack;
 	if (!p) {
 		printf(" empty stack\n");
+		might_errexit();
 		return FALSE;
 	}
 	*f = p->val;
@@ -1861,11 +1878,11 @@ void
 exitret(void)
 {
 	ldouble a = 0;
-	if (stack) {
+	if (stack) {  // exit 0 or 1, based on top of stack
 		pop(&a);
-		exit(a == 0);  // flip status per unix convention
+		exit(a == 0);  // flip exit status per unix convention
 	} else {
-		exit(2);
+		exit(2);  // exit 2 on empty stack
 	}
 
 }
@@ -2162,7 +2179,7 @@ gettoken(struct token *t)
 
 	if (!parse_tok(input_ptr, t, &input_ptr, 1)) {
 		printf(" error: unrecognized input '%s'\n", input_ptr);
-		// flushinput();
+		might_errexit();
 		return 0;
 	}
 
@@ -2189,6 +2206,7 @@ close_paren(void)
 	// this has to be a warning -- the command in error is already
 	// finished, so we can't cancel it.
 	printf(" warning: mismatched/extra parentheses\n");
+	might_errexit();
 	return BADOP;
 }
 
@@ -2250,7 +2268,7 @@ open_paren(void)
 			    trace(("symbolic is %s\n", t->val.oper->name));
 			if (ptok.type == NUMERIC || ptok.type == SYMBOLIC) {
 				printf(" error: bad expression sequence\n");
-				// flushinput();
+				might_errexit();
 				return BADOP;
 			}
 			tpush(&out_stack, t);
@@ -2272,6 +2290,7 @@ open_paren(void)
 				while (1) {
 					if (tp == NULL) {
 						printf(" error: missing parentheses?\n");
+						might_errexit();
 						return BADOP;
 					}
 
@@ -2282,6 +2301,7 @@ open_paren(void)
 					    ptok.val.oper->operands > 0) {
 						printf(" error: missing operand(s) for %s\n",
 							tp->val.oper->name);
+						might_errexit();
 						return BADOP;
 					}
 
@@ -2333,7 +2353,7 @@ open_paren(void)
 				if (ptok.type == OP &&
 					ptok.val.oper->func != close_paren) {
 					printf(" error: bad operator sequence\n");
-					// flushinput();
+					might_errexit();
 					return BADOP;
 				}
 
@@ -2356,7 +2376,7 @@ open_paren(void)
 			} else {
 				printf(" error: '%s' unsuitable in infix expression\n",
 					t->val.oper->name);
-				// flushinput();
+				might_errexit();
 				return BADOP;
 			}
 			break;
@@ -2365,7 +2385,7 @@ open_paren(void)
 		case UNKNOWN:
 		cleanup:
 			printf(" error: unrecognized input '%s'\n", t->val.str);
-			// flushinput();
+			might_errexit();
 			return BADOP;
 		}
 
@@ -2380,7 +2400,7 @@ open_paren(void)
 
 	if (paren_count) {
 		printf(" error: missing parentheses\n");
-		// flushinput();
+		might_errexit();
 		return BADOP;
 	}
 
@@ -2678,6 +2698,7 @@ struct oper opers[] = {
 	{"quit", quit,		0 },
 	{"q", quit,		0 },
 	{"exit", quit,		"Leave the calculator" },
+	{"errorexit", enable_errexit,	"Enable exit(4) on error or warning" },
 	{"#", help,		"Comment. The rest of the line will be ignored." },
 	{NULL, NULL, 0},
 };
@@ -2749,7 +2770,7 @@ main(int argc, char *argv[])
 		default:
 		case UNKNOWN:
 			printf(" error: unrecognized input '%s'\n", t->val.str);
-			// flushinput();
+			might_errexit();
 			break;
 		}
 
