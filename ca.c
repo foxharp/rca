@@ -2111,9 +2111,11 @@ fetch_line(void)
 	if ((input_buf = readline("")) == NULL)  // got EOF
 		exitret();
 
+#if READLINE_NO_ECHO_BARE_NL  // no longer true?
 	// readline() doesn't echo bare newlines to tty, so do it here,
 	if (*input_buf == '\0')
 		putchar('\n');
+#endif
 
 #else
 	if (getline(&input_buf, &blen, stdin) < 0)  // EOF
