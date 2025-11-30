@@ -27,7 +27,7 @@ install:
 	wake_host chive clover; sleep 3
 	for x in grass hemlock chive flax colo basil clover; \
 	do \
-	 	$$x put ca ca_float bin ; \
+		$$x put ca ca_float bin ; \
 	done
 	lumber put ca.c .
 	lumber run doit ca.c

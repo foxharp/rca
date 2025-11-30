@@ -115,8 +115,8 @@ struct oper {
 	char *name;
 	opreturn(*func) (void);
 	char *help;
-	int operands;    /* used only by infix code */
-	int prec;	 /* used only by infix code */
+	int operands;	/* used only by infix code */
+	int prec;	/* used only by infix code */
 };
 
 /* operator table */
@@ -194,14 +194,14 @@ ldouble offstack3;
 opreturn
 enable_errexit(void)
 {
-    exit_on_error = TRUE;
-    return GOODOP;
+	exit_on_error = TRUE;
+	return GOODOP;
 }
 
 void
 might_errexit(void)
 {
-    if (exit_on_error) exit(4);
+	if (exit_on_error) exit(4);
 }
 
 long long
@@ -243,7 +243,7 @@ boolean
 peek(ldouble *f)
 {
 	if (!stack)
-	    return FALSE;
+		return FALSE;
 
 	*f = stack->val;
 	return TRUE;
@@ -681,7 +681,7 @@ chsign(void)
 opreturn
 plus(void)
 {
-	    return GOODOP;
+	return GOODOP;
 }
 
 opreturn
@@ -2022,10 +2022,10 @@ parse_tok(char *p, token *t, char **nextp, int rpn_signed_ints)
 			if (n == matchlen && !strncmp(op->name, p, matchlen)) {
 				*nextp = p + matchlen;
 				t->val.oper = op;
-				if (op->operands == -1)
-				    t->type = SYMBOLIC;  // like "pi", "recall"
+				if (op->operands == -1) // like "pi", "recall"
+					t->type = SYMBOLIC;
 				else
-				    t->type = OP;
+					t->type = OP;
 				return 1;
 			}
 			op++;
@@ -2272,9 +2272,9 @@ open_paren(void)
 		case NUMERIC:
 		case SYMBOLIC:
 			if (t->type == NUMERIC)
-			    trace(("val is %Lf\n", t->val.val));
+				trace(("val is %Lf\n", t->val.val));
 			else
-			    trace(("symbolic is %s\n", t->val.oper->name));
+				trace(("symbolic is %s\n", t->val.oper->name));
 			if (ptok.type == NUMERIC || ptok.type == SYMBOLIC) {
 				printf(" error: bad expression sequence\n");
 				might_errexit();
@@ -2306,8 +2306,8 @@ open_paren(void)
 					if (tp->val.oper->func == open_paren)
 						break;
 
-				    	if (ptok.type == OP &&
-					    ptok.val.oper->operands > 0) {
+					if (ptok.type == OP &&
+						ptok.val.oper->operands > 0) {
 						printf(" error: missing operand(s) for %s\n",
 							tp->val.oper->name);
 						might_errexit();
@@ -2344,7 +2344,7 @@ open_paren(void)
 				// another operator.  A closing paren
 				// is not an operator in this case.
 				if (ptok.type == UNKNOWN ||
-				    		(ptok.type == OP &&
+						(ptok.type == OP &&
 					ptok.val.oper->func != close_paren)) {
 					if (t->val.oper->func == subtract) {
 						t = &chsign_token;
@@ -2454,7 +2454,7 @@ precedence(void)
 		if (op->name[0] && op->func && op->prec > 0) {
 			if (op->prec >= NUM_PRECEDENCE) {
 				printf("%s precedence too large: %d\n",
-				    op->name, op->prec);
+					op->name, op->prec);
 			}
 			if (!prec_ops[op->prec])
 				prec_ops[op->prec] = (char *)calloc(1, 500);
