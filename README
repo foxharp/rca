@@ -1,0 +1,77 @@
+
+
+At it's heart, ca is a reverse polish notation (RPN) calculator
+modeled (very loosely) on the Hewlett-Packard operating model from
+their long line of scientific calculators.  Numbers entered by the
+user are pushed onto a stack.  Operators pop those stack entries,
+usually 1 or 2 at a time, and push the result of the operation back on
+the stack.  Operators cover the usual arithemetic functions (+, -,
+etc), , as well as functions (sin, cos, negation), bit-shifting (<<
+and >>), logical operations (&&, ||), and comparators (==, !=, <=,
+etc).  There are even a few unit conversions available (e.g., i2mm,
+oz2g, f2c).  A complete list of operators can be obtained with the ? 
+or help commands.
+
+In addition, ca supports infix style expressions (i.e., non-RPN
+expressions) which must be enclosed in parentheses.  These expressions
+ "escape" the RPN model, and
+are evaluated with the usual rules of operator precedence.  The special
+symbol "X" can be used in the expression, to reference the current value
+of x, the top of stack.  The top of stack will _not_ be disturbed. 
+The result of the expression will be pushed on the RPN stack.  Infix
+expressions must fit on a single line of input.
+
+ca can be configured (via pseudo-operators, which pull parameters from
+the stack) to operate on floating point numbers, or integers.
+
+When in floating point mode (the default), the user can control either
+the number of digits shown after the decimal point ("decimals", or
+"K"), or the total number of significant digits ("precision", or "k"). 
+So the value of pi multiplied by 1 million will display as 3.14159e+06
+with "6 k" or as 3,141,592.6535898 with "7 K".
+
+The width of integers in integer mode can be configured to be as
+narrow as 8 bits.  The maximum width is system dependent:  either the
+width of the "long long" data type, or the width of the "long double"
+mantissa, whichever is narrower.  This is 64 bits on most CPU
+architectures in 2025.  (53 bits on some ARM systems.) Also, in
+integer mode, the default base for all output can be set to decimal,
+hex, octal, or binary.  The input base of a number is controlled by
+how it is entered:  10, 0xa, 012, and 0b1010 are all the same value.
+
+To aid in reading, ca by default will add commas to numbers it prints.
+This can be disabled with the "commas" command.  Both commas and the
+"$" currency symbol will be silently stripped on input.
+
+A complete list of operators/commands can be obtained entering "?" or
+"help".  Many operators have two names:  "?" and "help" are the same,
+both "width" and "w" can be used to set word width, either "^" or "**"
+can be used for exponentiation, "*" and "x" will both multiply, etc.
+
+When used as an RPN calculator, operator precedence isn't really meaningful --
+the stack paradigm makes all operators equal in that regard.  But when evaluating
+an infix expression, the relative precedence of operators is important.  A
+list of operator precedence can be obtained with the "precedence" command,
+whose output is reproduced here.  Higher numbers denote higher precedence.
+    28	( 
+    26	~ chs negate plus ! 
+    24	recip sqrt sin cos tan asin acos atan atan2 abs \
+    	frac int i2mm mm2i ft2m m2ft mi2km km2mi f2c c2f \
+	oz2g g2oz oz2ml ml2oz q2l l2q
+    22	^ ** 
+    20	* x / % 
+    18	+ - 
+    16	>> << 
+    14	& clearb 
+    12	xor 
+    10	| setb 
+    8	< <= > >= 
+    6	== != 
+    4	&& 
+    2	|| 
+
+A special operator "sum" will pop and add up previous entries on the
+stack, stopping when the stack is empty, or when a "mark" is reached. 
+The mark can be set before entering data for a subsequent "sum", in
+order to limit its reach.  "sum" is the only operator to consume more
+than 2 stack elements.
