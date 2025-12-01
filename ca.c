@@ -1891,7 +1891,12 @@ units_km_mi(void)
 opreturn
 autop(void)
 {
-	autoprint = !autoprint;
+	ldouble wantautop;
+
+	if (!pop(&wantautop))
+		return BADOP;
+
+	autoprint = (wantautop != 0);
 	// info
 	snprintf(pending_info, sizeof(pending_info),
 		" autoprinting is now %s\n", autoprint ? "on" : "off");
@@ -2699,7 +2704,7 @@ struct oper opers[] = {
 	{"h", printhex,		0 },
 	{"b", printbin,		"Print x in float, decimal, octal, hex, or binary" },
 	{"autoprint", autop,	0 },
-	{"a", autop,		"Toggle autoprinting on/off" },
+	{"a", autop,		"Set autoprinting on/off" },
 	{"raw", printraw,	"HideMe, print raw stack contents" },
 	{"tracing", tracetoggle,"HideMe, toggle debug tracing" },
 	{"", 0, 0},
