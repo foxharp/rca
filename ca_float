@@ -1,107 +1,36 @@
-#!/bin/bash
 
-# This wrapper script give "easy" access to floating point evaluation
-# and conditionals from a bash-like shell.  The underlying calculator
-# is "ca".  At its heart, ca is an RPN calculator, but it will perform
-# infix evaluation on anything in parentheses.  This script takes
-# advantage of that, and exposes only the infix capabilities.
+# This shell snippet gives simple access to ca's floating point
+# capability from a POSIX shell.
 #
-# Source this file into your script, then use code like this:
-#	answer=$(float_eval "3 * pi")     # "fe" is a synonym for float_eval
-# to do a calculation or like this:
-#	if float_cond "(10 * 3) < $foo"   # "fc" is a synonym for float_cond
-#	then ....
-# for a conditional.
-#
-# Use "ca help q | less" to see the ca documentation.
+# After including this code, use lines like this to calculate:
+#	foo=$(fe "$bar * pi")
+# or like this for a conditional:
+#	if fc "(10 * 3) < $foo"; then ...
 
-# internal worker
-_float_run()
+CA_INIT="3K 0commas errorexit"
+
+_ca_run()    # support routine
 {
-    # on exit: 
-    # ca will return 0 or 1 depending on whether the top of stack
-    #  is non-zero.
-    # the exit value will be 2 if the stack is empty on exit.
-    # the exit value will be 3 for internal (malloc) errors.
-    # the exit value will be 4 if warnings or errors are encountered. (this
-    #  behavior is enabled with the "errorexit" command.)
-    test "$1" && result=$(ca "$_float_decimals 0 commas errorexit ( $* ) q")
+    output=$(ca "$CA_INIT" "( $* )" q)
     exitcode=$?
 
-    # 0 and 1 are simply logical results from the last expression.  we
-    # just want its value in this case
-    case $exitcode in
-    0|1)
-	echo $result
+    if [ $exitcode -le 1 ]; then
+	echo $output
 	return $exitcode
-	;;
-    *)
-	echo ca fail: $result >&2
-	exit 1
-	;;
-    esac
+    fi
+
+    echo ca failure: $output >&2
+    exit 1
 }
 
-# Evaluate a floating point expression.
-float_eval()
+fe()	# Evaluate a floating point expression.
 {
-    _float_run "$*"
+    _ca_run "$*"
     return 0
 }
 
-fe() { float_eval "$@"; }   # shorthand
-
-
-# Evaluate a floating point number conditional expression.
-# ca's exit code reflects the expression's logical value
-float_cond()
+fc()	 # Evaluate a floating point conditional expression.
 {
-    _float_run "$*" >/dev/null
+    _ca_run "$*" >/dev/null
 }
-
-fc() { float_cond "$@"; }   # shorthand
-
-# Helper for changing number of places after the decimal
-float_decimals()
-{
-    _float_decimals="$1 K"
-}
-_float_decimals=;
-
-
-# Normally this file is source'd into a script.  Invoking it directly
-# is done for testing, and either evaluates its (single) argument, or
-# runs some simple canned evaluations.
-me=${0##*/}
-if [ "$me" = ca_float ]
-then
-    if [[ $1 ]]
-    then
-        echo $(float_eval $*)
-    else
-        e="12.5 / 3.2"
-        echo $e is $(float_eval "$e")
-        e="100.4 / 4.2 + 3.2 * 6.5"
-        echo "$e" is $(fe "$e")
-        if fc '10.0 > 9.3'; then
-            echo "10.0 is greater than 9.3"
-        fi
-        if float_cond '10.0 < 9.3'; then
-            echo "Oops"
-        else
-            echo "10.0 is not less than 9.3"
-        fi
-        a=12.0
-        b=3.0
-        c=$(float_eval "$a / $b")
-        echo "$a / $b" is $c
-    fi
-fi
-
-# answers:
-# 12.5 / 3.2 is 3.906250
-# 100.4 / 4.2 + 3.2 * 6.5 is 44.704762  (rounded to 6 digits)
-# 10.0 is greater than 9.3
-# 10.0 is not less than 9.3
-# 12.0 / 3.0 is 4.000000
 
