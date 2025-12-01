@@ -437,7 +437,8 @@ divide(void)
 			} else {
 				push(a);
 				push(b);
-				printf(" would divide by zero\n");
+				printf(" math error: would divide by zero\n");
+				might_errexit();
 				return BADOP;
 			}
 			lastx = b;
@@ -464,7 +465,8 @@ modulo(void)
 			} else {
 				push(a);
 				push(b);
-				printf(" would divide by zero\n");
+				printf(" math error: would divide by zero\n");
+				might_errexit();
 				return BADOP;
 			}
 			lastx = b;
@@ -487,7 +489,8 @@ y_to_the_x(void)
 			} else {
 				push(a);
 				push(b);
-				printf(" result would be complex\n");
+				printf(" math error: result would be complex\n");
+				might_errexit();
 				return BADOP;
 			}
 			lastx = b;
@@ -510,7 +513,8 @@ rshift(void)
 			i = (long long)a;
 			j = (long long)b;
 			if (j < 0) {
-				printf(" shift by negative not allowed\n");
+				printf(" error: shift by negative not allowed\n");
+				might_errexit();
 				push(a);
 				push(b);
 				return BADOP;
@@ -536,7 +540,8 @@ lshift(void)
 			i = (long long)a;
 			j = (long long)b;
 			if (j < 0) {
-				printf(" shift by negative not allowed\n");
+				printf(" error: shift by negative not allowed\n");
+				might_errexit();
 				push(a);
 				push(b);
 				return BADOP;
@@ -707,7 +712,8 @@ recip(void)
 			return GOODOP;
 		} else {
 			push(a);
-			printf(" would divide by zero\n");
+			printf(" math error: would divide by zero\n");
+			might_errexit();
 			return BADOP;
 		}
 	}
@@ -726,7 +732,8 @@ squarert(void)
 			return GOODOP;
 		} else {
 			push(a);
-			printf(" can't take root of negative\n");
+			printf(" math error: can't take root of negative\n");
+			might_errexit();
 			return BADOP;
 		}
 	}
@@ -1341,7 +1348,7 @@ mode2name(void)
 	case 'b':
 		return "binary";
 	default:
-		printf(" mode is 0x%x\n", mode);
+		printf(" error: mode is 0x%x\n", mode);
 		return "ERROR";
 	}
 }
@@ -1695,7 +1702,8 @@ sum(void)
 	ldouble a, tot = 0;
 
 	if (stack_count <= stack_mark) {
-		printf(" nothing to sum\n");
+		printf(" error: nothing to sum\n");
+		might_errexit();
 		return BADOP;
 	}
 	while (stack_count > stack_mark) {
@@ -2042,7 +2050,8 @@ parse_tok(char *p, token *t, char **nextp, int rpn_signed_ints)
 			}
 			*nextp = p + n;
 		} else {
-			printf(" illegal character in input\n");
+			printf(" error: illegal character in input\n");
+			might_errexit();
 			t->val.str = p;
 			t->type = UNKNOWN;
 			return 0;
@@ -2496,8 +2505,9 @@ precedence(void)
 			(!op->help || strncmp(op->help, "Hidden:", 7) != 0) &&
 			op->func && op->prec > 0) {
 			if (op->prec >= NUM_PRECEDENCE) {
-				printf("%s precedence too large: %d\n",
+				printf("error: %s precedence too large: %d\n",
 					op->name, op->prec);
+				might_errexit();
 			}
 			if (!prec_ops[op->prec])
 				prec_ops[op->prec] = (char *)calloc(1, 500);
