@@ -1,7 +1,7 @@
 /*
  *  build with:
- *    doit:      gcc -g -Wall -Wextra -o ca -D USE_READLINE ca.c -lm -lreadline
- *    doit-norl: gcc -g -Wall -Wextra -o ca ca.c -lm
+ *    doit:      gcc -g -o rca -D USE_READLINE rca.c -lm -lreadline
+ *    doit-norl: gcc -g -o rca rca.c -lm
  *
  *	This program is a mediocre but practical stack-based floating
  *	point calculator.  It resembles the UNIX 'dc' command in usage,
@@ -26,14 +26,14 @@
  *	with the addition of "X", for referencing the current top of stack.
  *	So expressions like ((X << 3) ** 2) will work.  Logical operators
  *	have been added as well:  "(X <= pi * 2)" results in 0 or 1.  (That
- *	could be written "pi 2 * >" in RPN notation.)  In addition, ca will
+ *	could be written "pi 2 * >" in RPN notation.)  In addition, rca will
  *	use the logical value of its last result as its exit value, so
- *	something like 'if ca "($foo <= pi * 2)"; then ...' can be used in
+ *	something like 'if rca "($foo <= pi * 2)"; then ...' can be used in
  *	the shell.
  *		- pgf, Thu Apr 3, 2025
  *
  *  documentation:
- *	ca help q | less
+ *	rca help q | less
  */
 
 #include <stdlib.h>
@@ -219,7 +219,7 @@ push(ldouble n)
 	struct num *p = (struct num *)calloc(1, sizeof(struct num));
 
 	if (!p) {
-		perror("ca: calloc failure");
+		perror("rca: calloc failure");
 		exit(3);
 	}
 
@@ -303,7 +303,7 @@ tpush(token **tstackp, token *token)
 	} else {
 		t = (struct token *)calloc(1, sizeof(struct token));
 		if (!t) {
-			perror("ca: calloc failure");
+			perror("rca: calloc failure");
 			exit(3);
 		}
 
@@ -2145,7 +2145,7 @@ fetch_line(void)
 
 		input_buf = malloc(blen);
 		if (!input_buf) {
-			perror("ca: malloc failure");
+			perror("rca: malloc failure");
 			exit(3);
 		}
 
@@ -2200,7 +2200,7 @@ fetch_line(void)
 	/* if stdin is a terminal, the command is already on-screen.
 	 * but we also want it mixed with the output if we're
 	 * redirecting from a file or pipe.  (easy to get rid of it
-	 * with something like: "ca < commands | grep '^ '"
+	 * with something like: "rca < commands | grep '^ '"
 	 */
 	if (!isatty(0))
 		printf("%s", input_buf);
@@ -2554,7 +2554,7 @@ opreturn showhelp(int show_hidden)
 
 	op = opers;
 	printf("\
-ca -- a stack based calculator\n\
+rca -- a rich/RPN scientific and programmer's calculator\n\
  Any arguments on the command line are used as initial calculator input.\n\
  Entering a number pushes it on the stack.\n\
  Operators replace either one or two top stack values with their result.\n\
@@ -2570,7 +2570,7 @@ ca -- a stack based calculator\n\
   all commands that produce constants (e.g., 'pi', 'recall') can be referenced\n\
   in infix expressions.  The infix expression must all be entered on one line.\n\
  Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath. \n\
- On exit, ca returns 0 if the top of stack is non-zero, else it returns 1,\n\
+ On exit, rca returns 0 if the top of stack is non-zero, else it returns 1,\n\
  or 2 if stack is empty, and 3 in the case of program error.\n\
 \n\
 ");
@@ -2599,7 +2599,7 @@ ca -- a stack based calculator\n\
 		op++;
 	}
 	printf("\n%78s\n", __FILE__ " built " __DATE__ " " __TIME__);
-	printf ("\nTip:  Use \"ca help q | less\" to view this help\n");
+	printf ("\nTip:  Use \"rca help q | less\" to view this help\n");
 	return GOODOP;
 }
 

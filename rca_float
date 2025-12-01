@@ -1,5 +1,5 @@
 
-# This shell snippet gives simple access to ca's floating point
+# This shell snippet gives simple access to rca's floating point
 # capability from a POSIX shell.
 #
 # After including this code, use lines like this to calculate:
@@ -7,11 +7,11 @@
 # or like this for a conditional:
 #	if fc "(10 * 3) < $foo"; then ...
 
-CA_INIT="3K 0commas errorexit"
+RCA_INIT="3K 0commas errorexit"
 
-_ca_run()    # support routine
+_rca_run()    # support routine
 {
-    output=$(ca "$CA_INIT" "( $* )" q)
+    output=$(rca "$RCA_INIT" "( $* )" q)
     exitcode=$?
 
     if [ $exitcode -le 1 ]; then
@@ -19,18 +19,18 @@ _ca_run()    # support routine
 	return $exitcode
     fi
 
-    echo ca failure: $output >&2
+    echo rca failure: $output >&2
     exit 1
 }
 
 fe()	# Evaluate a floating point expression.
 {
-    _ca_run "$*"
+    _rca_run "$*"
     return 0
 }
 
 fc()	 # Evaluate a floating point conditional expression.
 {
-    _ca_run "$*" >/dev/null
+    _rca_run "$*" >/dev/null
 }
 

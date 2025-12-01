@@ -1,22 +1,22 @@
-.TH ca 1 2025-12-1
+.TH rca 1 2025-12-1
 .SH NAME
-ca \- an RPN (and more) programmer's calculator
+rca \- a rich/RPN (and more) programmer's calculator
 .SH SYNOPSIS
-.BR ca
-.I [ initial ca command text ]
+.BR rca
+.I [ initial rca command text ]
 
 .SH DESCRIPTION
 At it's heart, 
-.B ca
+.B rca
 is a reverse polish notation (RPN) calculator modeled (very loosely)
 on the Hewlett-Packard operating model used in their long line of
 scientific calculators.  Operators include both scientific and bitwise
 and logical operators.  Word width can be limited, for working with
 programs for any class of CPU.  In addition,
-.B ca
+.B rca
 can evaluate traditional infix expressions, greatly expanding its
 usefulness.  Input is free form, for the most part, and
-.B ca
+.B rca
 is easily incorporated into shell scripts to provide floating point
 support.
 
@@ -61,7 +61,7 @@ and
 
 .SH INFIX NOTATION
 In addition, 
-.B ca
+.B rca
 supports infix style expressions (i.e., non-RPN expressions) which
 must be enclosed in parentheses, and are constrained to a single input
 line.  These expressions "escape" the RPN model, and are evaluated
@@ -87,14 +87,14 @@ The result of the expression will be pushed on the RPN
 stack.
 
 .SH OPERATING MODES
-.B ca
+.B rca
 can be configured (via pseudo-operators, which pull their parameters from
 the stack) to operate on floating point numbers, or integers, and to print
 results in various ways.
 
 .SS Floating point
 The default mode for
-.B ca
+.B rca
 is floating point, which can be entered with the
 .B F
 command.  When in floating point mode (the default), the user can
@@ -159,7 +159,7 @@ the same value.
 
 .SS Integer width
 By default the width of
-.BR ca 's
+.BR rca 's
 integers is the maximum supported, but it can be configured to be as
 narrow as 8 bits using the
 .B width
@@ -172,7 +172,7 @@ architectures in 2025.  (One exception:  52 bits on Raspberry Pi
 when running a 32 bit OS)
 .P
 To aid in reading long digit strings,
-.B ca
+.B rca
 by default will add commas to numbers it prints.
 These can be disabled with the 
 .B 0 commas
@@ -265,7 +265,7 @@ higher precedence.
     2    \fB ||                                               \fR
 
 .SH EXIT STATUS
-.B ca
+.B rca
 will normally exit with status 0 or 1; a non-zero value of
 .I x
 at the top of the stack causes the program to return "success" in the
@@ -278,7 +278,7 @@ command has been given, then warnings and errors will result in an
 exit status of 4.
 
 .SH SHELL SUPPORT
-.B ca
+.B rca
 can take initial input from the command line, and returns a reasonable
 set of exit codes on either success or failure, so incorporating it
 into the shell is straightforward:
@@ -298,7 +298,7 @@ into the shell is straightforward:
 ..
 .CODE
 
-# This shell snippet gives simple access to ca's floating point
+# This shell snippet gives simple access to rca's floating point
 # capability from a POSIX shell.
 #
 # After including this code, use lines like this to calculate:
@@ -306,11 +306,11 @@ into the shell is straightforward:
 # or like this for a conditional:
 #	if fc "(10 * 3) < $foo"; then ...
 
-CA_INIT="3K 0commas errorexit"
+RCA_INIT="3K 0commas errorexit"
 
-_ca_run()    # support routine
+_rca_run()    # support routine
 {
-    output=$(ca "$CA_INIT" "( $* )" q)
+    output=$(rca "$RCA_INIT" "( $* )" q)
     exitcode=$?
 
     if [ $exitcode -le 1 ]; then
@@ -318,19 +318,19 @@ _ca_run()    # support routine
 	return $exitcode
     fi
 
-    echo ca failure: $output >&2
+    echo rca failure: $output >&2
     exit 1
 }
 
 fe()	# Evaluate a floating point expression.
 {
-    _ca_run "$*"
+    _rca_run "$*"
     return 0
 }
 
 fc()	 # Evaluate a floating point conditional expression.
 {
-    _ca_run "$*" >/dev/null
+    _rca_run "$*" >/dev/null
 }
 
 .ENDCODE
@@ -338,6 +338,6 @@ fc()	 # Evaluate a floating point conditional expression.
 
 .SH AUTHOR
 Paul Fox created
-.B ca
-very slowly over a span of decades, starting in 1993.
+.B rca
+(formerly called "ca") very slowly over a span of decades, starting in 1993.
 
