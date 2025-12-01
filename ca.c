@@ -187,9 +187,7 @@ ldouble lastx;
 ldouble infix_X;
 
 /* for store/recall */
-ldouble offstack;
-ldouble offstack2;
-ldouble offstack3;
+ldouble offstack[5];
 
 opreturn
 enable_errexit(void)
@@ -1565,63 +1563,83 @@ width(void)
 }
 
 opreturn
-store(void)
+store_any(int loc)
 {
 	ldouble a;
 
 	if (pop(&a)) {
 		push(a);
-		offstack = a;
+		offstack[loc - 1] = a;
 		return GOODOP;
 	}
 	return BADOP;
+}
+
+opreturn
+recall_any(int loc)
+{
+	push(offstack[loc - 1]);
+	return GOODOP;
+}
+
+opreturn
+store1(void)
+{
+	return store_any(1);
 }
 
 opreturn
 store2(void)
 {
-	ldouble a;
-
-	if (pop(&a)) {
-		push(a);
-		offstack2 = a;
-		return GOODOP;
-	}
-	return BADOP;
+	return store_any(2);
 }
 
 opreturn
 store3(void)
 {
-	ldouble a;
-
-	if (pop(&a)) {
-		push(a);
-		offstack3 = a;
-		return GOODOP;
-	}
-	return BADOP;
+	return store_any(3);
 }
 
 opreturn
-recall(void)
+store4(void)
 {
-	push(offstack);
-	return GOODOP;
+	return store_any(4);
+}
+
+opreturn
+store5(void)
+{
+	return store_any(5);
+}
+
+opreturn
+recall1(void)
+{
+	return recall_any(1);
 }
 
 opreturn
 recall2(void)
 {
-	push(offstack2);
-	return GOODOP;
+	return recall_any(2);
 }
 
 opreturn
 recall3(void)
 {
-	push(offstack3);
-	return GOODOP;
+	return recall_any(3);
+}
+
+opreturn
+recall4(void)
+{
+	return recall_any(4);
+}
+
+opreturn
+recall5(void)
+{
+	return recall_any(5);
 }
 
 opreturn
@@ -2640,14 +2658,18 @@ struct oper opers[] = {
 	{"sum", sum,		"Sum stack to \"mark\", or entire stack if no mark" },
 	{"", 0, 0},
     {"Constants and storage:", 0, 0},
-	{"store", store,	0 },
-	{"sto", store,		0 },
-	{"sto2", store2,	0 },
-	{"sto3", store3,	"Save x off-stack (to 3 locations)" },
-	{"recall", recall,	0, -1 },
-	{"rcl", recall,		0, -1 },
-	{"rcl2", recall2,	0, -1 },
-	{"rcl3", recall3,	"Fetch x (from 3 locations)", -1 },
+	{"store", store1,	"Same as s1" },
+	{"recall", recall1,	"Same as r1", -1 },
+	{"s1", store1,		0 },
+	{"s2", store2,		0 },
+	{"s3", store3,		0 },
+	{"s4", store4,		0 },
+	{"s5", store5,	"Save x off-stack (to 5 locations)" },
+	{"r1", recall1,		0, -1 },
+	{"r2", recall2,		0, -1 },
+	{"r3", recall3,		0, -1 },
+	{"r4", recall4,		0, -1 },
+	{"r5", recall5,	"Fetch x (from 5 locations)", -1 },
 	{"X", stack_x,		"HideMe, push saved copy of x (for infix)", -1 },
 	{"pi", push_pi,		"Push constant pi", -1 },
 	{"e", push_e,		"Push constant e", -1 },
