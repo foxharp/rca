@@ -1,16 +1,25 @@
-.TH CA 1 ca
+.TH ca 1 2025-12-1
 .SH NAME
 ca \- an RPN (and more) programmer's calculator
 .SH SYNOPSIS
 .BR ca
 .I [ initial ca command text ]
+
 .SH DESCRIPTION
 At it's heart, 
 .B ca
-is a reverse polish notation (RPN) calculator
-modeled (very loosely) on the Hewlett-Packard operating model from
-their long line of scientific calculators.  Input is free form, for
-the most part.
+is a reverse polish notation (RPN) calculator modeled (very loosely)
+on the Hewlett-Packard operating model used in their long line of
+scientific calculators.  Operators include both scientific and bitwise
+and logical operators.  Word width can be limited, for working with
+programs for any class of CPU.  In addition,
+.B ca
+can evaluate traditional infix expressions, greatly expanding its
+usefulness.  Input is free form, for the most part, and
+.B ca
+is easily incorporated into shell scripts to provide floating point
+support.
+
 .SH REVERSE POLISH NOTATION
 Numbers entered by the
 user are pushed onto a stack.  Operators pop those stack entries,
@@ -49,6 +58,7 @@ sometimes referred to as
 .I x
 and
 .IR y .
+
 .SH INFIX NOTATION
 In addition, 
 .B ca
@@ -75,11 +85,13 @@ through
 .BR r5 .
 The result of the expression will be pushed on the RPN
 stack.
-.SH OPERATING Modes
+
+.SH OPERATING MODES
 .B ca
 can be configured (via pseudo-operators, which pull their parameters from
 the stack) to operate on floating point numbers, or integers, and to print
 results in various ways.
+
 .SS Floating point
 The default mode for
 .B ca
@@ -103,6 +115,7 @@ or as 3,141,592.6535898 with
 .BR K .
 .P
 All floating point values are "long double" in size.
+
 .SS Integer
 Integer mode, along with the default base for display purposes, is
 selected with
@@ -143,6 +156,7 @@ or
 The input base of a number is independent of the mode, and controlled
 by entirely by how it is entered:  10, 0xa, 012, and 0b1010 are all
 the same value.
+
 .SS Integer width
 By default the width of
 .BR ca 's
@@ -165,6 +179,7 @@ These can be disabled with the
 command.  In addition, both commas and the
 "$" currency symbol will be silently stripped on input, which is convenient
 when doing arithmetic on copy/pasted data.
+
 .SH HELP
 A complete list of operators/commands can be obtained entering 
 .B ?
@@ -184,6 +199,7 @@ can be used for exponentiation,
 and
 .B x
 will both multiply, etc.
+
 .SH SPECIAL VALUES
 The
 .B pi
@@ -222,6 +238,7 @@ The mark can be set before entering data for a subsequent
 in order to limit its reach.  
 .B sum
 is the only operator to consume more than 2 stack elements.
+
 .SH OPERATOR PRECEDENCE
 When used as an RPN calculator, operator precedence isn't really
 meaningful, since the stack paradigm makes all operators equal in that
@@ -230,41 +247,97 @@ precedence of operators is important.  The "precedence" command will
 give a list, whose output is reproduced here.  Higher numbers denote
 higher precedence.
 .P
-    28	( 
-    26	~ chs negate plus ! 
-    24	recip sqrt sin cos tan asin acos atan atan2 abs
-    	frac int i2mm mm2i ft2m m2ft mi2km km2mi f2c c2f
-    	oz2g g2oz oz2ml ml2oz q2l l2q
-    22	^ ** 
-    20	* x / % 
-    18	+ - 
-    16	>> << 
-    14	& clearb 
-    12	xor 
-    10	| setb 
-    8	< <= > >= 
-    6	== != 
-    4	&& 
-    2	|| 
+    28   \fB (                                                \fR
+    26   \fB ~ chs negate plus !                              \fR
+    24   \fB recip sqrt sin cos tan asin acos atan atan2 abs  \fR
+         \fB frac int i2mm mm2i ft2m m2ft mi2km km2mi f2c c2f \fR
+         \fB oz2g g2oz oz2ml ml2oz q2l l2q                    \fR
+    22   \fB ^ **                                             \fR
+    20   \fB * x / %                                          \fR
+    18   \fB + -                                              \fR
+    16   \fB >> <<                                            \fR
+    14   \fB & clearb                                         \fR
+    12   \fB xor                                              \fR
+    10   \fB | setb                                           \fR
+    8    \fB < <= > >=                                        \fR
+    6    \fB == !=                                            \fR
+    4    \fB &&                                               \fR
+    2    \fB ||                                               \fR
 
 .SH EXIT STATUS
 .B ca
-will normally exit with status 0 or 1, reflecting whether the value
-currently at the top of stack is non-zero or not.  (I.e., a non-zero
-value of
+will normally exit with status 0 or 1; a non-zero value of
 .I x
-causes the program to return "success" in the shell sense.)
-An exit status of 2 results if the stack is empty on exit. 
-An exit status of 3 comes from internal (malloc) errors.  Usually
-operational warnings and errors are assumed to be useful to the user,
-and execution proceeds.  If the
+at the top of the stack causes the program to return "success" in the
+shell sense.) An exit status of 2 results if the stack is empty on
+normal exit.  An exit status of 3 comes from unrecoverable internal
+errors.  Usually operational warnings and errors are assumed to be
+useful to the user, and execution proceeds.  If the
 .B errorexit
 command has been given, then warnings and errors will result in an
 exit status of 4.
+
+.SH SHELL SUPPORT
+.B ca
+can take initial input from the command line, and returns a reasonable
+set of exit codes on either success or failure, so incorporating it
+into the shell is straightforward:
+\" CODE/ENDCODE preserve text verbatim
+.de CODE
+.br
+.nr saveIN \\n(.i   \" double the backslash when defining a macro
+.RS
+.nf
+.nh
+..
+.de ENDCODE
+.hy
+.fi
+.RE
+.in \\n[saveIN]u    \" 'u' means 'units': do not scale this number 
+..
+.CODE
+
+# This shell snippet gives simple access to ca's floating point
+# capability from a POSIX shell.
+#
+# After including this code, use lines like this to calculate:
+#	foo=$(fe "$bar * pi")
+# or like this for a conditional:
+#	if fc "(10 * 3) < $foo"; then ...
+
+CA_INIT="3K 0commas errorexit"
+
+_ca_run()    # support routine
+{
+    output=$(ca "$CA_INIT" "( $* )" q)
+    exitcode=$?
+
+    if [ $exitcode -le 1 ]; then
+	echo $output
+	return $exitcode
+    fi
+
+    echo ca failure: $output >&2
+    exit 1
+}
+
+fe()	# Evaluate a floating point expression.
+{
+    _ca_run "$*"
+    return 0
+}
+
+fc()	 # Evaluate a floating point conditional expression.
+{
+    _ca_run "$*" >/dev/null
+}
+
+.ENDCODE
 
 
 .SH AUTHOR
 Paul Fox created
 .B ca
-very slowly over a span of decades starting in 1993.
+very slowly over a span of decades, starting in 1993.
 
