@@ -2474,7 +2474,9 @@ precedence(void)
 
 	op = opers;
 	while (op->name) {
-		if (op->name[0] && op->func && op->prec > 0) {
+		if (op->name[0] &&
+			(!op->help || strncmp(op->help, "HideMe", 6) != 0) &&
+			op->func && op->prec > 0) {
 			if (op->prec >= NUM_PRECEDENCE) {
 				printf("%s precedence too large: %d\n",
 					op->name, op->prec);
