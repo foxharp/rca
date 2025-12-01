@@ -2510,6 +2510,10 @@ precedence(void)
 			}
 			if (!prec_ops[op->prec])
 				prec_ops[op->prec] = (char *)calloc(1, 500);
+			if (!prec_ops[op->prec]) {
+				perror("rca: calloc failure");
+				exit(3);
+			}
 			strcat(prec_ops[op->prec], op->name);
 			strcat(prec_ops[op->prec], " ");
 		}
