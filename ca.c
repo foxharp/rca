@@ -2475,7 +2475,7 @@ precedence(void)
 	op = opers;
 	while (op->name) {
 		if (op->name[0] &&
-			(!op->help || strncmp(op->help, "HideMe", 6) != 0) &&
+			(!op->help || strncmp(op->help, "Hidden:", 7) != 0) &&
 			op->func && op->prec > 0) {
 			if (op->prec >= NUM_PRECEDENCE) {
 				printf("%s precedence too large: %d\n",
@@ -2504,6 +2504,8 @@ commands(void)
 
 	op = opers;
 
+	printf("%10s%10s %s %s\n", "oper alias", "operands", "preced", "help");
+	printf("---- -----  -------- ------ -------\n");
 	while (op->name) {
 		if (op->func ) {
 			if (lastop && lastop->func == op->func )
@@ -2552,7 +2554,7 @@ ca -- a stack based calculator\n\
 			putchar('\n');
 		} else {
 			if (op->help && !show_hidden &&
-					strncmp(op->help, "HideMe", 6) == 0) {
+					strncmp(op->help, "Hidden:", 7) == 0) {
 				/* hidden command */ ;
 			} else if (!op->func) {
 				printf("%s\n", op->name);
@@ -2623,7 +2625,7 @@ struct oper opers[] = {
 	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 26 },
 	{"chs", chsign,		0, 1, 26 },  // precedence unused, see special case in open_paren()
 	{"negate", chsign,	"Change sign of x (2's complement)", 1, 26 },
-	{"plus", plus,		"HideMe, plus sign, needed for infix", 1, 26 }, // needed for infix
+	{"plus", plus,		"Hidden: unary plus, needed to parse infix", 1, 26 }, // needed for infix
 	{"recip", recip,        0, 1, 24 },
 	{"sqrt", squarert,      "Reciprocal and square root of x", 1, 24 },
 	{"sin", sine,           0, 1, 24 },
@@ -2677,7 +2679,7 @@ struct oper opers[] = {
 	{"r3", recall3,		0, -1 },
 	{"r4", recall4,		0, -1 },
 	{"r5", recall5,	"Fetch x (from 5 locations)", -1 },
-	{"X", stack_x,		"HideMe, push saved copy of x (for infix)", -1 },
+	{"X", stack_x,		"Hidden: push saved copy of x (for infix)", -1 },
 	{"pi", push_pi,		"Push constant pi", -1 },
 	{"e", push_e,		"Push constant e", -1 },
 	{"", 0, 0},
@@ -2707,8 +2709,8 @@ struct oper opers[] = {
 	{"b", printbin,		"Print x in float, decimal, octal, hex, or binary" },
 	{"autoprint", autop,	0 },
 	{"a", autop,		"Set autoprinting on/off" },
-	{"raw", printraw,	"HideMe, print raw stack contents" },
-	{"tracing", tracetoggle,"HideMe, toggle debug tracing" },
+	{"state", printraw,	"Hidden: print raw calculator state" },
+	{"tracing", tracetoggle,"Hidden: toggle debug tracing" },
 	{"", 0, 0},
     {"Modes:", 0, 0},
 	{"F", modefloat,	"Switch to floating point mode" },
@@ -2732,7 +2734,7 @@ struct oper opers[] = {
 	{"help", help,		"Show this list" },
 	{"Help", Help,		"Show this list, including hidden commands" },
 	{"precedence", precedence, "List infix operator precedence" },
-	{"commands", commands,	"HideMe, show raw command table" },  // raw command table
+	{"commands", commands,	"Hidden: show raw command table" },  // raw command table
 	{"quit", quit,		0 },
 	{"q", quit,		0 },
 	{"exit", quit,		"Leave the calculator" },
