@@ -1197,7 +1197,9 @@ print_n(ldouble n, int format)
 		}
 		break;
 	default:		// 'f'
+		putchar(' ');
 		printf(format_string, float_digits, n);
+		putchar('\n');
 		break;
 	}
 }
@@ -1272,29 +1274,45 @@ printfloat(void)
 
 /* debug support -- hidden command */
 opreturn
-printraw(void)
+printstate(void)
 {
 	struct num *s;
 
-	printf("int_mask 0x%llx, int_sign_bit 0x%llx\n",
-			int_mask, int_sign_bit);
+	putchar('\n');
+	printf(" mode is %c\n", mode);
+	putchar('\n');
 
-	printf("stack:\n");
+	printf(" float_digits is %d (%s), float_specifier is %c\n",
+		float_digits,
+		float_specifier == 'f' ? "decimals" : "precision",
+		float_specifier);
+	printf(" format string for float mode: \"%s\"\n", format_string);
+	putchar('\n');
+
+	printf(" int_mask:     0x"); puthex(int_mask);     putchar('\n');
+	printf(" int_sign_bit: 0x"); puthex(int_sign_bit); putchar('\n');
+	putchar('\n');
+
 	s = stack;
-	printf("%16s   %16s\n", "(long long)", "(long double)");
-	while (s) {
-		printf("%#16llx   %#16Lg\n", (long long)(s->val), s->val);
-		s = s->next;
+	printf(" stack:\n");
+	if (!s) {
+		printf("%16s\n", "<empty>");
+	} else {
+		printf(" %16s   %16s\n",
+		    "long long", "long double (printed with '%#16.16Lg')");
+		while (s) {
+			printf(" %#16llx   %#16.16Lg\n",
+				(long long)(s->val), s->val);
+			s = s->next;
+		}
 	}
-	printf("stack_count %d, stack_mark %d\n", stack_count, stack_mark);
-	printf("native sizes (bits):\n");
-	printf("%16lu   %16lu\n", (unsigned long)(8 * sizeof(long long)),
-		(unsigned long)(8 * sizeof(long double)));
-	printf("long double mantissa width %d\n", LDBL_MANT_DIG);
+	printf(" stack_count %d, stack_mark %d\n", stack_count, stack_mark);
+	putchar('\n');
+	printf(" native sizes (bits):\n");
+	printf("  long long:\t%lu\n", (unsigned long)(8 * sizeof(long long)));
+	printf("  long double:\t%lu\n", (unsigned long)(8 * sizeof(long double)));
+	printf("  long double mantissa: %u\n", LDBL_MANT_DIG);
 
-	printf("float_digits is %d, float_specifier is %c\n",
-		float_digits, float_specifier);
-	printf("format string for float mode: \"%s\"\n", format_string);
 
 	suppress_autoprint = TRUE;
 	return GOODOP;
@@ -1417,14 +1435,14 @@ setup_format_string(void)
 
 	if (punct) {
 		if (float_specifier == 'f')
-			format_string = " %'.*Lf\n";
+			format_string = "%'.*Lf";
 		else
-			format_string = " %'.*Lg\n";
+			format_string = "%'.*Lg";
 	} else {
 		if (float_specifier == 'f')
-			format_string = " %.*Lf\n";
+			format_string = "%.*Lf";
 		else
-			format_string = " %.*Lg\n";
+			format_string = "%.*Lg";
 	}
 }
 
@@ -2709,7 +2727,7 @@ struct oper opers[] = {
 	{"b", printbin,		"Print x in float, decimal, octal, hex, or binary" },
 	{"autoprint", autop,	0 },
 	{"a", autop,		"Set autoprinting on/off" },
-	{"state", printraw,	"Hidden: print raw calculator state" },
+	{"state", printstate,	"Hidden: print raw calculator state" },
 	{"tracing", tracetoggle,"Hidden: toggle debug tracing" },
 	{"", 0, 0},
     {"Modes:", 0, 0},
@@ -2734,7 +2752,7 @@ struct oper opers[] = {
 	{"help", help,		"Show this list" },
 	{"Help", Help,		"Show this list, including hidden commands" },
 	{"precedence", precedence, "List infix operator precedence" },
-	{"commands", commands,	"Hidden: show raw command table" },  // raw command table
+	{"commands", commands,	"Hidden: show raw command table" },
 	{"quit", quit,		0 },
 	{"q", quit,		0 },
 	{"exit", quit,		"Leave the calculator" },
