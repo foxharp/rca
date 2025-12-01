@@ -1337,8 +1337,6 @@ static char *
 mode2name(void)
 {
 	switch (mode) {
-	case 'f':
-		return "float";
 	case 'd':
 		return "decimal";
 	case 'o':
@@ -1347,9 +1345,10 @@ mode2name(void)
 		return "hex";
 	case 'b':
 		return "binary";
-	default:
-		printf(" error: mode is 0x%x\n", mode);
-		return "ERROR";
+	case 'f':
+	default: // can't happen.  set it to default
+		mode = 'f';
+		return "float";
 	}
 }
 
