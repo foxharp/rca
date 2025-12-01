@@ -1,0 +1,270 @@
+.TH CA 1 ca
+.SH NAME
+ca \- an RPN (and more) programmer's calculator
+.SH SYNOPSIS
+.BR ca
+.I [ initial ca command text ]
+.SH DESCRIPTION
+At it's heart, 
+.B ca
+is a reverse polish notation (RPN) calculator
+modeled (very loosely) on the Hewlett-Packard operating model from
+their long line of scientific calculators.  Input is free form, for
+the most part.
+.SH REVERSE POLISH NOTATION
+Numbers entered by the
+user are pushed onto a stack.  Operators pop those stack entries,
+usually 1 or 2 at a time, and push the result of the operation back on
+the stack.  Operators exist which cover the usual arithemetic
+functions
+.RB ( + ,
+.BR - ,
+etc),
+as well as functions (e.g.,
+.BR sin ,
+.BR cos ,
+.BR sqrt ),
+bit-shifting 
+.RB ( <<
+and
+.BR >>),
+logical operations 
+.RB ( && ,
+.BR || ),
+and comparators
+.RB ( == ,
+.BR !=,
+.BR <=,
+etc).  There are also a few unit conversions available
+(e.g.,
+.BR i2mm ,
+.BR oz2g ,
+.BR f2c ).
+A complete list of operators can be obtained with the
+.B ?
+or
+.B help
+commands.  The top two elements on the stack, in HP tradition, are
+sometimes referred to as 
+.I x
+and
+.IR y .
+.SH INFIX NOTATION
+In addition, 
+.B ca
+supports infix style expressions (i.e., non-RPN expressions) which
+must be enclosed in parentheses, and are constrained to a single input
+line.  These expressions "escape" the RPN model, and are evaluated
+with the usual rules of operator precedence.  The special symbol
+.B X
+can be used to reference the value of 
+.I x
+(the top of stack) when the infix expression was invoked.  (The top of
+stack will
+.I not
+be popped or replaced.)  The five storage locations (accessed with
+.B store
+or 
+.B s2
+through
+.B s5
+can also be
+referenced, using
+.B r1
+through
+.BR r5 .
+The result of the expression will be pushed on the RPN
+stack.
+.SH OPERATING Modes
+.B ca
+can be configured (via pseudo-operators, which pull their parameters from
+the stack) to operate on floating point numbers, or integers, and to print
+results in various ways.
+.SS Floating point
+The default mode for
+.B ca
+is floating point, which can be entered with the
+.B F
+command.  When in floating point mode (the default), the user can
+control either the number of digits shown after the decimal point
+(using
+.BR decimals,
+or
+.BR K ),
+or the total number of significant digits (using
+.BR precision ,
+or
+.BR k ). 
+So the value of pi multiplied by 1 million will display as 3.14159e+06
+with 
+.B 6 k
+or as 3,141,592.6535898 with
+.B 7
+.BR K .
+.P
+All floating point values are "long double" in size.
+.SS Integer
+Integer mode, along with the default base for display purposes, is
+selected with
+.B D
+(decimal)
+(or
+.B I
+),
+.B H
+(hex),
+.B O
+(octal),
+.RB or B
+(binary) commands.
+The default base is used by
+the
+.BR p ,
+.BR P ,
+and
+.B autoprint
+commands.
+Regardless of the integer mode, individual values can be
+viewed in any base using
+.BR f ,
+.BR d ,
+.BR h ,
+.BR o ,
+or
+.BR b .
+(The full stack is printed when using
+.BR F ,
+.BR D ,
+.BR H ,
+.BR O ,
+or
+.BR B .
+.P
+The input base of a number is independent of the mode, and controlled
+by entirely by how it is entered:  10, 0xa, 012, and 0b1010 are all
+the same value.
+.SS Integer width
+By default the width of
+.BR ca 's
+integers is the maximum supported, but it can be configured to be as
+narrow as 8 bits using the
+.B width
+(or
+.BR w )
+command.  The maximum supported width will be either the
+width of the "long long" data type, or of the "long double"
+mantissa, whichever is smaller.  This results in 64 bits on most CPU
+architectures in 2025.  (One exception:  52 bits on Raspberry Pi
+when running a 32 bit OS)
+.P
+To aid in reading long digit strings,
+.B ca
+by default will add commas to numbers it prints.
+These can be disabled with the 
+.B 0 commas
+command.  In addition, both commas and the
+"$" currency symbol will be silently stripped on input, which is convenient
+when doing arithmetic on copy/pasted data.
+.SH HELP
+A complete list of operators/commands can be obtained entering 
+.B ?
+or
+.BR help .
+Many operators have two names:  
+both 
+.B width
+and 
+.B w
+can be used to set word width, either 
+.B ^
+or 
+.B **
+can be used for exponentiation, 
+.B *
+and
+.B x
+will both multiply, etc.
+.SH SPECIAL VALUES
+The
+.B pi
+and
+.B e
+operators push the values of the obvious constants to the stack.
+.P The
+.B s1
+through
+.B s5
+operators copy
+.I x
+to one of 5 off-stack storage locations (without
+disturbing the stack).  The
+.B r1
+through
+.B r5
+operators recall those values, pushing them onto the stack, and can
+also be used in infix expressions to reference those values.
+.RB ( store
+is synonymous with
+.BR s1 ,
+and
+.B recall
+with
+.BR r1 .)
+.P
+A special operator 
+.B sum
+will pop and add up previous entries on the
+stack, stopping when the stack is empty, or when a 
+.B mark
+is reached. 
+The mark can be set before entering data for a subsequent 
+.BR sum,
+in order to limit its reach.  
+.B sum
+is the only operator to consume more than 2 stack elements.
+.SH OPERATOR PRECEDENCE
+When used as an RPN calculator, operator precedence isn't really
+meaningful, since the stack paradigm makes all operators equal in that
+regard.  But when evaluating an infix expression, the relative
+precedence of operators is important.  The "precedence" command will
+give a list, whose output is reproduced here.  Higher numbers denote
+higher precedence.
+.P
+    28	( 
+    26	~ chs negate plus ! 
+    24	recip sqrt sin cos tan asin acos atan atan2 abs
+    	frac int i2mm mm2i ft2m m2ft mi2km km2mi f2c c2f
+    	oz2g g2oz oz2ml ml2oz q2l l2q
+    22	^ ** 
+    20	* x / % 
+    18	+ - 
+    16	>> << 
+    14	& clearb 
+    12	xor 
+    10	| setb 
+    8	< <= > >= 
+    6	== != 
+    4	&& 
+    2	|| 
+
+.SH EXIT STATUS
+.B ca
+will normally exit with status 0 or 1, reflecting whether the value
+currently at the top of stack is non-zero or not.  (I.e., a non-zero
+value of
+.I x
+causes the program to return "success" in the shell sense.)
+An exit status of 2 results if the stack is empty on exit. 
+An exit status of 3 comes from internal (malloc) errors.  Usually
+operational warnings and errors are assumed to be useful to the user,
+and execution proceeds.  If the
+.B errorexit
+command has been given, then warnings and errors will result in an
+exit status of 4.
+
+
+.SH AUTHOR
+Paul Fox created
+.B ca
+very slowly over a span of decades starting in 1993.
+
