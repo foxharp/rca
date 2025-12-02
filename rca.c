@@ -43,6 +43,7 @@
 #include <string.h>
 #include <math.h>
 #include <float.h>
+#include <limits.h>
 #include <errno.h>
 #include <locale.h>
 
@@ -1151,6 +1152,23 @@ putoct(unsigned long long n)
 	printf("%03llo", n % 01000);
 }
 
+boolean
+check_overflow(ldouble n)
+{
+	return (n >= LLONG_MAX || n <= LLONG_MIN);
+}
+
+void
+show_overflow(boolean o)
+{
+	if (o) {
+		printf("     warning: integer conversion overflow\n");
+		might_errexit();
+	} else {
+		putchar('\n');
+	}
+}
+
 void
 print_n(ldouble n, int format)
 {
@@ -1158,40 +1176,51 @@ print_n(ldouble n, int format)
 	long long mask = int_mask;
 	long long signbit;
 	unsigned long long uln;
+	boolean ovfl;
 
 	suppress_autoprint = TRUE;
 
+	if (mode == 'f' && format == 'f') {
+		mask = ~0;	// no masking in float mode
+		putchar(' ');
+		printf(format_string, float_digits, n);
+		putchar('\n');
+		return;
+	}
+
 	// mode can be float but we can still print in hex, binary format, etc
-	if (mode == 'f')	// no masking in float mode
-		mask = ~0;
+
+	ovfl = check_overflow(n);
 
 	switch (format) {
 	case 'h':
 		ln = (long long)n & mask;
 		printf(" 0x");
 		puthex(ln);
-		putchar('\n');
+		show_overflow(ovfl);
 		break;
 	case 'o':
 		ln = (long long)n & mask;
 		printf(" 0");
 		putoct(ln);
-		putchar('\n');
+		show_overflow(ovfl);
 		break;
 	case 'b':
 		ln = (long long)n & mask;
 		printf(" 0b");
 		putbinary(ln);
-		putchar('\n');
+		show_overflow(ovfl);
 		break;
 	case 'u':
 		uln = (unsigned long long)n & mask;
-		printf(punct ? " %'llu\n" : " %llu\n", uln);
+		printf(punct ? " %'llu" : " %llu", uln);
+		show_overflow(ovfl);
 		break;
 	case 'd':
 		ln = (long long)n;
 		if (mode == 'f' || int_width == LONGLONG_BITS) {
-			printf(punct ? " %'lld\n" : " %lld\n", ln);
+			printf(punct ? " %'lld" : " %lld", ln);
+			show_overflow(ovfl);
 		} else {
 			/* shenanigans to make pos/neg numbers appear
 			 * properly.  our masked/shortened numbers
@@ -1210,7 +1239,8 @@ print_n(ldouble n, int format)
 				t = ln & mask;
 				printf(" ");
 			}
-			printf(punct ? "%'lld\n" : "%lld\n", t);
+			printf(punct ? "%'lld" : "%lld", t);
+			show_overflow(ovfl);
 		}
 		break;
 	default:		// 'f'
