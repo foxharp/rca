@@ -1,14 +1,19 @@
 
 
-all:
-	doit rca.c
+all: rca rca-norl
+
+rca: rca.c
+	gcc -g -Wall -Wextra -o rca -D USE_READLINE rca.c -lm -lreadline
+
+rca-norl: rca.c
+	gcc -g -Wall -Wextra -o rca-norl rca.c -lm
 
 test:
-	egrep -v '^ ' rca_test.txt | rca | diff -u rca_test.txt -
+	egrep -v '^ ' rca_test.txt | ./rca | diff -u rca_test.txt -
 	@ echo test succeeded
 
 newtest:
-	egrep -v '^ ' rca_test.txt | rca > new_rca_test.txt
+	egrep -v '^ ' rca_test.txt | ./rca > new_rca_test.txt
 	
 publish_prepare:
 	( \
@@ -34,3 +39,5 @@ install:
 	lumber run mv rca bin
 	lumber put rca_float bin
 
+clean:
+	rm -f rca rca-norl
