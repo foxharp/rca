@@ -25,7 +25,7 @@ P
  5.75
  3.14159
 %
- 1
+ 2.60841
 10 4 %
  2
 10 **
@@ -40,7 +40,7 @@ foobar
 
 H
  Mode is hex.  Integer math with 64 bits.
- 0x1
+ 0x2
  0x1000
 0xfffff
 0xaaaaa ~ &
@@ -49,7 +49,7 @@ lastx |
  0xffff,ffff,fff5,5555
 20 width
  Words are 20 bits wide.
- 0x1
+ 0x2
  0x1000
  0x5,5555
 clear

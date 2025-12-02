@@ -457,12 +457,8 @@ modulo(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			long long i, j;
-
-			i = (long long)a;
-			j = (long long)b;
-			if (j != 0) {
-				push(i / j);
+			if (b != 0) {
+				push(fmodl(a,b));
 			} else {
 				push(a);
 				push(b);
@@ -2700,7 +2696,7 @@ struct oper opers[] = {
 	{"*", multiply,		0, 2, 20 },
 	{"x", multiply,		"Two ways to multiply x and y", 2, 20 },
 	{"/", divide,		0, 2, 20 },
-	{"%", modulo,		"Divide and modulo of y by x (arithmetic shift)", 2, 20 },
+	{"%", modulo,		"Divide and modulo of y by x", 2, 20 },
 	{"^", y_to_the_x,	0, 2, 22 },
 	{"**", y_to_the_x,	"Raise y to the x'th power", 2, 22 },
 	{">>", rshift,		0, 2, 16 },
