@@ -18,14 +18,18 @@ can evaluate traditional infix expressions, greatly expanding its
 usefulness.  Input is free form, for the most part, and
 .B rca
 is easily incorporated into shell scripts to provide floating point
-support.
+support.  Whitespace is optional, though there may be cases where ambiguity
+would get in the way.  (For example, "456b" will put 456 on the stack and
+print it as binary, but "0x456b" will push the hex constant 0x456b.  Use
+your judgement.)  Any text after and including a
+.B #
+character will be ignored as a comment.
 
 .SH REVERSE POLISH NOTATION
-Numbers entered by the
-user are pushed onto a stack.  Operators pop those stack entries,
-usually 1 or 2 at a time, and push the result of the operation back on
-the stack.  Operators exist which cover the usual arithemetic
-functions
+Numbers entered by the user are pushed onto a stack.  Operators pop
+those stack entries, usually 1 or 2 at a time, and push the result of
+the operation back on the stack.  Operators exist which cover the
+usual arithemetic functions
 .RB ( + ,
 .BR - ,
 etc),
@@ -44,8 +48,7 @@ and comparators
 .RB ( == ,
 .BR !=,
 .BR <=,
-etc).  There are also a few unit conversions available
-(e.g.,
+etc).  There are also a few unit conversions available (e.g.,
 .BR i2mm ,
 .BR oz2g ,
 .BR f2c ).
@@ -114,13 +117,15 @@ or as 3,141,592.6535898 with
 .B 7
 .BR K .
 .P
-All floating point values are "long double" in size.
+All floating point values are
+.I long double
+in size.
 
 .SS Integer
 Integer mode, along with the default format for display purposes, is
 selected with the
 .B D
-(signed decimal)
+(signed decimal),
 .B U
 (unsigned decimal),
 .B H
@@ -156,7 +161,7 @@ or
 to switch modes.)
 .P
 The input base of a number is independent of the mode, and controlled
-by entirely by how it is entered:  10, 0xa, 012, and 0b1010 are all
+entirely by how it is entered:  10, 0xa, 012, and 0b1010 are all
 the same value.
 .P
 To aid in reading long digit strings,
@@ -167,20 +172,6 @@ These can be disabled with the
 command.  In addition, both commas and the
 "$" currency symbol will be silently stripped on input, which is convenient
 when doing arithmetic on copy/pasted data.
-
-.SS Integer width
-By default the width of
-.BR rca 's
-integers is the maximum supported, but it can be configured to be as
-narrow as 2 bits using the
-.B width
-(or
-.BR w )
-command.  The maximum supported width will be either the
-width of the "long long" data type, or of the "long double"
-mantissa, whichever is smaller.  This results in 64 bits on most CPU
-architectures in 2025.  (An exception:  52 bits on Raspberry Pi
-when running a 32 bit OS)
 
 .SH HELP
 A complete list of operators/commands can be obtained entering 
@@ -266,6 +257,45 @@ higher precedence.
     4    \fB &&                                               \fR
     2    \fB ||                                               \fR
 
+.SH DATA TYPES and OVERFLOW
+By default the width of
+.BR rca 's
+integers is the maximum supported, but it can be configured to be as
+narrow as 2 bits using the
+.B width
+(or
+.BR w )
+command.  The maximum supported width will be either the width of the
+.I long long
+data type, or of the
+.I long double
+mantissa, whichever is smaller.  This results in 64 bits on most CPU
+architectures in 2025.  (An exception:  52 bits on Raspberry Pi
+when running a 32 bit OS)
+
+All stack values in
+.B rca
+are stored in
+.I long double
+format.  This is convenient for a calculator
+which will primarily deal with floating point, but can be a problem with
+.BR rca 's
+mixed model.  Many operations (primarily the bitwise operations, but
+also simply working in other bases and word widths) require conversion
+to integer.  The
+.I long long
+type is used in this case; results are
+converted back when finished, if necessary.  If the conversion from
+.I long double
+to
+.I long long
+can't be done without loss, a warning is
+issued.  This may happen while printing the value in an integer base,
+after switching to an integer mode, or while performing a bitwise
+operation.  Execution will proceed after the warning unless
+.B errorexit
+has been enabled.
+
 .SH EXIT STATUS
 .B rca
 will normally exit with status 0 or 1; a non-zero value of
@@ -277,7 +307,9 @@ errors.  Usually operational warnings and errors are assumed to be
 useful to the user, and execution proceeds.  If the
 .B errorexit
 command has been given, then warnings and errors will result in an
-exit status of 4.
+exit status of 4.  (Once given,
+.B errorexit
+cannot be rescinded.)
 
 .SH SHELL SUPPORT
 .B rca
@@ -308,11 +340,11 @@ into the shell is straightforward:
 # or like this for a conditional:
 #	if fc "(10 * 3) < $foo"; then ...
 
-RCA_INIT="3K 0commas errorexit"
+_RCA_INIT="3K 0commas errorexit"  # $RCA_INIT can override this
 
 _rca_run()    # support routine
 {
-    output=$(rca "$RCA_INIT" "( $* )" q)
+    output=$(rca "$_RCA_INIT $RCA_INIT" "( $* )" q)
     exitcode=$?
 
     if [ $exitcode -le 1 ]; then
