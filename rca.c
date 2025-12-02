@@ -1557,8 +1557,8 @@ width(void)
 		bits = max_int_width;
 		printf(" Width out of range, set to max (%lld)\n", bits);
 	}
-	if (bits < 8) {
-		bits = 8;
+	if (bits < 2) {
+		bits = 2;
 		printf(" Width out of range, set to min (%lld)\n", bits);
 	}
 
