@@ -509,9 +509,10 @@ rshift(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			long long i, j;
+			unsigned long long i;  // want logical shift, not arithmetic
+			long long j;
 
-			i = (long long)a;
+			i = (unsigned long long)a;
 			j = (long long)b;
 			if (j < 0) {
 				printf(" error: shift by negative not allowed\n");
@@ -520,7 +521,8 @@ rshift(void)
 				push(b);
 				return BADOP;
 			}
-			push((i >> j) & ~int_sign_bit);
+
+			push(i >>= j);
 			lastx = b;
 			return GOODOP;
 		}
