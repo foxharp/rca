@@ -141,10 +141,10 @@ struct token {
 #define OP 2
 #define EOL 3
 
-/* 4 major modes: float, decimal, hex, octal, binary.
+/* 5 major modes: float, decimal, unsigned, hex, octal, binary.
  * all but float are integer modes.
  */
-int mode = 'f';			/* 'f', 'd', 'h', 'o', 'b' */
+int mode = 'f';			/* 'f', 'd', 'u', 'h', 'o', 'b' */
 
 /* if true, exit(4) on error, warning, or access to empty operand stack */
 boolean exit_on_error = FALSE;
@@ -1116,6 +1116,7 @@ putbinary2(int width, long long mask, unsigned long long n)
 void
 putbinary(long long n)
 {
+    	// mode can be float but we can print in binary
 	if (mode == 'f')	// no masking in float mode
 		putbinary2(max_int_width, ~0, (unsigned long long)n);
 	else
@@ -1156,9 +1157,11 @@ print_n(ldouble n, int format)
 	long long ln;
 	long long mask = int_mask;
 	long long signbit;
+	unsigned long long uln;
 
 	suppress_autoprint = TRUE;
 
+	// mode can be float but we can still print in hex, binary format, etc
 	if (mode == 'f')	// no masking in float mode
 		mask = ~0;
 
@@ -1181,13 +1184,20 @@ print_n(ldouble n, int format)
 		putbinary(ln);
 		putchar('\n');
 		break;
+	case 'u':
+		uln = (unsigned long long)n & mask;
+		printf(punct ? " %'llu\n" : " %llu\n", uln);
+		break;
 	case 'd':
 		ln = (long long)n;
 		if (mode == 'f' || int_width == LONGLONG_BITS) {
 			printf(punct ? " %'lld\n" : " %lld\n", ln);
 		} else {
-			/* shenanigans to make pos/neg numbers
-			 * appear properly.
+			/* shenanigans to make pos/neg numbers appear
+			 * properly.  our masked/shortened numbers
+			 * don't appear as negative to printf, so we
+			 * find the reduced-width sign bit, and fake
+			 * it.
 			 */
 			long long t;
 
@@ -1255,6 +1265,13 @@ opreturn
 printoct(void)
 {
 	print_top('o');
+	return GOODOP;
+}
+
+opreturn
+printuns(void)
+{
+	print_top('u');
 	return GOODOP;
 }
 
@@ -1338,7 +1355,9 @@ mode2name(void)
 {
 	switch (mode) {
 	case 'd':
-		return "decimal";
+		return "signed decimal";
+	case 'u':
+		return "unsigned decimal";
 	case 'o':
 		return "octal";
 	case 'h':
@@ -1411,6 +1430,14 @@ opreturn
 modedec(void)
 {
 	mode = 'd';
+	showmode();
+	return printall();
+}
+
+opreturn
+modeuns(void)
+{
+	mode = 'u';
 	showmode();
 	return printall();
 }
@@ -2735,21 +2762,22 @@ struct oper opers[] = {
 	{"p", printone,		"Print x according to mode" },
 	{"f", printfloat,	0 },
 	{"d", printdec,		0 },
-	{"o", printoct,		0 },
+	{"u", printuns,		"Print x as float, decimal, unsigned decimal," },
 	{"h", printhex,		0 },
-	{"b", printbin,		"Print x in float, decimal, octal, hex, or binary" },
+	{"o", printoct,		0 },
+	{"b", printbin,		"     hex, octal, or binary" },
 	{"autoprint", autop,	0 },
 	{"a", autop,		"Set autoprinting on/off" },
 	{"state", printstate,	"Hidden: print raw calculator state" },
 	{"tracing", tracetoggle,"Hidden: toggle debug tracing" },
 	{"", 0, 0},
     {"Modes:", 0, 0},
-	{"F", modefloat,	"Switch to floating point mode" },
+	{"F", modefloat,	0 },
 	{"D", modedec,		0 },
-	{"I", modedec,		"Switch to decimal/integer mode" },
+	{"U", modeuns,		"Switch to floating point, decimal, unsigned decimal," },
 	{"H", modehex,		0 },
 	{"O", modeoct,		0 },
-	{"B", modebin,		"Switch to hex, octal, or binary modes" },
+	{"B", modebin,		"     hex, octal, or binary modes" },
 	{"precision",		precision, 0 },
 	{"k", precision,	"Float format: number of significant digits (%g)" },
 	{"decimals",		decimal_length, 0 },

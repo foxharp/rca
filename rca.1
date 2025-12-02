@@ -117,30 +117,30 @@ or as 3,141,592.6535898 with
 All floating point values are "long double" in size.
 
 .SS Integer
-Integer mode, along with the default base for display purposes, is
-selected with
+Integer mode, along with the default format for display purposes, is
+selected with the
 .B D
-(decimal)
-(or
-.B I
-),
+(signed decimal)
+.B U
+(unsigned decimal),
 .B H
 (hex),
 .B O
-(octal),
-.RB or B
+(octal), or
+.B B
 (binary) commands.
-The default base is used by
+The default format is used by
 the
 .BR p ,
 .BR P ,
 and
 .B autoprint
 commands.
-Regardless of the integer mode, individual values can be
-viewed in any base using
+Regardless of the default integer format, individual values can be
+viewed in any format at any time using
 .BR f ,
 .BR d ,
+.BR u ,
 .BR h ,
 .BR o ,
 or
@@ -148,14 +148,25 @@ or
 (The full stack is printed when using
 .BR F ,
 .BR D ,
+.BR U ,
 .BR H ,
 .BR O ,
 or
-.BR B .
+.B B
+to switch modes.)
 .P
 The input base of a number is independent of the mode, and controlled
 by entirely by how it is entered:  10, 0xa, 012, and 0b1010 are all
 the same value.
+.P
+To aid in reading long digit strings,
+.B rca
+by default will add commas to numbers it prints.
+These can be disabled with the 
+.B 0 commas
+command.  In addition, both commas and the
+"$" currency symbol will be silently stripped on input, which is convenient
+when doing arithmetic on copy/pasted data.
 
 .SS Integer width
 By default the width of
@@ -168,17 +179,8 @@ narrow as 2 bits using the
 command.  The maximum supported width will be either the
 width of the "long long" data type, or of the "long double"
 mantissa, whichever is smaller.  This results in 64 bits on most CPU
-architectures in 2025.  (One exception:  52 bits on Raspberry Pi
+architectures in 2025.  (An exception:  52 bits on Raspberry Pi
 when running a 32 bit OS)
-.P
-To aid in reading long digit strings,
-.B rca
-by default will add commas to numbers it prints.
-These can be disabled with the 
-.B 0 commas
-command.  In addition, both commas and the
-"$" currency symbol will be silently stripped on input, which is convenient
-when doing arithmetic on copy/pasted data.
 
 .SH HELP
 A complete list of operators/commands can be obtained entering 
