@@ -168,6 +168,7 @@ boolean punct = TRUE;
  * depending on float_specifier
  */
 unsigned int float_digits = 6;
+unsigned int max_precision = 18;  // true value calculated at startup
 int float_specifier = 'g';	/* 'f' or 'g' */
 char *format_string;
 
@@ -227,6 +228,9 @@ detect_epsilon(void)
 		eps /= 2.0L;
 
 	epsilon = 5 * eps;
+
+	// round up to significant digit
+	max_precision = (int)(-log10l(epsilon)) + 1;
 }
 
 long double
@@ -1562,31 +1566,6 @@ setup_format_string(void)
 }
 
 opreturn
-precision(void)
-{
-	ldouble digits;
-
-	if (!pop(&digits))
-		return BADOP;
-
-	float_digits = abs((int)digits);
-	// this is total digits, so '0' doesn't make sense
-	if (float_digits < 1)
-		float_digits = 1;
-
-	float_specifier = 'g';
-
-	setup_format_string();
-
-	// info
-	snprintf(pending_info, sizeof(pending_info),
-		" %d digit%s of total displayed precision.\n",
-		float_digits, float_digits == 1 ? "" : "s");
-
-	return GOODOP;
-}
-
-opreturn
 punctuation(void)
 {
 	ldouble wantcommas;
@@ -1604,6 +1583,36 @@ punctuation(void)
 }
 
 opreturn
+precision(void)
+{
+	ldouble digits;
+	char *limited = "";
+
+	if (!pop(&digits))
+		return BADOP;
+
+	float_digits = abs((int)digits);
+	// this is total digits, so '0' doesn't make sense
+	if (float_digits < 1) {
+		float_digits = 1;
+	} else if (float_digits > max_precision) {
+		float_digits = max_precision;
+		limited = "the maximum of ";
+	}
+
+	float_specifier = 'g';
+
+	setup_format_string();
+
+	// info
+	snprintf(pending_info, sizeof(pending_info),
+		" showing %s%d significant digit%s.\n", limited,
+		float_digits, float_digits == 1 ? "" : "s");
+
+	return GOODOP;
+}
+
+opreturn
 decimal_length(void)
 {
 	ldouble digits;
@@ -1611,8 +1620,12 @@ decimal_length(void)
 	if (!pop(&digits))
 		return BADOP;
 
-	float_digits = abs((int)digits);
 	// this is digits after decimal, so '0' is okay
+	float_digits = abs((int)digits);
+
+	// but it can't be greater than our maximum precision
+	if (float_digits > max_precision)
+		float_digits = max_precision;
 
 	float_specifier = 'f';
 
@@ -1620,7 +1633,7 @@ decimal_length(void)
 
 	// info
 	snprintf(pending_info, sizeof(pending_info),
-		" %d digit%s after the decimal.\n",
+		" will show at most %d digit%s after the decimal.\n",
 		float_digits, float_digits == 1 ? "" : "s");
 
 	return GOODOP;
