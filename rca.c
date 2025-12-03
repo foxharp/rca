@@ -181,6 +181,10 @@ int int_width;
 long long int_sign_bit;
 long long int_mask;
 
+/* this is used to control floating point error
+*/
+long double epsilon;
+
 /* the most recent top-of-stack */
 ldouble lastx;
 
@@ -215,6 +219,53 @@ sign_extend(ldouble a)
 }
 
 void
+detect_epsilon(void)
+{
+	long double eps = 1.0L;
+
+	while ((1.0L + eps / 2.0L) > 1.0L)
+		eps /= 2.0L;
+
+	epsilon = 5 * eps;
+}
+
+long double
+canonicalize(long double x)
+{
+	long double abs_x = fabsl(x);
+	long double scale = abs_x > 1.0L ? abs_x : 1.0L;
+	long double tolerance = epsilon * scale;
+
+	if (!epsilon) detect_epsilon();
+
+	abs_x = fabsl(x);
+	scale = abs_x > 1.0L ? abs_x : 1.0L;
+	tolerance = epsilon * scale;
+
+	// snap to zero
+	if (abs_x <= tolerance)
+		return 0.0L;
+
+	// snap to integer
+	long double r = roundl(x);
+
+	if (fabsl(x - r) <= tolerance)
+		return r;
+
+	/*
+	 * if x has magnitude much greater than tolerance, but the
+	 * low-order digits are within tolerance, remove them by rounding.
+	 */
+	long double rounded = floorl(x / tolerance + 0.5L) * tolerance;
+
+	if (fabsl(x - rounded) <= tolerance)
+		return rounded;
+
+	return x;
+}
+
+
+void
 push(ldouble n)
 {
 	struct num *p = (struct num *)calloc(1, sizeof(struct num));
@@ -225,7 +276,7 @@ push(ldouble n)
 	}
 
 	if (mode == 'f') {
-		p->val = n;
+		p->val = canonicalize(n);
 		trace(("pushed %Lg/0x%llx\n", n, (long long)(p->val)));
 	} else {
 		p->val = sign_extend((long long)n & int_mask);
@@ -1364,6 +1415,9 @@ printstate(void)
 	printf("  long long:\t%lu\n", (unsigned long)(8 * sizeof(long long)));
 	printf("  long double:\t%lu\n", (unsigned long)(8 * sizeof(long double)));
 	printf("  long double mantissa: %u\n", LDBL_MANT_DIG);
+	printf("  LDBL_EPSILON is %Lg\n", LDBL_EPSILON);
+	printf("  detected eps is %Lg\n", epsilon);
+
 
 
 	suppress_autoprint = TRUE;
