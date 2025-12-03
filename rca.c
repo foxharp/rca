@@ -227,7 +227,7 @@ detect_epsilon(void)
 	while ((1.0L + eps / 2.0L) > 1.0L)
 		eps /= 2.0L;
 
-	epsilon = 5 * eps;
+	epsilon = 10 * eps;
 
 	// round up to significant digit
 	max_precision = (int)(-log10l(epsilon)) + 1;
@@ -236,9 +236,7 @@ detect_epsilon(void)
 long double
 canonicalize(long double x)
 {
-	long double abs_x = fabsl(x);
-	long double scale = abs_x > 1.0L ? abs_x : 1.0L;
-	long double tolerance = epsilon * scale;
+	long double abs_x, scale, tolerance;
 
 	if (!epsilon) detect_epsilon();
 
@@ -1222,6 +1220,49 @@ show_overflow(boolean o)
 	}
 }
 
+unsigned
+min(unsigned a, unsigned b)
+{
+    return (a < b) ? a : b;
+}
+
+void
+print_floating(ldouble n)
+{
+	putchar(' ');
+	if (mode == 'f' && float_specifier == 'f') {
+	    char buf[128];
+	    char *p;
+	    unsigned int digits = 0;
+
+	    snprintf(buf, sizeof(buf), format_string, float_digits, n);
+
+	    for (p = buf; *p && *p != '.'; p++) {
+		if (isdigit(*p))
+		    digits++;
+	    }
+
+	    // in "0.34", the 0 doesn't count toward significant digits
+	    if (digits == 1 && *buf == '0')
+		    digits = 0;
+
+	    if (p) { /* found a decimal point */
+		snprintf(buf, sizeof(buf), format_string, 
+		    min(float_digits, max_precision - digits), n);
+		// remove trailing zeros
+		//p = buf + strlen(buf) - 1;
+		//while (p > buf && *p == '0')
+		//    *p-- = '\0';
+	    }
+	    puts(buf);
+
+	} else {
+	    printf(format_string, float_digits, n);
+	    putchar('\n');
+	}
+
+}
+
 void
 print_n(ldouble n, int format)
 {
@@ -1235,9 +1276,7 @@ print_n(ldouble n, int format)
 
 	if (mode == 'f' && format == 'f') {
 		mask = ~0;	// no masking in float mode
-		putchar(' ');
-		printf(format_string, float_digits, n);
-		putchar('\n');
+		print_floating(n);
 		return;
 	}
 
@@ -1297,9 +1336,7 @@ print_n(ldouble n, int format)
 		}
 		break;
 	default:		// 'f'
-		putchar(' ');
-		printf(format_string, float_digits, n);
-		putchar('\n');
+		print_floating(n);
 		break;
 	}
 }
@@ -1389,6 +1426,7 @@ printstate(void)
 	printf(" mode is %c\n", mode);
 	putchar('\n');
 
+	printf(" max_precision is %u\n", max_precision);
 	printf(" float_digits is %d (%s), float_specifier is %c\n",
 		float_digits,
 		float_specifier == 'f' ? "decimals" : "precision",
@@ -1632,9 +1670,13 @@ decimal_length(void)
 	setup_format_string();
 
 	// info
-	snprintf(pending_info, sizeof(pending_info),
-		" will show at most %d digit%s after the decimal.\n",
-		float_digits, float_digits == 1 ? "" : "s");
+	if (float_digits == 0)
+		snprintf(pending_info, sizeof(pending_info),
+			" will show no digits after the decimal.\n");
+	else
+		snprintf(pending_info, sizeof(pending_info),
+			" will show at most %d digit%s after the decimal.\n",
+			float_digits, float_digits == 1 ? "" : "s");
 
 	return GOODOP;
 }
