@@ -167,8 +167,8 @@ boolean punct = TRUE;
  * displayed precision, or the number of digits after the decimal,
  * depending on float_specifier
  */
-unsigned int float_digits = 6;
-unsigned int max_precision = 18;  // true value calculated at startup
+int float_digits = 6;
+int max_precision = 18;  // true value calculated at startup
 int float_specifier = 'g';	/* 'f' or 'g' */
 char *format_string;
 
@@ -1220,10 +1220,10 @@ show_overflow(boolean o)
 	}
 }
 
-unsigned
-min(unsigned a, unsigned b)
+int
+min(int a, int b)
 {
-    return (a < b) ? a : b;
+	return (a < b) ? a : b;
 }
 
 void
@@ -1233,22 +1233,25 @@ print_floating(ldouble n)
 	if (mode == 'f' && float_specifier == 'f') {
 	    char buf[128];
 	    char *p;
-	    unsigned int digits = 0;
+	    int decimals, leadingdigits = 0;
 
 	    snprintf(buf, sizeof(buf), format_string, float_digits, n);
 
 	    for (p = buf; *p && *p != '.'; p++) {
 		if (isdigit(*p))
-		    digits++;
+		    leadingdigits++;
 	    }
 
 	    // in "0.34", the 0 doesn't count toward significant digits
-	    if (digits == 1 && *buf == '0')
-		    digits = 0;
+	    if (leadingdigits == 1 && *buf == '0')
+		    leadingdigits = 0;
 
 	    if (p) { /* found a decimal point */
-		snprintf(buf, sizeof(buf), format_string, 
-		    min(float_digits, max_precision - digits), n);
+
+		decimals = min(float_digits, max_precision - leadingdigits);
+		if (decimals <= 0) decimals = 0;
+
+		snprintf(buf, sizeof(buf), format_string, decimals, n);
 		// remove trailing zeros
 		//p = buf + strlen(buf) - 1;
 		//while (p > buf && *p == '0')
