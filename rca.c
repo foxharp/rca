@@ -2790,8 +2790,8 @@ opreturn showhelp(int show_hidden)
 rca -- a rich/RPN scientific and programmer's calculator\n\
  Any arguments on the command line are used as initial calculator input.\n\
  Entering a number pushes it on the stack.\n\
- Operators replace either one or two top stack values with their result.\n\
- Most whitespace is optional between number and operators, and can consist\n\
+ Operators replace either one or two stack values with their result.\n\
+ Most whitespace is optional between numbers and operators, and can consist\n\
   of spaces, tabs, or newlines.\n\
  Numbers can include commas and $ signs (e.g., '$3,577,455').\n\
  Numbers are represented internally as long double and signed long long.\n\
