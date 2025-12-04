@@ -116,10 +116,17 @@ with
 or as 3,141,592.6535898 with
 .B 7
 .BR K .
-.P
+
 All floating point values are
 .I long double
-in size.
+in size.  Because digital floating point is inexact, values are sometimes
+calculated which are
+.I almost
+correct (like .99999999999... instead of 1), but not quite.
+.B rca
+tries to help by snapping very close values to 0, or to adjacent
+integers, and by rounding when the precision limits of the floating
+point representation are reached.
 
 .SS Integer
 Integer mode, along with the default format for display purposes, is
@@ -159,11 +166,11 @@ or
 or
 .B B
 to switch modes.)
-.P
+
 The input base of a number is independent of the mode, and controlled
 entirely by how it is entered:  10, 0xa, 012, and 0b1010 are all
 the same value.
-.P
+
 To aid in reading long digit strings,
 .B rca
 by default will add commas to numbers it prints.
@@ -199,7 +206,8 @@ The
 and
 .B e
 operators push the values of the obvious constants to the stack.
-.P The
+
+The
 .B s1
 through
 .B s5
@@ -219,7 +227,7 @@ and
 .B recall
 with
 .BR r1 .)
-.P
+
 A special operator 
 .B sum
 will pop and add up previous entries on the
@@ -239,11 +247,12 @@ regard.  But when evaluating an infix expression, the relative
 precedence of operators is important.  The "precedence" command will
 give a list, whose output is reproduced here.  Higher numbers denote
 higher precedence.
-.P
+
     28   \fB (                                                \fR
     26   \fB ~ chs negate plus !                              \fR
-    24   \fB recip sqrt sin cos tan asin acos atan atan2 abs  \fR
-         \fB frac int i2mm mm2i ft2m m2ft mi2km km2mi f2c c2f \fR
+    24   \fB recip sqrt ln log2 log10 abs frac int            \fR
+         \fB sin cos tan asin acos atan atan2                 \fR
+         \fB i2mm mm2i ft2m m2ft mi2km km2mi f2c c2f          \fR
          \fB oz2g g2oz oz2ml ml2oz q2l l2q                    \fR
     22   \fB ^ **                                             \fR
     20   \fB * x / %                                          \fR
@@ -273,6 +282,20 @@ mantissa, whichever is smaller.  This results in 64 bits on most CPU
 architectures in 2025.  (An exception:  52 bits on Raspberry Pi
 when running a 32 bit OS)
 
+.B rca
+will try and prevent you from attempting to print with more than the available
+significant digits on the system.  The
+.B precision
+value can't be set above this limit.  However, if viewing %f output (after
+setting a
+.B decimals
+value), it's easy to start seeing "unclean" bits if the magnitude of
+the number grows beyond the number of significant digits.  The numbers
+are really big at that point:  over 1e19 on a modern system.  So just
+don't do that -- use %g in those case, which will help somewhat. 
+Switch to "bc" with a large enough scale value if you really need
+accuracy way "up there".
+
 All stack values in
 .B rca
 are stored in
@@ -295,6 +318,11 @@ after switching to an integer mode, or while performing a bitwise
 operation.  Execution will proceed after the warning unless
 .B errorexit
 has been enabled.
+
+Also, if "integer-centric" operators are used (bitwise operators,
+mostly), the values will be cast to long long and the result will be
+cast back to float, which will likely result in the loss of any
+exponential and fractional parts of the value.
 
 .SH EXIT STATUS
 .B rca
