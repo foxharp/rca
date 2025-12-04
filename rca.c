@@ -928,6 +928,48 @@ atangent2(void)
 }
 
 opreturn
+log_worker(int which)
+{
+	ldouble n, l;
+
+	if (pop(&n)) {
+		if (n <= 0) {
+			push(n);
+			printf(" math error: log of 0 or negative\n");
+			might_errexit();
+			return BADOP;
+		}
+		switch(which) {
+		case 0: l = logl(n); break;
+		case 2: l = log2l(n); break;
+		case 10:l = log10l(n); break;
+		}
+		result_push(l);
+		lastx = n;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
+log_natural(void)
+{
+	return log_worker(0);
+}
+
+opreturn
+log_base2(void)
+{
+	return log_worker(2);
+}
+
+opreturn
+log_base10(void)
+{
+	return log_worker(10);
+}
+
+opreturn
 fraction(void)
 {
 	ldouble a;
@@ -2853,6 +2895,9 @@ struct oper opers[] = {
 	{"acos", acosine,       0, 1, 24 },
 	{"atan", atangent,      "Trig functions (in degrees)", 1, 24 },
 	{"atan2", atangent2,    "Arctan of y/x (i.e., 2 operands, in degrees)", 2, 24 },
+	{"ln", log_natural,    	0, 1, 24 },
+	{"log2", log_base2,    	0, 1, 24 },
+	{"log10", log_base10,    	"Natural, base 2, and base 10 logarithms", 1, 24 },
 
 	{"abs", absolute,	0, 1, 24 },
 	{"frac", fraction,	0, 1, 24 },
