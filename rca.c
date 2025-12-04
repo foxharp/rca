@@ -233,37 +233,44 @@ detect_epsilon(void)
 	max_precision = (int)(-log10l(epsilon)) + 1;
 }
 
-long double
-canonicalize(long double x)
+
+/*
+ * fudge_floats_ulp:
+ *   Returns a version of x where digits smaller than roughly one ULP
+ *   are removed. This includes:
+ *     - values very close to zero
+ *     - values very close to integers
+ *     - other rounding artifacts
+ */
+ldouble fudge_floats(ldouble x)
 {
-	long double abs_x, scale, tolerance;
+    if (!isfinite(x)) return x;  /* NaN, +Inf, -Inf pass through */
 
-	if (!epsilon) detect_epsilon();
+    ldouble abs_x = fabsl(x);
 
-	abs_x = fabsl(x);
-	scale = abs_x > 1.0L ? abs_x : 1.0L;
-	tolerance = epsilon * scale;
+    /* scale tolerance by magnitude */
+    ldouble tolerance = epsilon * (abs_x > 1.0L ? abs_x : 1.0L);
 
-	// snap to zero
-	if (abs_x <= tolerance)
-		return 0.0L;
+    /* snap to zero */
+    if (abs_x <= tolerance)
+        return 0.0L;
 
-	// snap to integer
-	long double r = roundl(x);
+    /* snap to integer - aggressive: allow a slightly bigger margin */
+    ldouble r = roundl(x);
+    if (fabsl(x - r) <= 100.0L * tolerance)  /* 100×epsilon scaling */
+        return r;
 
-	if (fabsl(x - r) <= tolerance)
-		return r;
+    /* compute ULP(x) */
+    ldouble next = nextafterl(x, INFINITY);
+    ldouble ulp = fabsl(next - x);
 
-	/*
-	 * if x has magnitude much greater than tolerance, but the
-	 * low-order digits are within tolerance, remove them by rounding.
-	 */
-	long double rounded = floorl(x / tolerance + 0.5L) * tolerance;
+    /* round to nearest multiple of ULP if within small multiple of ULP */
+    ldouble rounded = roundl(x / ulp) * ulp;
+    if (fabsl(x - rounded) <= 10.0L * ulp)
+        return rounded;
 
-	if (fabsl(x - rounded) <= tolerance)
-		return rounded;
-
-	return x;
+    /* otherwise return original x */
+    return x;
 }
 
 
@@ -278,7 +285,7 @@ push(ldouble n)
 	}
 
 	if (mode == 'f') {
-		p->val = canonicalize(n);
+		p->val = n;
 		trace(("pushed %Lg/0x%llx\n", n, (long long)(p->val)));
 	} else {
 		p->val = sign_extend((long long)n & int_mask);
@@ -289,6 +296,12 @@ push(ldouble n)
 	p->next = stack;
 	stack = p;
 	stack_count++;
+}
+
+void
+result_push(ldouble n)
+{
+	push(fudge_floats(n));
 }
 
 boolean
@@ -438,7 +451,7 @@ add(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			push(a + b);
+			result_push(a + b);
 			lastx = b;
 			return GOODOP;
 		}
@@ -454,7 +467,7 @@ subtract(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			push(a - b);
+			result_push(a - b);
 			lastx = b;
 			return GOODOP;
 		}
@@ -470,7 +483,7 @@ multiply(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			push(a * b);
+			result_push(a * b);
 			lastx = b;
 			return GOODOP;
 		}
@@ -487,7 +500,7 @@ divide(void)
 	if (pop(&b)) {
 		if (pop(&a)) {
 			if (b != 0.0) {
-				push(a / b);
+				result_push(a / b);
 			} else {
 				push(a);
 				push(b);
@@ -511,7 +524,7 @@ modulo(void)
 	if (pop(&b)) {
 		if (pop(&a)) {
 			if (b != 0) {
-				push(fmodl(a,b));
+				result_push(fmodl(a,b));
 			} else {
 				push(a);
 				push(b);
@@ -535,7 +548,7 @@ y_to_the_x(void)
 	if (pop(&b)) {
 		if (pop(&a)) {
 			if (a >= 0 || floorl(b) == b) {
-				push(powl(a, b));
+				result_push(powl(a, b));
 			} else {
 				push(a);
 				push(b);
@@ -759,7 +772,7 @@ recip(void)
 
 	if (pop(&a)) {
 		if (a != 0.0) {
-			push(1.0 / a);
+			result_push(1.0 / a);
 			lastx = a;
 			return GOODOP;
 		} else {
@@ -779,7 +792,7 @@ squarert(void)
 
 	if (pop(&a)) {
 		if (a >= 0.0) {
-			push(sqrtl(a));
+			result_push(sqrtl(a));
 			lastx = a;
 			return GOODOP;
 		} else {
@@ -808,7 +821,7 @@ sine(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		push(sinl((a * pi) / 180.0));
+		result_push(sinl((a * pi) / 180.0));
 		lastx = a;
 		return GOODOP;
 	}
@@ -824,7 +837,7 @@ asine(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		push((180.0 * asinl(a)) / pi);
+		result_push((180.0 * asinl(a)) / pi);
 		lastx = a;
 		return GOODOP;
 	}
@@ -840,7 +853,7 @@ cosine(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		push(cosl((a * pi) / 180.0));
+		result_push(cosl((a * pi) / 180.0));
 		lastx = a;
 		return GOODOP;
 	}
@@ -856,7 +869,7 @@ acosine(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		push(180.0 * acosl(a) / pi);
+		result_push(180.0 * acosl(a) / pi);
 		lastx = a;
 		return GOODOP;
 	}
@@ -873,7 +886,7 @@ tangent(void)
 
 	if (pop(&a)) {
 		// FIXME:  tan() goes infinite at +/-90
-		push(tanl(a * pi / 180.0));
+		result_push(tanl(a * pi / 180.0));
 		lastx = a;
 		return GOODOP;
 	}
@@ -889,7 +902,7 @@ atangent(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		push((180.0 * atanl(a)) / pi);
+		result_push((180.0 * atanl(a)) / pi);
 		lastx = a;
 		return GOODOP;
 	}
@@ -906,7 +919,7 @@ atangent2(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			push((180.0 * atan2(a,b)) / pi);
+			result_push((180.0 * atan2(a,b)) / pi);
 			lastx = b;
 			return GOODOP;
 		}
@@ -1424,6 +1437,7 @@ opreturn
 printstate(void)
 {
 	struct num *s;
+	ldouble x;
 
 	putchar('\n');
 	printf(" mode is %c\n", mode);
@@ -1459,9 +1473,15 @@ printstate(void)
 	printf(" native sizes (bits):\n");
 	printf("  long long:\t%lu\n", (unsigned long)(8 * sizeof(long long)));
 	printf("  long double:\t%lu\n", (unsigned long)(8 * sizeof(long double)));
-	printf("  long double mantissa: %u\n", LDBL_MANT_DIG);
+	printf("  LDBL_MANT_DIG: %u\n", LDBL_MANT_DIG);
+	printf("  LDBL_MAX: %.20Lg\n", LDBL_MAX);
 	printf("  LDBL_EPSILON is %Lg\n", LDBL_EPSILON);
+	x = 1.2345678e24L;
+	printf("  ULP (calculated) is %.0Lf\n", nextafterl(x, INFINITY) - x);
 	printf("  detected eps is %Lg\n", epsilon);
+
+	/* Unit in the Last Place */
+	// ULP(x) = LDBL_EPSILON × 2^(exp(x))
 
 
 
@@ -1877,7 +1897,7 @@ sum(void)
 			break;
 		tot += a;
 	}
-	push(tot);
+	result_push(tot);
 	stack_mark = 0;
 	return r;
 }
@@ -1889,7 +1909,7 @@ units_in_mm(void)
 
 	if (pop(&a)) {
 		a *= 25.4;
-		push(a);
+		result_push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1903,7 +1923,7 @@ units_mm_in(void)
 
 	if (pop(&a)) {
 		a /= 25.4;
-		push(a);
+		result_push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1917,7 +1937,7 @@ units_ft_m(void)
 
 	if (pop(&a)) {
 		a /= 3.28084;
-		push(a);
+		result_push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1931,7 +1951,7 @@ units_m_ft(void)
 
 	if (pop(&a)) {
 		a *= 3.28084;
-		push(a);
+		result_push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1946,7 +1966,7 @@ units_F_C(void)
 	if (pop(&a)) {
 		a -= 32.0;
 		a /= 1.8;
-		push(a);
+		result_push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1961,7 +1981,7 @@ units_C_F(void)
 	if (pop(&a)) {
 		a *= 1.8;
 		a += 32.0;
-		push(a);
+		result_push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1975,7 +1995,7 @@ units_l_qt(void)
 
 	if (pop(&a)) {
 		a *= 1.05669;
-		push(a);
+		result_push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1989,7 +2009,7 @@ units_qt_l(void)
 
 	if (pop(&a)) {
 		a /= 1.05669;
-		push(a);
+		result_push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2003,7 +2023,7 @@ units_oz_g(void)
 
 	if (pop(&a)) {
 		a *= 28.3495;
-		push(a);
+		result_push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2017,7 +2037,7 @@ units_g_oz(void)
 
 	if (pop(&a)) {
 		a /= 28.3495;
-		push(a);
+		result_push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2031,7 +2051,7 @@ units_oz_ml(void)
 
 	if (pop(&a)) {
 		a *= 29.5735;
-		push(a);
+		result_push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2045,7 +2065,7 @@ units_ml_oz(void)
 
 	if (pop(&a)) {
 		a /= 29.5735;
-		push(a);
+		result_push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2059,7 +2079,7 @@ units_mi_km(void)
 
 	if (pop(&a)) {
 		a /= 0.6213712;
-		push(a);
+		result_push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2073,7 +2093,7 @@ units_km_mi(void)
 
 	if (pop(&a)) {
 		a *= 0.6213712;
-		push(a);
+		result_push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2962,6 +2982,7 @@ main(int argc, char *argv[])
 
 	setup_width(0);
 	setup_format_string();
+	detect_epsilon();
 
 	create_infix_support_tokens();
 
