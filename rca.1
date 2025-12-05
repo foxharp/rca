@@ -8,20 +8,18 @@ rca \- a rich/RPN (and more) programmer's calculator
 .SH DESCRIPTION
 At it's heart, 
 .B rca
-is a reverse polish notation (RPN) calculator modeled (very loosely)
-on the Hewlett-Packard operating model used in their long line of
-scientific calculators.  Operators include both scientific and bitwise
-and logical operators.  Word width can be limited, for working with
-programs for any class of CPU.  In addition,
+is a command-line reverse polish notation (RPN) calculator inspired
+(very loosely) by the Hewlett-Packard operating model used in their
+long line of scientific calculators.  Operators include
+scientific, logical, and bitwise operators.  Word width can be
+limited, for working with programs for any class of CPU.  In addition,
 .B rca
 can evaluate traditional infix expressions, greatly expanding its
 usefulness.  Input is free form, for the most part, and
 .B rca
 is easily incorporated into shell scripts to provide floating point
-support.  Whitespace is optional, though there may be cases where ambiguity
-would get in the way.  (For example, "456b" will put 456 on the stack and
-print it as binary, but "0x456b" will push the hex constant 0x456b.  Use
-your judgement.)  Any text after and including a
+support.  Whitespace is usually optional, though there may be cases where ambiguity
+would get in the way.  Any text including and following a
 .B #
 character will be ignored as a comment.
 
@@ -29,7 +27,7 @@ character will be ignored as a comment.
 Numbers entered by the user are pushed onto a stack.  Operators pop
 those stack entries, usually 1 or 2 at a time, and push the result of
 the operation back on the stack.  Operators exist which cover the
-usual arithemetic functions
+usual arithemetic operations
 .RB ( + ,
 .BR - ,
 etc),
@@ -63,16 +61,45 @@ and
 .IR y .
 
 .SH INFIX NOTATION
-In addition, 
 .B rca
-supports infix style expressions (i.e., non-RPN expressions) which
-must be enclosed in parentheses, and are constrained to a single input
-line.  These expressions "escape" the RPN model, and are evaluated
-with the usual rules of operator precedence.  The special symbol
+supports infix style expressions (i.e., non-RPN expressions).  Such
+expressions must be fully enclosed in parentheses, and cannot
+cross to a new line.  A single line of input can be a mix of RPN notation
+(unparenthesized) and complete infix expressions (parenthesized).
+The infix expressions "escape" the RPN model, and are evaluated
+with the typical rules of operator precedence (see
+.B OPERATOR PRECEDENCE
+below).  All input number formats are accepted in infix, just as in RPN.
+.P
+All
+.B rca
+stack operators can be used as infix functions, including
+the unary operators (i.e.,
+.BR - x
+.BR + x
+.BR ~ x
+.BR ! x),
+and all of the comparison,
+logical, and bitwise operators.  Infix expressions result in a value.  For
+example, the expression
+.B (-3 + +5)
+will result in "2" being pushed
+on the stack.  When single operand operators appear in infix expressions, the
+operand will always follow the operator.  With two operand operators,
+one operand will appear on either side of the operator.  So exponentiation
+would be written as
+.B ( 3 ** 2 )
+(producing 9 as a result) and
+.B (0 setb 3)
+will give 8.  The expression
+.B (sin 180 == cos 90)
+has the value 1, i.e. "true".
+.P
+The special symbol
 .B X
-can be used to reference the value of 
+can be used in an infix expression to reference the value of 
 .I x
-(the top of stack) when the infix expression was invoked.  (The top of
+(the top of stack) when the expression was invoked.  (The top of
 stack will
 .I not
 be popped or replaced.)  The five storage locations (accessed with
@@ -86,30 +113,31 @@ referenced, using
 .B r1
 through
 .BR r5 .
-The result of the expression will be pushed on the RPN
-stack.
+The result of an infix expression, whether it's the result of floating
+arithmetic, integer bitwise math, or logical comparison, will be
+pushed on the RPN stack.  If an error occurs during evaluation of an
+infix expression, evaluation will cease, and the stack will be left as
+it was at the point of the error.
+.P
 
 .SH OPERATING MODES
 .B rca
-can be configured (via pseudo-operators, which pull their parameters from
+can be configured (via pseudo-operators, which also get their parameters from
 the stack) to operate on floating point numbers, or integers, and to print
 results in various ways.
 
 .SS Floating point
-The default mode for
-.B rca
-is floating point, which can be entered with the
+In floating point mode (i.e., 
 .B F
-command.  When in floating point mode (the default), the user can
-control either the number of digits shown after the decimal point
-(using
-.BR decimals,
-or
-.BR K ),
-or the total number of significant digits (using
-.BR precision ,
-or
-.BR k ). 
+mode, the default mode on entry), all operations use the full size of
+long double.  Printing can be controlled with the
+.B precision
+.BR ( k )
+command which specifies a number of digits for the printf "%g" format, or
+by the
+.B decimals
+.BR ( K )
+command, which specifies the number of decimals for the printf "%f" format.
 So the value of pi multiplied by 1 million will display as 3.14159e+06
 with 
 .B 6 k
@@ -117,9 +145,24 @@ or as 3,141,592.6535898 with
 .B 7
 .BR K .
 
-All floating point values are
-.I long double
-in size.  Because digital floating point is inexact, values are sometimes
+Scientific notation will be used when in 
+.B precision
+mode as it is in printf's %g:  any time the
+exponent is less than -4, or greater than the chosen precision.
+.B rca
+will prevent you from attempting to print with more than the available
+significant digits on the system.  The default
+.B precision
+value is set based on this limit (18 for most modern PC
+architectures), and can't be raised above it.  However, if viewing %f
+output (after setting a
+.B decimals
+value), it's easy to start seeing "unclean" bits if the magnitude of
+the number grows beyond the number of significant digits.  The numbers
+are really big at that point:  over 1e19 on a modern system.  So just
+don't do that -- use %g in those case, which will help somewhat. 
+
+Because digital floating point is inexact, values are sometimes
 calculated which are
 .I almost
 correct (like .99999999999... instead of 1), but not quite.
@@ -129,8 +172,8 @@ integers, and by rounding when the precision limits of the floating
 point representation are reached.
 
 .SS Integer
-Integer mode, along with the default format for display purposes, is
-selected with the
+Integer mode is selected with any of the following commands, which
+also choose, the default display format:
 .B D
 (signed decimal),
 .B U
@@ -140,16 +183,16 @@ selected with the
 .B O
 (octal), or
 .B B
-(binary) commands.
-The default format is used by
+(binary).
+The default printing format is used by
 the
 .BR p ,
 .BR P ,
 and
 .B autoprint
 commands.
-Regardless of the default integer format, individual values can be
-viewed in any format at any time using
+Regardless of the default format, individual values can be
+viewed at any time in any format by using
 .BR f ,
 .BR d ,
 .BR u ,
@@ -157,7 +200,7 @@ viewed in any format at any time using
 .BR o ,
 or
 .BR b .
-(The full stack is printed when using
+(The full stack can be printed with
 .BR F ,
 .BR D ,
 .BR U ,
@@ -165,40 +208,57 @@ or
 .BR O ,
 or
 .B B
-to switch modes.)
+which also switches to that display mode.)
 
 The input base of a number is independent of the mode, and controlled
-entirely by how it is entered:  10, 0xa, 012, and 0b1010 are all
+entirely by how it is entered:  10, 0xa, 012, and 0b1010 and 1e01 are all
 the same value.
 
+By default the width of
+.BR rca 's
+integers is the maximum supported, but it can be configured to as
+few as 2 bits using the
+.B width
+(or
+.BR w )
+command.  The maximum supported width will be either the width of the
+.I long long
+data type, or of the
+.I long double
+mantissa, whichever is smaller.  This results in 64 bits on most CPU
+architectures in 2025.  (An exception:  52 bits on Raspberry Pi
+when running a 32 bit OS)
+
+Values will effectively be masked to the chosen word width for both
+use and display, whether they are input by the user or result from an
+operation.  Arithmetic on the values will be signed.  If floating
+operations are used on width-restricted integers, the width
+restriction will be ignored.
+
+.SS Punctuation
 To aid in reading long digit strings,
 .B rca
-by default will add commas to numbers it prints.
+will by default add commas to numbers it prints.
 These can be disabled with the 
 .B 0 commas
-command.  In addition, both commas and the
-"$" currency symbol will be silently stripped on input, which is convenient
-when doing arithmetic on copy/pasted data.
+command.  (Commas will never appear in the fractional part of a
+value.)  When enabled, commas will be added to numbers in every base.
+
+In addition, both commas and the "$" currency symbol will be
+silently stripped on input, which is convenient when doing arithmetic
+on copy/pasted data.
 
 .SH HELP
 A complete list of operators/commands can be obtained entering 
 .B ?
 or
 .BR help .
-Many operators have two names:  
-both 
-.B width
-and 
-.B w
-can be used to set word width, either 
-.B ^
-or 
-.B **
-can be used for exponentiation, 
-.B *
-and
-.B x
-will both multiply, etc.
+Many operators have two names, and this is indicated in the
+.B help
+table.  A table showing operator precedence in infix expressions
+is available with the
+.B precedence
+command.
 
 .SH SPECIAL VALUES
 The
@@ -232,9 +292,10 @@ A special operator
 .B sum
 will pop and add up previous entries on the
 stack, stopping when the stack is empty, or when a 
+stack marker previously set with the 
 .B mark
-is reached. 
-The mark can be set before entering data for a subsequent 
+command is reached. 
+The mark would be set before entering the data for a subsequent 
 .BR sum,
 in order to limit its reach.  
 .B sum
@@ -266,35 +327,27 @@ higher precedence.
     4    \fB &&                                               \fR
     2    \fB ||                                               \fR
 
-.SH DATA TYPES and OVERFLOW
-By default the width of
-.BR rca 's
-integers is the maximum supported, but it can be configured to be as
-narrow as 2 bits using the
-.B width
-(or
-.BR w )
-command.  The maximum supported width will be either the width of the
-.I long long
-data type, or of the
-.I long double
-mantissa, whichever is smaller.  This results in 64 bits on most CPU
-architectures in 2025.  (An exception:  52 bits on Raspberry Pi
-when running a 32 bit OS)
+.SH OPERATOR NOTES
+Most operators behave as they are commonly understood to.  A few need
+more specific documentation.
 
-.B rca
-will try and prevent you from attempting to print with more than the available
-significant digits on the system.  The
-.B precision
-value can't be set above this limit.  However, if viewing %f output (after
-setting a
-.B decimals
-value), it's easy to start seeing "unclean" bits if the magnitude of
-the number grows beyond the number of significant digits.  The numbers
-are really big at that point:  over 1e19 on a modern system.  So just
-don't do that -- use %g in those case, which will help somewhat. 
-Switch to "bc" with a large enough scale value if you really need
-accuracy way "up there".
+.B modulo
+is always done in floating point using the C fmodl() library.
+
+.B frac
+applied to negaive values will give a negative result.
+
+.SS Associativity
+In infix mode exponentiation 
+.RB ( ^ or ** )
+is right associative.  (
+.B (2 ^ 3 ^ 2)
+is read as
+.B (2 ^ (3 ^ 2))
+.)
+
+
+.SH DATA TYPES and OVERFLOW
 
 All stack values in
 .B rca
@@ -308,7 +361,7 @@ also simply working in other bases and word widths) require conversion
 to integer.  The
 .I long long
 type is used in this case; results are
-converted back when finished, if necessary.  If the conversion from
+converted back when finished.  If the conversion from
 .I long double
 to
 .I long long
@@ -326,16 +379,18 @@ exponential and fractional parts of the value.
 
 .SH EXIT STATUS
 .B rca
-will normally exit with status 0 or 1; a non-zero value of
-.I x
-at the top of the stack causes the program to return "success" in the
-shell sense.) An exit status of 2 results if the stack is empty on
-normal exit.  An exit status of 3 comes from unrecoverable internal
-errors.  Usually operational warnings and errors are assumed to be
-useful to the user, and execution proceeds.  If the
+will normally exit with status 0 or 1; a non-zero value 
+at the top of the stack causes a shell exit of 0, a 0 at top of stack
+causes an exit value of 1.  An exit status of 2 results if the stack
+is empty on normal exit.  An exit status of 3 comes from unrecoverable
+internal errors (memory allocation, etc).  Operational warnings and
+errors are assumed to be useful to the user, and execution proceeds. 
+If the
 .B errorexit
 command has been given, then warnings and errors will result in an
-exit status of 4.  (Once given,
+exit status of 4.  This can be useful when
+.B rca
+is used non-interactively.  (Once given,
 .B errorexit
 cannot be rescinded.)
 
