@@ -101,7 +101,7 @@ store
 km2mi
  15.7828
 15k
- 15 digits of total displayed precision.
+ showing 15 significant digits.
  15.78282848
 oz2g
  447.43529599376
@@ -260,56 +260,56 @@ clear
 F
  Mode is float.  Displaying 15 digits of total precision.
 32k
- 32 digits of total displayed precision.
+ showing the maximum of 18 significant digits.
 pi
- 3.1415926535897932385128089594062
+ 3.14159265358979324
 frac
- 0.14159265358979323851280895940619
+ 0.141592653589793239
 pi
- 3.1415926535897932385128089594062
+ 3.14159265358979324
 chs
- -3.1415926535897932385128089594062
+ -3.14159265358979324
 frac
- -0.14159265358979323851280895940619
+ -0.141592653589793239
 pi
- 3.1415926535897932385128089594062
+ 3.14159265358979324
 int
  3
 pi
- 3.1415926535897932385128089594062
+ 3.14159265358979324
 chs
- -3.1415926535897932385128089594062
+ -3.14159265358979324
 int
  -3
 pi
- 3.1415926535897932385128089594062
+ 3.14159265358979324
 15k
- 15 digits of total displayed precision.
+ showing 15 significant digits.
  3.14159265358979
 pi
  3.14159265358979
 10 15 ^ *
  3.14159265358979e+15
 15K
- 15 digits after the decimal.
- 3,141,592,653,589,793.238525390625000
+ will show at most 15 digits after the decimal.
+ 3,141,592,653,589,793.00
 5K
- 5 digits after the decimal.
- 3,141,592,653,589,793.23853
+ will show at most 5 digits after the decimal.
+ 3,141,592,653,589,793.00
 1K
- 1 digit after the decimal.
- 3,141,592,653,589,793.2
+ will show at most 1 digit after the decimal.
+ 3,141,592,653,589,793.0
 0K
- 0 digits after the decimal.
+ will show no digits after the decimal.
  3,141,592,653,589,793
 15k
- 15 digits of total displayed precision.
+ showing 15 significant digits.
  3.14159265358979e+15
 1k
- 1 digit of total displayed precision.
+ showing 1 significant digit.
  3e+15
 10k
- 10 digits of total displayed precision.
+ showing 10 significant digits.
  3.141592654e+15
 d
  3,141,592,653,589,793
@@ -445,7 +445,7 @@ sum
  0
 
 3K
- 3 digits after the decimal.
+ will show at most 3 digits after the decimal.
  0.000
 
 25 tan
@@ -510,7 +510,7 @@ atan
 10 chs * 10 chs atan2
  -115.000
 7k
- 7 digits of total displayed precision.
+ showing 7 significant digits.
  -115
 ( i2mm -.75 )
  -19.05
@@ -520,7 +520,7 @@ atan
  numeric punctuation is now off
  1016
 3K
- 3 digits after the decimal.
+ will show at most 3 digits after the decimal.
  1016.000
 1 c
  numeric punctuation is now on
