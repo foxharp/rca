@@ -123,7 +123,7 @@ struct oper {
 /* operator table */
 struct oper opers[];
 
-/* tokens are typed -- currently numbers, operators, line-ends */
+/* tokens are typed -- currently numbers, operators, symbolic, and line-ends */
 struct token {
 	union {
 		ldouble val;
@@ -2197,24 +2197,39 @@ size_t strpunct(char *s, char **endptr)
 	return ns - s;
 }
 
+void
+print_token(token *t)
+{
+	switch(t->type) {
+	case NUMERIC:
+	    printf("%+Lg", t->val.val);
+	    break;
+	case SYMBOLIC:
+	    printf("%s", t->val.oper->name);
+	    break;
+	case OP:
+	    printf("oper %s", t->val.oper->name);
+	    break;
+	case EOL:
+	    printf("EOL");
+	    break;
+	case UNKNOWN:
+	    printf("unknown");
+	    break;
+	}
+}
+
 int
-parse_tok(char *p, token *t, char **nextp, int rpn_signed_ints)
+parse_tok(char *p, token *t, char **nextp)
 {
 	int sign = 1;
 
-	/* when parsing infix, we must treat "-3" as a unary negation
-	 * operator, followed by the positive number "3".  That's
-	 * special-cased in open_paren().  In RPN, it must be treated
-	 * as negative 3.
-	 */
-	if (rpn_signed_ints) {
-		/* be sure + and - are bound closely to numbers */
-		if (*p == '+' && (*(p + 1) == '.' || isdigit(*(p + 1)))) {
-			p++;
-		} else if (*p == '-' && (*(p + 1) == '.' || isdigit(*(p + 1)))) {
-			sign = -1;
-			p++;
-		}
+	/* be sure + and - are bound closely to numbers */
+	if (*p == '+' && (*(p + 1) == '.' || isdigit(*(p + 1)))) {
+		p++;
+	} else if (*p == '-' && (*(p + 1) == '.' || isdigit(*(p + 1)))) {
+		sign = -1;
+		p++;
 	}
 
 	if (*p == '0' && (*(p + 1) == 'x' || *(p + 1) == 'X')) {
@@ -2462,7 +2477,7 @@ gettoken(struct token *t)
 
 	fflush(stdin);
 
-	if (!parse_tok(input_ptr, t, &next_input_ptr, 1)) {
+	if (!parse_tok(input_ptr, t, &next_input_ptr)) {
 		printf(" error: unrecognized input '%s'\n", input_ptr);
 		might_errexit();
 		input_ptr = next_input_ptr;
@@ -2482,9 +2497,9 @@ create_infix_support_tokens()
 	 * specifically for dealing with infix processing.
 	 */
 	char *outp;
-	(void)parse_tok("(", &open_paren_token, &outp, 0);
-	(void)parse_tok("chs", &chsign_token, &outp, 0);
-	(void)parse_tok("plus", &plus_token, &outp, 0);
+	(void)parse_tok("(", &open_paren_token, &outp);
+	(void)parse_tok("chs", &chsign_token, &outp);
+	(void)parse_tok("plus", &plus_token, &outp);
 }
 
 opreturn
@@ -2542,7 +2557,7 @@ open_paren(void)
 
 		t = &tok;
 
-		if (!parse_tok(input_ptr, &tok, &input_ptr, 0)) {
+		if (!parse_tok(input_ptr, &tok, &input_ptr)) {
 			goto cleanup;
 		}
 
@@ -2554,7 +2569,11 @@ open_paren(void)
 			else
 				trace(("symbolic is %s\n", t->val.oper->name));
 			if (ptok.type == NUMERIC || ptok.type == SYMBOLIC) {
-				printf(" error: bad expression sequence\n");
+				printf(" error: bad expression sequence, last saw ");
+				print_token(&ptok);
+				printf(" and ");
+				print_token(t);
+				printf("\n");
 				might_errexit();
 				return BADOP;
 			}
