@@ -30,10 +30,13 @@ publish: publish_prepare
 
 install:
 	wake_host chive clover; sleep 3
-	for x in grass hemlock chive flax colo basil clover; \
+	for x in grass hemlock chive flax colo basil clover lumber; \
 	do \
 		$$x put rca rca_float bin ; \
+		$$x run mkdir -p man/man1 ; \
+		$$x put rca.1 man/man1 ; \
 	done
+	# redo lumber
 	lumber put rca.c .
 	lumber run doit rca.c
 	lumber run mv rca bin
