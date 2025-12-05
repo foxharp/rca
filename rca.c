@@ -2722,11 +2722,14 @@ open_paren(void)
 opreturn
 precedence(void)
 {
-	int prec;
+	int prec, i;
 	oper *op;
 #define NUM_PRECEDENCE 30
 	char *prec_ops[NUM_PRECEDENCE] = {0};
+	int linelen[NUM_PRECEDENCE] = {0};
 
+	printf("Precedence for operators in infix expressions, listed\n");
+	printf(" from top to bottom in order of descending precedence.\n");
 	op = opers;
 	while (op->name) {
 		if (op->name[0] &&
@@ -2737,21 +2740,31 @@ precedence(void)
 					op->name, op->prec);
 				might_errexit();
 			}
-			if (!prec_ops[op->prec])
+			if (!prec_ops[op->prec]) {
 				prec_ops[op->prec] = (char *)calloc(1, 500);
+				linelen[op->prec] = 0;
+			}
 			if (!prec_ops[op->prec]) {
 				perror("rca: calloc failure");
 				exit(3);
 			}
 			strcat(prec_ops[op->prec], op->name);
-			strcat(prec_ops[op->prec], " ");
+			linelen[op->prec] += strlen(op->name);
+			if (linelen[op->prec] > 60) {
+				strcat(prec_ops[op->prec], "\n            ");
+				linelen[op->prec] = 12;
+			} else {
+				strcat(prec_ops[op->prec], " ");
+				linelen[op->prec]++;
+			}
 		}
 		op++;
 	}
 
+	i = 1;
 	for (prec = NUM_PRECEDENCE-1; prec >=0; prec--) {
 		if (prec_ops[prec])
-			printf("%d	%s\n", prec, prec_ops[prec]);
+			printf("%-8i%s\n", i++, prec_ops[prec]);
 	}
 
 	return GOODOP;
