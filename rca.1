@@ -6,20 +6,21 @@ rca \- a rich/RPN (and more) programmer's calculator
 .I [ initial rca command text ]
 
 .SH DESCRIPTION
-At it's heart, 
+At it's heart,
 .B rca
 is a command-line reverse polish notation (RPN) calculator inspired
 (very loosely) by the Hewlett-Packard operating model used in their
 long line of scientific calculators.  Operators include
 scientific, logical, and bitwise operators.  Word width can be
-limited, for working with programs for any class of CPU.  In addition,
+limited, for working with values from any class of CPU.  In addition,
 .B rca
 can evaluate traditional infix expressions, greatly expanding its
 usefulness.  Input is free form, for the most part, and
 .B rca
 is easily incorporated into shell scripts to provide floating point
-support.  Whitespace is usually optional, though there may be cases where ambiguity
-would get in the way.  Any text including and following a
+support.  Whitespace is usually optional, though there may be cases
+where ambiguity would get in the way.  Any text including and
+following a
 .B #
 character will be ignored as a comment.
 
@@ -35,11 +36,11 @@ as well as functions (e.g.,
 .BR sin ,
 .BR cos ,
 .BR sqrt ),
-bit-shifting 
+bit-shifting
 .RB ( <<
 and
 .BR >>),
-logical operations 
+logical operations
 .RB ( && ,
 .BR || ),
 and comparators
@@ -55,7 +56,7 @@ A complete list of operators can be obtained with the
 or
 .B help
 commands.  The top two elements on the stack, in HP tradition, are
-sometimes referred to as 
+sometimes referred to as
 .I x
 and
 .IR y .
@@ -63,11 +64,13 @@ and
 .SH INFIX NOTATION
 .B rca
 supports infix style expressions (i.e., non-RPN expressions).  Such
-expressions must be fully enclosed in parentheses, and cannot
-cross to a new line.  A single line of input can be a mix of RPN notation
-(unparenthesized) and complete infix expressions (parenthesized).
-The infix expressions "escape" the RPN model, and are evaluated
-with the typical rules of operator precedence (see
+expressions must be fully enclosed in parentheses, and cannot cross to
+a new line.  (Infix expressions are translated to RPN by an
+impementation of Dijkstra's "shunting yard" algorithm, and then
+executed as usual.)  A single line of input can be a mix of RPN
+notation (unparenthesized) and complete infix expressions
+(parenthesized).  The infix expressions "escape" the RPN model, and
+are evaluated with fairly typical rules of precedence (see
 .B OPERATOR PRECEDENCE
 below).  All input number formats are accepted in infix, just as in RPN.
 .P
@@ -97,15 +100,16 @@ has the value 1, i.e. "true".
 .P
 The special symbol
 .B X
-can be used in an infix expression to reference the value of 
+can be used in an infix expression to reference the value of
 .I x
 (the top of stack) when the expression was invoked.  (The top of
 stack will
 .I not
-be popped or replaced.)  The five storage locations (accessed with
+be popped or replaced.) The five storage locations settable (only in
+RPN mode) with
 .B store
-or 
-.B s2
+or
+.B s1
 through
 .B s5
 can also be
@@ -113,24 +117,47 @@ referenced, using
 .B r1
 through
 .BR r5 .
-The result of an infix expression, whether it's the result of floating
-arithmetic, integer bitwise math, or logical comparison, will be
+The result of an infix expression will be
 pushed on the RPN stack.  If an error occurs during evaluation of an
 infix expression, evaluation will cease, and the stack will be left as
 it was at the point of the error.
-.P
 
 .SH OPERATING MODES
 .B rca
-can be configured (via pseudo-operators, which also get their parameters from
-the stack) to operate on floating point numbers, or integers, and to print
-results in various ways.
+can be configured into two modes of operation:  floating point (the default)
+using the
+.B F
+command, and integer, using one of
+.B D
+(signed decimal),
+.B U
+(unsigned decimal),
+.B H
+(hex),
+.B O
+(octal), or
+.B B
+(binary).
+
+The difference between the various integer modes lies purely in how
+values are displayed by default, but floating point and integer differ
+in a few addional ways.  Most math is done in long double, regardless
+of mode, but in integer mode all values are masked to the current word
+width, and sign extended, if necessary, before being pushed.  (This
+will also happen to all stack values at once when switching from floating
+point to an integer mode.)
+
+The input base of a number is independent of the mode, and controlled
+entirely by how it is entered:  10, 0xa, 012, and 0b1010 and 1e01 are all
+the same value.
 
 .SS Floating point
-In floating point mode (i.e., 
+In floating point mode (i.e.,
 .B F
-mode, the default mode on entry), all operations use the full size of
-long double.  Printing can be controlled with the
+mode, the default mode on entry to
+.BR rca ),
+all operations use the full size of long double.  Printing can be
+controlled with the
 .B precision
 .BR ( k )
 command which specifies a number of digits for the printf "%g" format, or
@@ -139,28 +166,29 @@ by the
 .BR ( K )
 command, which specifies the number of decimals for the printf "%f" format.
 So the value of pi multiplied by 1 million will display as 3.14159e+06
-with 
+with
 .B 6 k
 or as 3,141,592.6535898 with
 .B 7
 .BR K .
 
-Scientific notation will be used when in 
+Scientific notation will be used when in
 .B precision
-mode as it is in printf's %g:  any time the
-exponent is less than -4, or greater than the chosen precision.
+mode any time the
+exponent is less than -4, or greater than the chosen precision.  (These
+choices from directly from printf.)
 .B rca
-will prevent you from attempting to print with more than the available
+will try to prevent you from printing with more than the available
 significant digits on the system.  The default
 .B precision
-value is set based on this limit (18 for most modern PC
+value is set based on this limit (18 digits for most modern PC
 architectures), and can't be raised above it.  However, if viewing %f
 output (after setting a
 .B decimals
 value), it's easy to start seeing "unclean" bits if the magnitude of
 the number grows beyond the number of significant digits.  The numbers
 are really big at that point:  over 1e19 on a modern system.  So just
-don't do that -- use %g in those case, which will help somewhat. 
+don't do that -- use %g in those case, which will help somewhat.
 
 Because digital floating point is inexact, values are sometimes
 calculated which are
@@ -173,7 +201,7 @@ point representation are reached.
 
 .SS Integer
 Integer mode is selected with any of the following commands, which
-also choose, the default display format:
+also choose the default display format:
 .B D
 (signed decimal),
 .B U
@@ -210,10 +238,6 @@ or
 .B B
 which also switches to that display mode.)
 
-The input base of a number is independent of the mode, and controlled
-entirely by how it is entered:  10, 0xa, 012, and 0b1010 and 1e01 are all
-the same value.
-
 By default the width of
 .BR rca 's
 integers is the maximum supported, but it can be configured to as
@@ -225,21 +249,22 @@ command.  The maximum supported width will be either the width of the
 .I long long
 data type, or of the
 .I long double
-mantissa, whichever is smaller.  This results in 64 bits on most CPU
+mantissa, whichever is smaller.  This results in 64 bits on most PC
 architectures in 2025.  (An exception:  52 bits on Raspberry Pi
 when running a 32 bit OS)
 
-Values will effectively be masked to the chosen word width for both
+Values will be masked to the chosen word width for both
 use and display, whether they are input by the user or result from an
-operation.  Arithmetic on the values will be signed.  If floating
+operation.  Arithmetic on all values will be signed.  If floating
 operations are used on width-restricted integers, the width
-restriction will be ignored.
+restriction will be ignored for the operation, but masking will happen
+when storing the result.
 
 .SS Punctuation
 To aid in reading long digit strings,
 .B rca
 will by default add commas to numbers it prints.
-These can be disabled with the 
+These can be disabled with the
 .B 0 commas
 command.  (Commas will never appear in the fractional part of a
 value.)  When enabled, commas will be added to numbers in every base.
@@ -249,7 +274,7 @@ silently stripped on input, which is convenient when doing arithmetic
 on copy/pasted data.
 
 .SH HELP
-A complete list of operators/commands can be obtained entering 
+A complete list of operators/commands can be obtained by entering
 .B ?
 or
 .BR help .
@@ -288,58 +313,101 @@ and
 with
 .BR r1 .)
 
-A special operator 
-.B sum
-will pop and add up previous entries on the
-stack, stopping when the stack is empty, or when a 
-stack marker previously set with the 
-.B mark
-command is reached. 
-The mark would be set before entering the data for a subsequent 
-.BR sum,
-in order to limit its reach.  
-.B sum
-is the only operator to consume more than 2 stack elements.
-
 .SH OPERATOR PRECEDENCE
 When used as an RPN calculator, operator precedence isn't really
 meaningful, since the stack paradigm makes all operators equal in that
 regard.  But when evaluating an infix expression, the relative
-precedence of operators is important.  The "precedence" command will
-give a list, whose output is reproduced here.  Higher numbers denote
-higher precedence.
+precedence and associativity of operators is important.  The
+"precedence" command will give a list, whose output is reproduced
+here.  Higher numbers denote higher precedence.  The 'R' flag denotes
+operators which are right associative.  All others group left to
+right.
 
-  1    \fB   (
-  2    \fB   + -  \fR  (unary)
-  3    \fB   ~ chs negate !
-  4    \fB   recip sqrt sin cos tan asin acos atan atan2 ln log2 log10
-       \fB       abs frac int i2mm mm2i ft2m m2ft mi2km km2mi f2c c2f
-       \fB        oz2gg2oz oz2ml ml2oz q2l l2q
-  5    \fB   ^ **
-  6    \fB   * x / %
-  7    \fB   + -
-  8    \fB   >> <<
-  9    \fB   & clearb
-  10   \fB   xor
-  11   \fB   | setb
-  12   \fB   < <= > >=
-  13   \fB   == !=
-  14   \fB   &&
-  15   \fB   ||
-
+ \fR 1      \fB (
+ \fR 2   R  \fB atan2 recip sqrt sin cos tan asin acos atan ln log2 log10
+ \fR        \fB   abs frac int i2mm mm2i ft2m m2ft mi2km km2mi f2c c2f
+ \fR        \fB   oz2g g2oz oz2ml ml2oz q2l l2q
+ \fR 3   R  \fB + - \fR   (unary)
+ \fR 4   R  \fB ~ chs negate !
+ \fR 5   R  \fB ^ **
+ \fR 6      \fB * x / %
+ \fR 7      \fB + -
+ \fR 8      \fB >> <<
+ \fR 9      \fB & clearb
+ \fR 10     \fB xor
+ \fR 11     \fB | setb
+ \fR 12     \fB < <= > >=
+ \fR 13     \fB == !=
+ \fR 14     \fB &&
+ \fR 15     \fB ||
 
 .SH OPERATOR NOTES
 Most operators behave as they are commonly understood to.  A few need
 more specific documentation.
-
+.RS .1
+.IP \\(bu
 .B modulo
 is always done in floating point using the C fmodl() library.
-
+.IP \\(bu
 .B frac
 applied to negaive values will give a negative result.
+.IP \\(bu
+In an infix expression, any operator that takes two arguments expects
+them to be to the left and right of the operator.  This looks fine in
+the case of the symbolic operators (as in
+.B 1 + 2
+), but for the named
+operators it can be odd looking.  To set bit 3 in 0xf0, the expression
+looks like
+.B (0xf0 setb
+.BR 3 ).
+.B atan2
+works similarly:
+.B (sin 30 atan2 cos 30)
+will return the result "30".  (In RPN, this would be
+.B 30 sin 30 cos
+.BR atan2 .)
+.IP \\(bu
+Trigonometric operations
+.RB ( sin ,
+.BR cos ,
+.BR tan ,
+.BR asin ,
+.BR acos ,
+.BR atan ,
+and
+.BR atan2 )
+are disallowed in integer mode, since they'd make no sense.
+.IP \\(bu
+Bitwise operations
+.RB ( ~
+.BR << ,
+.BR >> ,
+.BR & ,
+.BR | ,
+.BR xor ,
+.BR clearb ,
+.B and
+.BR setb )
+convert their operands to long long first, regardless of mode.  These
+operations will (as might be expected) discard fractional parts, and
+may discard significant digits, including the sign of the value.
+.IP \\(bu
+.B sum
+will pop and add up previous entries on the
+stack, stopping when the stack is empty, or when a
+stack marker previously set with the
+.B mark
+command is reached.
+The mark would be set before entering the data for a subsequent
+.BR sum,
+in order to limit its reach.
+.B sum
+is the only operator to consume more than 2 stack elements.
+.RE
 
 .SS Associativity
-In infix mode exponentiation 
+In infix mode exponentiation
 .RB ( ^ or ** )
 is right associative.  (
 .B (2 ^ 3 ^ 2)
@@ -373,20 +441,15 @@ operation.  Execution will proceed after the warning unless
 .B errorexit
 has been enabled.
 
-Also, if "integer-centric" operators are used (bitwise operators,
-mostly), the values will be cast to long long and the result will be
-cast back to float, which will likely result in the loss of any
-exponential and fractional parts of the value.
-
 .SH EXIT STATUS
 .B rca
-will normally exit with status 0 or 1; a non-zero value 
+will normally exit with status 0 or 1; a non-zero value
 at the top of the stack causes a shell exit of 0, a 0 at top of stack
 causes an exit value of 1.  An exit status of 2 results if the stack
 is empty on normal exit.  An exit status of 3 comes from unrecoverable
-internal errors (memory allocation, etc).  Operational warnings and
-errors are assumed to be useful to the user, and execution proceeds. 
-If the
+internal errors (e.g., failed memory allocation).  Operational warnings and
+errors regarding empty stacks and data types are normally assumed to be useful
+to the user, and execution proceeds. If the
 .B errorexit
 command has been given, then warnings and errors will result in an
 exit status of 4.  This can be useful when
@@ -412,7 +475,7 @@ into the shell is straightforward:
 .hy
 .fi
 .RE
-.in \\n[saveIN]u    \" 'u' means 'units': do not scale this number 
+.in \\n[saveIN]u    \" 'u' means 'units': do not scale this number
 ..
 .CODE
 
