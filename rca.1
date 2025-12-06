@@ -309,23 +309,24 @@ precedence of operators is important.  The "precedence" command will
 give a list, whose output is reproduced here.  Higher numbers denote
 higher precedence.
 
-    28   \fB (                                                \fR
-    26   \fB ~ chs negate plus !                              \fR
-    24   \fB recip sqrt ln log2 log10 abs frac int            \fR
-         \fB sin cos tan asin acos atan atan2                 \fR
-         \fB i2mm mm2i ft2m m2ft mi2km km2mi f2c c2f          \fR
-         \fB oz2g g2oz oz2ml ml2oz q2l l2q                    \fR
-    22   \fB ^ **                                             \fR
-    20   \fB * x / %                                          \fR
-    18   \fB + -                                              \fR
-    16   \fB >> <<                                            \fR
-    14   \fB & clearb                                         \fR
-    12   \fB xor                                              \fR
-    10   \fB | setb                                           \fR
-    8    \fB < <= > >=                                        \fR
-    6    \fB == !=                                            \fR
-    4    \fB &&                                               \fR
-    2    \fB ||                                               \fR
+  1    \fB   (
+  2    \fB   + -  \fR  (unary)
+  3    \fB   ~ chs negate !
+  4    \fB   recip sqrt sin cos tan asin acos atan atan2 ln log2 log10
+       \fB       abs frac int i2mm mm2i ft2m m2ft mi2km km2mi f2c c2f
+       \fB        oz2gg2oz oz2ml ml2oz q2l l2q
+  5    \fB   ^ **
+  6    \fB   * x / %
+  7    \fB   + -
+  8    \fB   >> <<
+  9    \fB   & clearb
+  10   \fB   xor
+  11   \fB   | setb
+  12   \fB   < <= > >=
+  13   \fB   == !=
+  14   \fB   &&
+  15   \fB   ||
+
 
 .SH OPERATOR NOTES
 Most operators behave as they are commonly understood to.  A few need
