@@ -145,7 +145,7 @@ struct token {
 /* 5 major modes: float, decimal, unsigned, hex, octal, binary.
  * all but float are integer modes.
  */
-int mode = 'f';			/* 'f', 'd', 'u', 'h', 'o', 'b' */
+int mode = 'F';			/* 'F', 'D', 'U', 'H', 'O', 'B' */
 
 /* if true, exit(4) on error, warning, or access to empty operand stack */
 boolean exit_on_error = FALSE;
@@ -284,7 +284,7 @@ push(ldouble n)
 		exit(3);
 	}
 
-	if (mode == 'f') {
+	if (mode == 'F') {
 		p->val = n;
 		trace(("pushed %Lg/0x%llx\n", n, (long long)(p->val)));
 	} else {
@@ -817,7 +817,7 @@ sine(void)
 {
 	ldouble a;
 
-	if (mode != 'f')
+	if (mode != 'F')
 		return trig_no_sense();
 
 	if (pop(&a)) {
@@ -833,7 +833,7 @@ asine(void)
 {
 	ldouble a;
 
-	if (mode != 'f')
+	if (mode != 'F')
 		return trig_no_sense();
 
 	if (pop(&a)) {
@@ -849,7 +849,7 @@ cosine(void)
 {
 	ldouble a;
 
-	if (mode != 'f')
+	if (mode != 'F')
 		return trig_no_sense();
 
 	if (pop(&a)) {
@@ -865,7 +865,7 @@ acosine(void)
 {
 	ldouble a;
 
-	if (mode != 'f')
+	if (mode != 'F')
 		return trig_no_sense();
 
 	if (pop(&a)) {
@@ -881,7 +881,7 @@ tangent(void)
 {
 	ldouble a;
 
-	if (mode != 'f')
+	if (mode != 'F')
 		return trig_no_sense();
 
 	if (pop(&a)) {
@@ -898,7 +898,7 @@ atangent(void)
 {
 	ldouble a;
 
-	if (mode != 'f')
+	if (mode != 'F')
 		return trig_no_sense();
 
 	if (pop(&a)) {
@@ -914,7 +914,7 @@ atangent2(void)
 {
 	ldouble a,b;
 
-	if (mode != 'f')
+	if (mode != 'F')
 		return trig_no_sense();
 
 	if (pop(&b)) {
@@ -1224,7 +1224,7 @@ void
 putbinary(long long n)
 {
     	// mode can be float but we can print in binary
-	if (mode == 'f')	// no masking in float mode
+	if (mode == 'F')	// no masking in float mode
 		putbinary2(max_int_width, ~0, (unsigned long long)n);
 	else
 		putbinary2(int_width, int_mask, (unsigned long long)n);
@@ -1285,7 +1285,7 @@ void
 print_floating(ldouble n)
 {
 	putchar(' ');
-	if (mode == 'f' && float_specifier == 'f') {
+	if (mode == 'F' && float_specifier == 'f') {
 	    char buf[128];
 	    char *p;
 	    int decimals, leadingdigits = 0;
@@ -1332,7 +1332,7 @@ print_n(ldouble n, int format)
 
 	suppress_autoprint = TRUE;
 
-	if (mode == 'f' && format == 'f') {
+	if (mode == 'F' && format == 'f') {
 		mask = ~0;	// no masking in float mode
 		print_floating(n);
 		return;
@@ -1343,32 +1343,32 @@ print_n(ldouble n, int format)
 	ovfl = check_overflow(n);
 
 	switch (format) {
-	case 'h':
+	case 'H':
 		ln = (long long)n & mask;
 		printf(" 0x");
 		puthex(ln);
 		show_overflow(ovfl);
 		break;
-	case 'o':
+	case 'O':
 		ln = (long long)n & mask;
 		printf(" 0");
 		putoct(ln);
 		show_overflow(ovfl);
 		break;
-	case 'b':
+	case 'B':
 		ln = (long long)n & mask;
 		printf(" 0b");
 		putbinary(ln);
 		show_overflow(ovfl);
 		break;
-	case 'u':
+	case 'U':
 		uln = (unsigned long long)n & mask;
 		printf(punct ? " %'llu" : " %llu", uln);
 		show_overflow(ovfl);
 		break;
-	case 'd':
+	case 'D':
 		ln = (long long)n;
-		if (mode == 'f' || int_width == LONGLONG_BITS) {
+		if (mode == 'F' || int_width == LONGLONG_BITS) {
 			printf(punct ? " %'lld" : " %lld", ln);
 			show_overflow(ovfl);
 		} else {
@@ -1393,7 +1393,7 @@ print_n(ldouble n, int format)
 			show_overflow(ovfl);
 		}
 		break;
-	default:		// 'f'
+	default:
 		print_floating(n);
 		break;
 	}
@@ -1435,42 +1435,42 @@ printone(void)
 opreturn
 printhex(void)
 {
-	print_top('h');
+	print_top('H');
 	return GOODOP;
 }
 
 opreturn
 printoct(void)
 {
-	print_top('o');
+	print_top('O');
 	return GOODOP;
 }
 
 opreturn
 printuns(void)
 {
-	print_top('u');
+	print_top('U');
 	return GOODOP;
 }
 
 opreturn
 printbin(void)
 {
-	print_top('b');
+	print_top('B');
 	return GOODOP;
 }
 
 opreturn
 printdec(void)
 {
-	print_top('d');
+	print_top('D');
 	return GOODOP;
 }
 
 opreturn
 printfloat(void)
 {
-	print_top('f');
+	print_top('F');
 	return GOODOP;
 }
 
@@ -1483,7 +1483,6 @@ printstate(void)
 
 	putchar('\n');
 	printf(" mode is %c\n", mode);
-	putchar('\n');
 
 	printf(" max_precision is %u\n", max_precision);
 	printf(" float_digits is %d (%s), float_specifier is %c\n",
@@ -1520,7 +1519,7 @@ printstate(void)
 	printf("  LDBL_EPSILON is %Lg\n", LDBL_EPSILON);
 	x = 1.2345678e24L;
 	printf("  ULP (calculated) is %.0Lf\n", nextafterl(x, INFINITY) - x);
-	printf("  detected eps is %Lg\n", epsilon);
+	printf("  detected epsilon is %Lg\n", epsilon);
 
 	/* Unit in the Last Place */
 	// ULP(x) = LDBL_EPSILON × 2^(exp(x))
@@ -1544,19 +1543,19 @@ static char *
 mode2name(void)
 {
 	switch (mode) {
-	case 'd':
+	case 'D':
 		return "signed decimal";
-	case 'u':
+	case 'U':
 		return "unsigned decimal";
-	case 'o':
+	case 'O':
 		return "octal";
-	case 'h':
+	case 'H':
 		return "hex";
-	case 'b':
+	case 'B':
 		return "binary";
-	case 'f':
+	case 'F':
 	default: // can't happen.  set it to default
-		mode = 'f';
+		mode = 'F';
 		return "float";
 	}
 }
@@ -1567,7 +1566,7 @@ showmode(void)
 
 	printf(" Mode is %s. ", mode2name());
 
-	if (mode == 'f') {
+	if (mode == 'F') {
 		char *msg;
 
 		if (float_specifier == 'g') {
@@ -1595,7 +1594,7 @@ modeinfo(void)
 opreturn
 modehex(void)
 {
-	mode = 'h';
+	mode = 'H';
 	showmode();
 	return printall();
 }
@@ -1603,7 +1602,7 @@ modehex(void)
 opreturn
 modebin(void)
 {
-	mode = 'b';
+	mode = 'B';
 	showmode();
 	return printall();
 }
@@ -1611,7 +1610,7 @@ modebin(void)
 opreturn
 modeoct(void)
 {
-	mode = 'o';
+	mode = 'O';
 	showmode();
 	return printall();
 }
@@ -1619,7 +1618,7 @@ modeoct(void)
 opreturn
 modedec(void)
 {
-	mode = 'd';
+	mode = 'D';
 	showmode();
 	return printall();
 }
@@ -1627,7 +1626,7 @@ modedec(void)
 opreturn
 modeuns(void)
 {
-	mode = 'u';
+	mode = 'U';
 	showmode();
 	return printall();
 }
@@ -1635,7 +1634,7 @@ modeuns(void)
 opreturn
 modefloat(void)
 {
-	mode = 'f';
+	mode = 'F';
 	showmode();
 	return printall();
 }
@@ -1797,7 +1796,7 @@ width(void)
 	// info
 	snprintf(pending_info, sizeof(pending_info),
 		" Words are %d bits wide.%s\n", int_width,
-			(mode == 'f') ? "  (Ignored in float mode!)":"");
+			(mode == 'F') ? "  (Ignored in float mode!)":"");
 	// This is sort of an "info" message, except that it also
 	// does a big printall() down below.  So we'll keep printing
 	// it mid-commandline, for now.
