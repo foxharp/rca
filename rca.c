@@ -2741,19 +2741,28 @@ open_paren(void)
 opreturn
 precedence(void)
 {
-	int prec, i, negate_prec;
 	oper *op;
 #define NUM_PRECEDENCE 30
-	char *prec_ops[NUM_PRECEDENCE] = {0};
+	static char *prec_ops[NUM_PRECEDENCE] = {0};
 	int linelen[NUM_PRECEDENCE] = {0};
+	int prec, i, negate_prec;
+	static int precedence_generated;
 
 	printf("Precedence for operators in infix expressions, from \n");
 	printf(" top to bottom in order of descending precedence.\n");
-	op = opers;
-	while (op->name) {
-		if (op->name[0] &&
-			(!op->help || strncmp(op->help, "Hidden:", 7) != 0) &&
-			op->func && op->prec > 0) {
+	if (!precedence_generated) {
+		op = opers;
+		while (op->name) {
+
+			/* skip anything in the table that doesn't have
+			 * a name, a function, a precedence, or is hidden
+			 */
+			if (!op->name[0] || !op->func || op->prec == 0 ||
+				(op->help && strncmp(op->help, "Hidden:", 7) == 0)) {
+				op++;
+				continue;
+			}
+
 			if (op->prec >= NUM_PRECEDENCE) {
 				printf("error: %s precedence too large: %d\n",
 					op->name, op->prec);
@@ -2778,17 +2787,13 @@ precedence(void)
 				strcat(prec_ops[op->prec], " ");
 				linelen[op->prec]++;
 			}
+			op++;
 		}
-		op++;
-	}
 
-	// add the special-cased unary + and - operators to the table 
-	prec_ops[negate_prec + 1] = (char *)calloc(1, 500);
-	if (!prec_ops[negate_prec + 1]) {
-		perror("rca: calloc failure");
-		exit(3);
+		prec_ops[negate_prec + 1] = "+ -    (unary)";
+
 	}
-	strcpy(prec_ops[negate_prec + 1], "+ -    (unary)");
+	precedence_generated = 1;
 
 	i = 1;
 	for (prec = NUM_PRECEDENCE-1; prec >=0; prec--) {
