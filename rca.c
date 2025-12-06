@@ -378,8 +378,8 @@ tpush(token **tstackp, token *token)
 		t->alloced = 1;
 	}
 
-	trace(("pushed token %p to %s stack\n", t,
-		(*tstackp == out_stack) ? "output":"operator"));
+	// trace(("pushed token %p to %s stack\n", t,
+	// 	(*tstackp == out_stack) ? "output":"operator"));
 
 	t->next = *tstackp;
 	*tstackp = t;
@@ -403,7 +403,7 @@ tpop(token **tstackp)
 	}
 
 	*tstackp = (*tstackp)->next;
-	trace(("popped token %p from %s stack\n", rt, stackname(tstackp)));
+	// trace(("popped token %p from %s stack\n", rt, stackname(tstackp)));
 
 	return rt;
 }
@@ -1536,6 +1536,7 @@ opreturn
 tracetoggle(void)
 {
 	tracing = !tracing;
+	printf(" tracing is now %s", tracing ? "on\n":"off\n");
 	return GOODOP;
 }
 
@@ -2658,7 +2659,11 @@ open_paren(void)
 				/* two two operand ops in a row? */
 				if (ptok.type == OP &&
 					ptok.val.oper->func != close_paren) {
-					printf(" error: bad operator sequence\n");
+					printf(" error: bad operator sequence, saw ");
+					print_token(&ptok);
+					printf(" and ");
+					print_token(t);
+					printf("\n");
 					might_errexit();
 					return BADOP;
 				}
