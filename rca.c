@@ -919,7 +919,7 @@ atangent2(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			result_push((180.0 * atan2(a,b)) / pi);
+			result_push((180.0 * atan2l(a,b)) / pi);
 			lastx = b;
 			return GOODOP;
 		}
