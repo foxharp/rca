@@ -2741,14 +2741,14 @@ open_paren(void)
 opreturn
 precedence(void)
 {
-	int prec, i;
+	int prec, i, negate_prec;
 	oper *op;
 #define NUM_PRECEDENCE 30
 	char *prec_ops[NUM_PRECEDENCE] = {0};
 	int linelen[NUM_PRECEDENCE] = {0};
 
-	printf("Precedence for operators in infix expressions, listed\n");
-	printf(" from top to bottom in order of descending precedence.\n");
+	printf("Precedence for operators in infix expressions, from \n");
+	printf(" top to bottom in order of descending precedence.\n");
 	op = opers;
 	while (op->name) {
 		if (op->name[0] &&
@@ -2767,6 +2767,8 @@ precedence(void)
 				perror("rca: calloc failure");
 				exit(3);
 			}
+			if (strcmp(op->name, "negate") == 0)
+				negate_prec = op->prec;
 			strcat(prec_ops[op->prec], op->name);
 			linelen[op->prec] += strlen(op->name);
 			if (linelen[op->prec] > 60) {
@@ -2779,6 +2781,14 @@ precedence(void)
 		}
 		op++;
 	}
+
+	// add the special-cased unary + and - operators to the table 
+	prec_ops[negate_prec + 1] = (char *)calloc(1, 500);
+	if (!prec_ops[negate_prec + 1]) {
+		perror("rca: calloc failure");
+		exit(3);
+	}
+	strcpy(prec_ops[negate_prec + 1], "+ -    (unary)");
 
 	i = 1;
 	for (prec = NUM_PRECEDENCE-1; prec >=0; prec--) {
