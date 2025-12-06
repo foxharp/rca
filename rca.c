@@ -2755,6 +2755,8 @@ precedence(void)
 
 	printf("Precedence for operators in infix expressions, from \n");
 	printf(" top to bottom in order of descending precedence.\n");
+	printf("All operators are left-associative, except for those\n");
+	printf(" in rows 2,3,4 and 5, which associate right to left.\n");
 	if (!precedence_generated) {
 		op = opers;
 		while (op->name) {
@@ -2802,8 +2804,12 @@ precedence(void)
 
 	i = 1;
 	for (prec = NUM_PRECEDENCE-1; prec >=0; prec--) {
-		if (prec_ops[prec])
-			printf("%-8i%s\n", i++, prec_ops[prec]);
+		if (prec_ops[prec]) {
+			printf("%-2i  %c     %s\n", i,
+			(i >= 2 && i <= 5) ? 'R':' ',
+			prec_ops[prec]);
+			i++;
+		}
 	}
 
 	return GOODOP;
