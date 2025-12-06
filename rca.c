@@ -2628,7 +2628,7 @@ open_paren(void)
 			unary:
 				while (tp != NULL &&
 					(tp->val.oper->func != open_paren) &&
-					(tp->val.oper->prec >= precedence))
+					(tp->val.oper->prec > precedence))
 				{
 					tpush(&out_stack, tpop(&oper_stack));
 					tp = tpeek(&oper_stack);
