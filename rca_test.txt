@@ -50,7 +50,7 @@ H
 lastx |
  0xffff,ffff,fff5,5555
 20 width
- Words are 20 bits wide.
+ Words are now 20 bits wide.
  0x2
  0x1000
  0x5,5555
@@ -126,7 +126,7 @@ H
 4 <<
  0xf2e0
 12 width
- Words are 12 bits wide.
+ Words are now 12 bits wide.
  0x0
  0x2e0
 4 >>
@@ -146,7 +146,7 @@ d
 clear
  empty stack
 64w
- Words are 64 bits wide.
+ Words are now 64 bits wide.
 0x8765
 o
  0103,545
@@ -160,7 +160,7 @@ b
  numeric punctuation is now off
  0x87650000
 16w
- Words are 16 bits wide.
+ Words are now 16 bits wide.
  0x0
 h
  0x0
@@ -176,7 +176,7 @@ D
  Mode is signed decimal.  Integer math with 16 bits.
  0
 32w
- Words are 32 bits wide.
+ Words are now 32 bits wide.
  0
 h
  0x0
@@ -537,14 +537,14 @@ clear
 H
  Mode is hex.  Integer math with 32 bits.
 16w
- Words are 16 bits wide.
+ Words are now 16 bits wide.
 0xffff
 d
  -1
 u
  65,535
 32w
- Words are 32 bits wide.
+ Words are now 32 bits wide.
  0xffff,ffff
 d
  -1
@@ -557,14 +557,14 @@ d
 u
  65,535
 16w
- Words are 16 bits wide.
+ Words are now 16 bits wide.
  0xffff
 d
  -1
 u
  65,535
 2w
- Words are 2 bits wide.
+ Words are now 2 bits wide.
  0x3
 p
  0x3

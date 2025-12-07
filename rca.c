@@ -1591,10 +1591,19 @@ modeinfo(void)
 	return GOODOP;
 }
 
+void
+mask_stack(void)
+{
+	struct num *s;
+	for (s = stack; s; s = s->next)
+		s->val = sign_extend((long long)s->val & int_mask);
+}
+
 opreturn
 modehex(void)
 {
 	mode = 'H';
+	mask_stack();
 	showmode();
 	return printall();
 }
@@ -1603,6 +1612,7 @@ opreturn
 modebin(void)
 {
 	mode = 'B';
+	mask_stack();
 	showmode();
 	return printall();
 }
@@ -1611,6 +1621,7 @@ opreturn
 modeoct(void)
 {
 	mode = 'O';
+	mask_stack();
 	showmode();
 	return printall();
 }
@@ -1619,6 +1630,7 @@ opreturn
 modedec(void)
 {
 	mode = 'D';
+	mask_stack();
 	showmode();
 	return printall();
 }
@@ -1627,6 +1639,7 @@ opreturn
 modeuns(void)
 {
 	mode = 'U';
+	mask_stack();
 	showmode();
 	return printall();
 }
@@ -1795,7 +1808,7 @@ width(void)
 
 	// info
 	snprintf(pending_info, sizeof(pending_info),
-		" Words are %d bits wide.%s\n", int_width,
+		" Words are now %d bits wide.%s\n", int_width,
 			(mode == 'F') ? "  (Ignored in float mode!)":"");
 	// This is sort of an "info" message, except that it also
 	// does a big printall() down below.  So we'll keep printing
@@ -1804,15 +1817,17 @@ width(void)
 		printf("%s", pending_info);
 	*pending_info = '\0';
 
-	/* need to mask and sign extend anything on the stack if we've
-	 * shortened word length.
-	 */
-	struct num *s;
+	if (mode == 'F') {
+		printf(" In float mode, width is recorded but not applied.\n");
+		return GOODOP;
+	} else {
+		/* need to mask and sign extend anything on the stack
+		 * if we've shortened word length.
+		 */
+		mask_stack();
 
-	for (s = stack; s; s = s->next)
-		s->val = sign_extend((long long)s->val & int_mask);
-
-	return printall();
+		return printall();
+	}
 }
 
 opreturn
