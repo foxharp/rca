@@ -1684,12 +1684,7 @@ setup_format_string(void)
 opreturn
 punctuation(void)
 {
-	ldouble wantcommas;
-
-	if (!pop(&wantcommas))
-		return BADOP;
-
-	punct = (wantcommas != 0);
+	punct = !punct;
 
 	// info
 	snprintf(pending_info, sizeof(pending_info),
@@ -2160,12 +2155,8 @@ units_km_mi(void)
 opreturn
 autop(void)
 {
-	ldouble wantautop;
+	autoprint = !autoprint;
 
-	if (!pop(&wantautop))
-		return BADOP;
-
-	autoprint = (wantautop != 0);
 	// info
 	snprintf(pending_info, sizeof(pending_info),
 		" autoprinting is now %s\n", autoprint ? "on" : "off");
@@ -3042,8 +3033,6 @@ struct oper opers[] = {
 	{"h", printhex,		0 },
 	{"o", printoct,		0 },
 	{"b", printbin,		"     hex, octal, or binary" },
-	{"autoprint", autop,	0 },
-	{"a", autop,		"Set autoprinting on/off" },
 	{"state", printstate,	"Hidden: print raw calculator state" },
 	{"tracing", tracetoggle,"Hidden: toggle debug tracing" },
 	{"", 0, 0},
@@ -3060,8 +3049,10 @@ struct oper opers[] = {
 	{"K", decimal_length,	"Float format: digits after decimal (%f)" },
 	{"width", width,	0 },
 	{"w", width,		"Set effective \"word size\" for integer modes" },
+	{"autoprint", autop,	0 },
+	{"a", autop,		"Toggle autoprinting on/off" },
 	{"commas", punctuation,	0 },
-	{"c", punctuation,	"Set comma separators on or off" },
+	{"c", punctuation,	"Toggle comma separators on/off" },
 	{"mode", modeinfo,	"Display current mode parameters" },
 	{"", 0, 0},
     {"Housekeeping:", 0, 0},

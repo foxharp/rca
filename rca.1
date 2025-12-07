@@ -24,6 +24,18 @@ following a
 .B #
 character will be ignored as a comment.
 
+The value at the top of the stack can be shown with the
+.B p
+command, and the entire stack with
+.BR P .
+Autoprinting (toggled with
+.B a
+(or
+.BR autoprint )
+will print the top of the stack after every input line,
+(unless the last thing on that line is numeric, which would make
+the autoprinted output redundant).
+
 .SH REVERSE POLISH NOTATION
 Numbers entered by the user are pushed onto a stack.  Operators pop
 those stack entries, usually 1 or 2 at a time, and push the result of
@@ -264,10 +276,12 @@ when storing the result.
 To aid in reading long digit strings,
 .B rca
 will by default add commas to numbers it prints.
-These can be disabled with the
-.B 0 commas
-command.  (Commas will never appear in the fractional part of a
-value.)  When enabled, commas will be added to numbers in every base.
+These can be toggled with the
+.B c
+(or 
+.BR commas )
+command.  When enabled, commas will be added to numbers in every base.
+(Commas will never appear in the fractional part of a value.)
 
 In addition, both commas and the "$" currency symbol will be
 silently stripped on input, which is convenient when doing arithmetic
@@ -498,7 +512,7 @@ into the shell is straightforward:
 # or like this for a conditional:
 #	if fc "(10 * 3) < $foo"; then ...
 
-_RCA_INIT="3K 0commas errorexit"  # $RCA_INIT can override this
+_RCA_INIT="3K commas errorexit"  # $RCA_INIT can override this
 
 _rca_run()    # support routine
 {
