@@ -347,10 +347,10 @@ more specific documentation.
 .RS .1
 .IP \\(bu
 .B modulo
-is always done in floating point using the C fmodl() library.
+is a floating point operation.  It uses the C fmodl() library.
 .IP \\(bu
 .B frac
-applied to negaive values will give a negative result.
+applied to negative values will give a negative result.
 .IP \\(bu
 In an infix expression, any operator that takes two arguments expects
 them to be to the left and right of the operator.  This looks fine in
@@ -404,17 +404,28 @@ The mark would be set before entering the data for a subsequent
 in order to limit its reach.
 .B sum
 is the only operator to consume more than 2 stack elements.
+
+.IP \\(bu
+The precedence and association of exponentiation
+.RB ( ^
+or
+.BR ** )
+is worth calling out,
+since implementations vary.  In
+.BR rca 's
+infix expressions,
+exponentation is right associative, and has lower precedence than unary minus.
+So each of these lines returns a result of 1 (true):
+.RS
+.IP 
+.B ((2 ^ 3 ^ 2) == (2 ^ (3 ^ 2)))
+.I # i.e., 512
+.IP 
+.B ((-3 ^ 2) == ((-3) ^ 2)))
+.I # i.e., 9
 .RE
 
-.SS Associativity
-In infix mode exponentiation
-.RB ( ^ or ** )
-is right associative.  (
-.B (2 ^ 3 ^ 2)
-is read as
-.B (2 ^ (3 ^ 2))
-.)
-
+.RE
 
 .SH DATA TYPES and OVERFLOW
 
