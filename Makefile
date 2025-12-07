@@ -14,6 +14,10 @@ test:
 
 newtest:
 	egrep -v '^ ' rca_test.txt | ./rca > new_rca_test.txt
+
+optest:
+	sed -e 's/^#.*//' optests.txt > .optests.txt
+	sed -e '/^ /d' .optests.txt | rca | diff -u .optests.txt -
 	
 publish_prepare:
 	( \

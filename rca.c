@@ -2882,7 +2882,7 @@ rca -- a rich/RPN scientific and programmer's calculator\n\
 			} else {
 				strcat(cbuf, " ");
 				strcat(cbuf, op->name);
-				printf("%20s     %s\n", cbuf, op->help);
+				printf("%21s     %s\n", cbuf, op->help);
 				cbuf[0] = '\0';
 			}
 		}
@@ -2914,7 +2914,7 @@ struct oper opers[] = {
 //       |                           +---- function pointer
 //       |                           |
 //       V                           V
-    {"Operators with two operands:", 0, 0},
+    {"Numerical operators with two operands:", 0, 0},
 //        +------------------------------- operator names
 //        |    +-------------------------- function pointer
 //        |    |                +--------- help (if 0, shares next cmd's help)
@@ -2937,8 +2937,9 @@ struct oper opers[] = {
 	{"xor", bitwise_xor,	"Bitwise AND, OR, and XOR of y and x", 2, 12 },
 	{"setb", setbit,	0, 2, 10 },
 	{"clearb", clearbit,	"Set and clear bit x in y", 2, 14 },
+	{"atan2", atangent2,    "Arctan of y/x (i.e., 2 operands, in degrees)", 2, 26 },
 	{"", 0, 0},		// all-null entries cause blank line in output
-    {"Operators with one operand:", 0, 0},
+    {"Numerical operators with one operand:", 0, 0},
 	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 24 },
 	{"chs", chsign,		0, 1, 24 },  // precedence unused, see special case in open_paren()
 	{"negate", chsign,	"Change sign of x (2's complement)", 1, 24 },
@@ -2951,7 +2952,6 @@ struct oper opers[] = {
 	{"asin", asine,         0, 1, 26 },
 	{"acos", acosine,       0, 1, 26 },
 	{"atan", atangent,      "Trig functions (in degrees)", 1, 26 },
-	{"atan2", atangent2,    "Arctan of y/x (i.e., 2 operands, in degrees)", 2, 26 },
 	{"ln", log_natural,    	0, 1, 26 },
 	{"log2", log_base2,    	0, 1, 26 },
 	{"log10", log_base10,    	"Natural, base 2, and base 10 logarithms", 1, 26 },
@@ -2962,7 +2962,7 @@ struct oper opers[] = {
 	{"(", open_paren,	0, 0, 28 },
 	{")", close_paren,	"Begin and end \"infix\" expression", 0},
 	{"", 0, 0},
-    {"Logical operators:", 0, 0},
+    {"Logical operators (two operands, except '!'):", 0, 0},
 	{"&&", logical_and,     0, 2, 4 },
 	{"||", logical_or,      "Logical AND and OR", 2, 2 },
 	{"==", is_eq,           0, 2, 6 },
@@ -2985,7 +2985,7 @@ struct oper opers[] = {
 	{"mark", mark,		"Mark stack for later summing" },
 	{"sum", sum,		"Sum stack to \"mark\", or entire stack if no mark" },
 	{"", 0, 0},
-    {"Constants and storage:", 0, 0},
+    {"Constants and storage (no operands):", 0, 0},
 	{"store", store1,	0 },
 	{"recall", recall1,	"Same as s1 and r1", -1 },
 	{"s1", store1,		0 },
@@ -3002,7 +3002,7 @@ struct oper opers[] = {
 	{"pi", push_pi,		"Push constant pi", -1 },
 	{"e", push_e,		"Push constant e", -1 },
 	{"", 0, 0},
-    {"Conversions:", 0, 0},
+    {"Unit conversions (one operand):", 0, 0},
 	{"i2mm", units_in_mm,   0, 1, 26 },
 	{"mm2i", units_mm_in,   "inches / millimeters", 1, 26 },
 	{"ft2m", units_ft_m,	0, 1, 26},
