@@ -1,0 +1,256 @@
+
+# ============================================
+# Unary + and - versus binary
+# ============================================
+
+(-3 + 5)
+ 2
+
+(+3 * 4)
+ 12
+
+(-2^2)
+ 4
+
+((-2)^2)
+ 4
+
+(-(2^2))
+ -4
+
+(-2^2^3)
+ 256
+
+# ============================================
+# Unary vs functions
+# ============================================
+
+(-sin 0)
+ -0
+
+((sin -3) == (sin (-3)))
+ 1
+
+((sin -3 * 2) == ((sin -3) * 2))
+ 1
+
+3 2 ^ sin chs 
+ -0.156434
+
+3 2 ^ sin chs (-sin(3^2)) ==
+ 1
+
+((-sin 3^2) == ((sin 3)^2))
+ 1
+
+((-sin 3^2) == (-sin (3^2)))
+ 0
+# ============================================
+# Function chaining tests
+# ============================================
+
+((sin cos 0) == (sin(cos(0))))
+ 1
+
+((ln sqrt 16) == (ln(4)))
+ 1
+
+# ============================================
+# Functions vs operators
+# ============================================
+
+((sin 3 * 2) == (sin(3)*2))
+ 1
+
+((cos 0 + 1) == (cos(0)+1))
+ 1
+
+# these next behaviors are due to ambiguity in parsing unary +.  the
+# same issue would occur with (3-1) is (3 -1), not (3 - 1).  Not sure
+# how to fix it.
+((abs -3 + 1) == (abs(-3)+1))
+ 0
+((abs -3 + 1) == (abs(-3) +1))
+ 0
+((abs -3 + 1) == (abs(-3) + 1))
+ 1
+((abs -3 + 1) == (abs(-3)+ 1))
+ 1
+((abs -3 + 1) == (abs(-3)++1))
+ 1
+
+
+# ============================================
+# atan2 behavior
+# ============================================
+
+(((1 atan2 2) + 2) == (1 atan2 2 + 2))
+ 1
+
+((1 atan2 2 * 3) == ((1 atan2 2)*3))
+ 1
+
+# the next two feel surprising, but I think they're just
+# a fallout of atan2 having higher precedence than multiplication,
+# so it consumes the '1' before it can be multiplied by '3'.
+((3 * 1 atan2 2) == ((3*1) atan2 2))
+ 0
+
+((3 * 1 atan2 2) == (3*(1 atan2 2)))
+ 1
+
+# ============================================
+# Exponent associativity (right)
+# ============================================
+
+(2 ^ 3 ^ 2)
+ 512
+
+# ============================================
+# *, /, % associativity
+# ============================================
+
+(8 / 4 / 2)
+ 1
+
+(8 % 5 % 3)
+ 0
+
+# ============================================
+# + and - associativity
+# ============================================
+
+(10 - 3 - 2)
+ 5
+
+# ============================================
+# Bitwise precedence
+# ============================================
+
+(1 << 2 + 1)
+ 8
+
+(1 + 2 << 3)
+ 24
+
+(8 & 3 | 4)
+ 4
+
+(8 | 3 & 4)
+ 8
+
+# ============================================
+# Function associativity (bug you found)
+# ============================================
+
+2 recip asin 
+ 30
+
+2 recip asin (asin (recip(2))) ==
+ 1
+
+2 recip asin (asin (recip 2)) ==
+ 1
+
+2 recip asin (asin recip 2) ==
+ 1
+
+((asin recip 2) == (asin(recip(2))))
+ 1
+
+9 sin sqrt
+ 0.395518
+
+(sqrt sin 9)
+ 0.395518
+
+9 sin sqrt (sqrt sin 9) ==
+ 1
+
+-4 recip abs
+ 0.25
+
+-4 recip abs (abs recip -4) ==
+ 1
+
+-4 recip abs (abs(recip(-4))) ==
+ 1
+
+((ln asin 1) == (ln(asin(1))))
+ 1
+
+# ============================================
+# Unary +/- with chained functions
+# ============================================
+
+2 recip sin chs (-sin(recip(2))) ==
+ 1
+
+2 recip sin chs (-sin recip 2) ==
+ 1
+
+(+abs -3)
+ 3
+
+# ============================================
+# Parentheses override
+# ============================================
+
+((1 + 2) * 3)
+ 9
+
+(1 + (2 * 3))
+ 7
+
+3 sin push *
+ 0.00273905
+
+((sin 3) ^ 2)
+ 0.00273905
+
+# ============================================
+# Error tests
+# ============================================
+clear
+ empty stack
+
+(sin)
+ error: missing operand(s) for sin
+
+(asin 1 2)
+ error: bad expression sequence, last saw +1 and +2
+ warning: mismatched/extra parentheses
+
+(3 *)
+ error: missing operand(s) for *
+
+((1 + 2)
+ error: missing parentheses
+
+# ============================================
+# Misc stress tests
+# ============================================
+
+0 tan cos sin (sin(cos(tan(0)))) ==
+ 1
+0 tan cos sin (sin cos tan 0) ==
+ 1
+
+-3 sin abs chs 3 2 ^ * 1 +
+ 0.528976
+
+(-1 * abs(sin(-3)) * (3^2) + 1)
+ 0.528976
+
+(-abs(sin(-3)) * (3^2) + 1)
+ 0.528976
+
+(abs(sin(-3)) * (3^2) + 1)
+ 1.47102
+
+((recip recip recip 2) == (recip(recip(recip(2)))))
+ 1
+
+((sin 30 atan2  cos 30) == (sin(30) atan2 cos(30)))
+ 1
+

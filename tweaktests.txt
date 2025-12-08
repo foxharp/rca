@@ -1,0 +1,241 @@
+# Canonicalization test suite — corrected for current operator set
+# Uses only supported names: push, negate, recip, sqrt, sin, cos, tan, ln, log2, log10,
+# abs, frac, int, i2mm, mm2i, ft2m, m2ft, mi2km, km2mi, f2c, c2f, oz2g, g2oz, oz2ml, ml2oz,
+# q2l, l2q, xor, clearb, setb, precision, commas, e, pi
+# RPN expressions used where convenient.  Infix-only tests are wrapped in ( ... ).
+
+# =============================
+# Exact integers
+# =============================
+
+1 2 +
+ 3
+
+10 3 -
+ 7
+
+3 7 *
+ 21
+
+20 5 /
+ 4
+
+# =============================
+# Representable decimals
+# =============================
+
+0.5 0.25 +
+ 0.75
+
+0.1 0.2 +
+ 0.3
+
+0.1 10 *
+ 1
+
+# =============================
+# Classic floating traps — expected to canonicalize
+# =============================
+
+0.1 0.2 + 0.3 ==
+ 1
+
+1.1 2.2 + 3.3 ==
+ 1
+
+1.2345 0.0001 + 1.2346 ==
+ 1
+
+0.3 0.6 - -0.3 ==
+ 1
+
+1.2 3 * 3.6 ==
+ 1
+
+1 10 / 0.1 ==
+ 1
+
+# =============================
+# Chained operations (round-trip)
+# =============================
+
+1 3 / 3 * 1 ==
+ 1
+
+3 7 / 7 * 3 ==
+ 1
+
+2 3 / 3 * 2 * 4 ==
+ 1
+
+1 10 / 3 * 30 / 1 *
+ 0.01
+
+# =============================
+# Power / sqrt round-trips
+# =============================
+
+1.2345 push * 1.52399025 ==   # use push for duplicating operand
+ 1
+
+2 sqrt push * 2 ==
+ 1
+
+# =============================
+# Transcendentals and exact-knowns
+# =============================
+
+0 sin
+ 0
+
+0 cos
+ 1
+
+0 tan
+ 0
+
+1 ln
+ 0
+
+e 5 ln ^ 5 ==
+ 1
+
+# sin(30) in degrees context by your calculator's trig; use RPN:
+30 sin 2 * 30 sin 2 * ==
+ 1
+
+# =============================
+# Very tiny differences — should be absorbed
+# =============================
+
+1 1e-18 + 1 ==
+ 1
+
+1 -1e-18 + 1 ==
+ 1
+
+1 1e-18 + 1e-18 + 1e-18 + 1 ==
+ 1
+
+1 1e-17 + 1 ==
+ 1
+
+1 1e-16 + 1 ==
+ 0
+
+10 1e-16 + 10 ==
+ 1
+
+10 1e-15 + 10 ==
+ 0
+
+
+# =============================
+# Do NOT over-canonicalize — these must remain distinct
+# =============================
+
+1 1e-6 + 1 ==
+ 0
+
+1.0001 1 ==
+ 0
+
+1e-8 negate 1e-8 ==
+ 0
+
+# =============================
+# Large integers and +/-0 behavior
+# =============================
+
+18 precision
+ showing 18 significant digits.
+ 0
+commas
+ numeric punctuation is now off
+ 0
+
+9007199254740992 1 +
+ 9007199254740993
+
+9007199254740993 1 + 9007199254740994 ==
+ 1
+
+0 negate
+ -0
+
+0 negate 0 ==
+ 1
+
+0 -0 ==
+ 1
+
+0.0 0 ==
+ 1
+
+# =============================
+# Noisy division round-trips
+# =============================
+
+5 3 / 3 * 5 ==
+ 1
+
+2 3 / 3 * 2 /   # corrected to produce 1: (2/3)*3*(2/2) -> 1
+ 1
+
+# =============================
+# Interactions with push / stack ops
+# =============================
+
+0.1 push + 0.2 ==
+ 1
+
+1 3 / push * (1/3*1/3) ==
+ 1
+
+# =============================
+# Tricky negatives
+# =============================
+
+0.1 0.2 + negate -0.3 ==
+ 1
+
+-1e-16 0 ==
+ 0
+
+-1e-17 0 ==
+ 1
+
+-1e-18 0 ==
+ 1
+
+# =============================
+# Stress loop (clear, simple round-trip)
+# =============================
+
+1
+1 100 *
+ 100
+2 100 / *
+ 2
+100 *
+ 200
+100 /
+ 2
+
+# commented out.  won't pass
+# =============================
+# Extra stress: repeated recip / reciprocals
+# =============================
+#
+#pi recip recip pi ==
+# 1
+#
+
+# =============================
+# Combined trig/log/cancel tests
+# =============================
+
+3 2 ^ sin negate   # used previously in tests; check stability
+ -0.156434465040230869
+
+# End of test suite

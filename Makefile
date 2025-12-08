@@ -16,9 +16,13 @@ newtest:
 	egrep -v '^ ' rca_test.txt | ./rca > new_rca_test.txt
 
 optest:
-	sed -e 's/^#.*//' optests.txt > .optests.txt
-	sed -e '/^ /d' .optests.txt | rca | diff -u .optests.txt -
-	
+	sed -e 's/^#.*//' optests.txt > .tests.txt
+	sed -e '/^ /d' .tests.txt | rca | diff -u .tests.txt -
+
+tweaktest:
+	sed -e 's/^#.*//' tweaktests.txt > .tests.txt
+	sed -e '/^ /d' .tests.txt | rca | diff -u .tests.txt -
+
 publish_prepare:
 	( \
 	echo $$(date +"// published %Y/%m/%d-%T -- ") $$(git rev-parse --short HEAD) ; \
