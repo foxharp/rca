@@ -184,6 +184,7 @@ long long int_mask;
 
 /* this is used to control floating point error
 */
+long double calculated_epsilon;
 long double epsilon;
 
 /* the most recent top-of-stack */
@@ -222,57 +223,60 @@ sign_extend(ldouble a)
 void
 detect_epsilon(void)
 {
-	long double eps = 1.0L;
+	calculated_epsilon = 1.0L;
 
-	while ((1.0L + eps / 2.0L) > 1.0L)
-		eps /= 2.0L;
+	while ((1.0L + calculated_epsilon / 2.0L) > 1.0L)
+		calculated_epsilon /= 2.0L;
 
-	epsilon = 10 * eps;
+	epsilon = 16 * calculated_epsilon;
 
 	// round up to significant digit
 	max_precision = (int)(-log10l(epsilon)) + 1;
 }
 
 
-/*
- * fudge_floats_ulp:
- *   Returns a version of x where digits smaller than roughly one ULP
- *   are removed. This includes:
- *     - values very close to zero
- *     - values very close to integers
- *     - other rounding artifacts
+/* try and take care of small floating point detritus, by snapping
+ * numbers that are very close to integers and zero, and by rounding
+ * to our max precision.
  */
-ldouble fudge_floats(ldouble x)
-{
+ldouble
+tweak_float(ldouble x) {
+
+    int digits = max_precision;
+    ldouble r, abs_x, tolerance, factor;
+
+    if (x == 0.0L) {
+        return 0.0L;
+    }
     if (!isfinite(x)) return x;  /* NaN, +Inf, -Inf pass through */
 
-    ldouble abs_x = fabsl(x);
+    abs_x = fabsl(x);
 
     /* scale tolerance by magnitude */
-    ldouble tolerance = epsilon * (abs_x > 1.0L ? abs_x : 1.0L);
+    tolerance = epsilon * (abs_x > 1.0L ? abs_x : 1.0L);
 
     /* snap to zero */
-    if (abs_x <= tolerance)
+    if (abs_x <= tolerance) {
+	trace(("snap %La (%.*Lg) to zero\n", x, digits, x));
         return 0.0L;
+    }
 
-    /* snap to integer - aggressive: allow a slightly bigger margin */
-    ldouble r = roundl(x);
-    if (fabsl(x - r) <= 100.0L * tolerance)  /* 100×epsilon scaling */
+    /* snap to integer - aggressive: allow a bigger margin */
+    r = roundl(x);
+    if (fabsl(x - r) <= 8.0L * tolerance) { /* 8 × epsilon scaling */
+	trace(("snap %La (%.*Lg) to %La (%.*Lg)\n", x, digits, x, r, digits, r));
         return r;
+    }
 
-    /* compute ULP(x) */
-    ldouble next = nextafterl(x, INFINITY);
-    ldouble ulp = fabsl(next - x);
+    /* round to max_precision */
+    digits = max_precision;
+    factor = powl(10L, digits - ceill(log10l(fabsl(x))));
+    r = roundl(x * factor) / factor;
+    trace(("force %La (%.*Lg) to %La (%.*Lg)\n", x, digits, x, r, digits, r));
 
-    /* round to nearest multiple of ULP if within small multiple of ULP */
-    ldouble rounded = roundl(x / ulp) * ulp;
-    if (fabsl(x - rounded) <= 10.0L * ulp)
-        return rounded;
+    return r;
 
-    /* otherwise return original x */
-    return x;
 }
-
 
 void
 push(ldouble n)
@@ -301,7 +305,7 @@ push(ldouble n)
 void
 result_push(ldouble n)
 {
-	push(fudge_floats(n));
+	push(tweak_float(n));
 }
 
 boolean
@@ -976,9 +980,9 @@ fraction(void)
 
 	if (pop(&a)) {
 		if (a > 0)
-			push(a - floorl(a));
+			result_push(a - floorl(a));
 		else
-			push(a - ceill(a));
+			result_push(a - ceill(a));
 		lastx = a;
 		return GOODOP;
 	}
@@ -992,9 +996,9 @@ integer(void)
 
 	if (pop(&a)) {
 		if (a > 0)
-			push(floorl(a));
+			result_push(floorl(a));
 		else
-			push(ceill(a));
+			result_push(ceill(a));
 		lastx = a;
 		return GOODOP;
 	}
@@ -1485,7 +1489,7 @@ printstate(void)
 	printf(" mode is %c\n", mode);
 
 	printf(" max_precision is %u\n", max_precision);
-	printf(" float_digits is %d (%s), float_specifier is %c\n",
+	printf(" float_digits is %d (representing %s), float_specifier is %c\n",
 		float_digits,
 		float_specifier == 'f' ? "decimals" : "precision",
 		float_specifier);
@@ -1497,15 +1501,15 @@ printstate(void)
 	putchar('\n');
 
 	s = stack;
-	printf(" stack:\n");
+	printf(" top of stack comes first:\n");
 	if (!s) {
 		printf("%16s\n", "<empty>");
 	} else {
-		printf(" %16s   %16s\n",
-		    "long long", "long double (printed with '%#16.16Lg')");
+		printf(" %20s   %20s\n",
+		    "long long", "long double ('%#20.20Lg' and '%La')");
 		while (s) {
-			printf(" %#16llx   %#16.16Lg\n",
-				(long long)(s->val), s->val);
+			printf(" %#20llx   %#20.20Lg    %La\n",
+				(long long)(s->val), s->val, s->val);
 			s = s->next;
 		}
 	}
@@ -1516,10 +1520,12 @@ printstate(void)
 	printf("  long double:\t%lu\n", (unsigned long)(8 * sizeof(long double)));
 	printf("  LDBL_MANT_DIG: %u\n", LDBL_MANT_DIG);
 	printf("  LDBL_MAX: %.20Lg\n", LDBL_MAX);
-	printf("  LDBL_EPSILON is %Lg\n", LDBL_EPSILON);
+	printf("  LDBL_EPSILON is %Lg (%La)\n", LDBL_EPSILON, LDBL_EPSILON);
 	x = 1.2345678e24L;
-	printf("  ULP (calculated) is %.0Lf\n", nextafterl(x, INFINITY) - x);
-	printf("  detected epsilon is %Lg\n", epsilon);
+	printf(" calculated:\n");
+	printf("  ULP is %.0Lf\n", nextafterl(x, INFINITY) - x);
+	printf("  detected epsilon is %Lg (%La)\n",
+			calculated_epsilon, calculated_epsilon);
 
 	/* Unit in the Last Place */
 	// ULP(x) = LDBL_EPSILON × 2^(exp(x))
@@ -3117,7 +3123,7 @@ main(int argc, char *argv[])
 
 		switch (t->type) {
 		case NUMERIC:
-			push(t->val.val);
+			result_push(t->val.val);
 			break;
 		case SYMBOLIC:
 		case OP:
