@@ -192,7 +192,7 @@ boolean raw_floats;
 ldouble lastx;
 
 /* copy of RPN top-of-stack, for infix use */
-ldouble infix_X;
+ldouble pre_infix_X;
 
 /* for store/recall */
 ldouble offstack[5];
@@ -1930,9 +1930,9 @@ mark(void)
 }
 
 opreturn
-stack_x(void)
+push_pre_infix_x(void)
 {
-	push(infix_X);
+	push(pre_infix_X);
 	return GOODOP;
 }
 
@@ -2562,8 +2562,8 @@ open_paren(void)
 
 	// set the source for the 'X' operator to the current top
 	// of the RPN stack, or zero if that stack is empty.
-	if (!peek(&infix_X))
-		infix_X = 0;
+	if (!peek(&pre_infix_X))
+		pre_infix_X = 0;
 
 	while (1) {
 		tdump(&oper_stack);
@@ -3018,7 +3018,7 @@ struct oper opers[] = {
 	{"r3", recall3,		0, -1 },
 	{"r4", recall4,		0, -1 },
 	{"r5", recall5,	"Fetch x (from 5 locations)", -1 },
-	{"X", stack_x,		"Hidden: push saved copy of x (for infix)", -1 },
+	{"X", push_pre_infix_x,	"Hidden: push pre-infix value of x", -1 },
 	{"pi", push_pi,		"Push constant pi", -1 },
 	{"e", push_e,		"Push constant e", -1 },
 	{"", 0, 0},
