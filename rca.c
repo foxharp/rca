@@ -2858,12 +2858,27 @@ commands(void)
 	return GOODOP;
 }
 
-opreturn showhelp(int show_hidden)
+opreturn
+showhelp(int show_hidden)
 {
 	oper *op;
 
+	FILE *fout;
+	boolean fout_is_pipe = 0;
+	char *pager = getenv("PAGER");
+
+	if (pager && pager[0] && (fout = popen(pager, "w"))) {
+		printf("Using '%s' from $PAGER to show help text\n", pager);
+		fout_is_pipe = 1;
+	} else {
+		fout = stdout;
+		// perror("$PAGER failed");
+	}
+
+
+
 	op = opers;
-	printf("\
+	fprintf(fout, "\
 rca -- a rich/RPN scientific and programmer's calculator\n\
  Any arguments on the command line are used as initial calculator input.\n\
  Entering a number pushes it on the stack.\n\
@@ -2888,13 +2903,13 @@ rca -- a rich/RPN scientific and programmer's calculator\n\
 	cbuf[0] = '\0';
 	while (op->name) {
 		if (!*op->name) {
-			putchar('\n');
+			fprintf(fout, "\n");
 		} else {
 			if (op->help && !show_hidden &&
 					strncmp(op->help, "Hidden:", 7) == 0) {
 				/* hidden command */ ;
 			} else if (!op->func) {
-				printf("%s\n", op->name);
+				fprintf(fout, "%s\n", op->name);
 			} else if (!op->help) {
 				strcat(cbuf, " ");
 				strcat(cbuf, op->name);
@@ -2902,14 +2917,21 @@ rca -- a rich/RPN scientific and programmer's calculator\n\
 			} else {
 				strcat(cbuf, " ");
 				strcat(cbuf, op->name);
-				printf("%21s     %s\n", cbuf, op->help);
+				fprintf(fout, "%21s     %s\n", cbuf, op->help);
 				cbuf[0] = '\0';
 			}
 		}
 		op++;
 	}
-	printf("\n%78s\n", __FILE__ " built " __DATE__ " " __TIME__);
-	printf ("\nTip:  Use \"rca help q | less\" to view this help\n");
+	fprintf(fout, "\n%78s\n", __FILE__ " built " __DATE__ " " __TIME__);
+	fprintf(fout, "\nTip:  Use \"rca help q | less\" to view this help\n");
+
+	if (fout_is_pipe) {
+	    if (pclose(fout) != 0) {
+		printf("Failed to show help.  Unset PAGER to show help directly\n");
+	    }
+	}
+
 	return GOODOP;
 }
 
