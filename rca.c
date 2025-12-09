@@ -182,10 +182,11 @@ int int_width;
 long long int_sign_bit;
 long long int_mask;
 
-/* this is used to control floating point error
-*/
-long double calculated_epsilon;
+/* this is used to control floating point error */
 long double epsilon;
+
+/* suppress snapping and rounding of float values */
+boolean raw_floats;
 
 /* the most recent top-of-stack */
 ldouble lastx;
@@ -223,15 +224,13 @@ sign_extend(ldouble a)
 void
 detect_epsilon(void)
 {
-	calculated_epsilon = 1.0L;
+	epsilon = 1.0L;
 
-	while ((1.0L + calculated_epsilon / 2.0L) > 1.0L)
-		calculated_epsilon /= 2.0L;
-
-	epsilon = 16 * calculated_epsilon;
+	while ((1.0L + epsilon / 2.0L) > 1.0L)
+		epsilon /= 2.0L;
 
 	// round up to significant digit
-	max_precision = (int)(-log10l(epsilon)) + 1;
+	max_precision = (int)(-log10l(epsilon)); // 18 for 64-bit mantissa
 }
 
 
@@ -240,41 +239,40 @@ detect_epsilon(void)
  * to our max precision.
  */
 ldouble
-tweak_float(ldouble x) {
+tweak_float(ldouble x)
+{
 
-    int digits = max_precision;
-    ldouble r, abs_x, tolerance, factor;
+	ldouble r, abs_x, tolerance, factor;
 
-    if (x == 0.0L) {
-        return 0.0L;
-    }
-    if (!isfinite(x)) return x;  /* NaN, +Inf, -Inf pass through */
+	if (raw_floats)
+		return x;
 
-    abs_x = fabsl(x);
+	if (x == 0.0L || x == -0.0)
+		return x;
 
-    /* scale tolerance by magnitude */
-    tolerance = epsilon * (abs_x > 1.0L ? abs_x : 1.0L);
+	if (!isfinite(x))
+		return x;	/* NaN, +Inf, -Inf pass through */
 
-    /* snap to zero */
-    if (abs_x <= tolerance) {
-	trace(("snap %La (%.*Lg) to zero\n", x, digits, x));
-        return 0.0L;
-    }
+	abs_x = fabsl(x);
 
-    /* snap to integer - aggressive: allow a bigger margin */
-    r = roundl(x);
-    if (fabsl(x - r) <= 8.0L * tolerance) { /* 8 × epsilon scaling */
-	trace(("snap %La (%.*Lg) to %La (%.*Lg)\n", x, digits, x, r, digits, r));
-        return r;
-    }
+	/* snap to integer */
+	/* scale tolerance by magnitude.  20 * epsilon is about 2e-18 */
+	tolerance = epsilon * 20L;
+	if (abs_x > 1.0L)
+		tolerance *= abs_x;
 
-    /* round to max_precision */
-    digits = max_precision;
-    factor = powl(10L, digits - ceill(log10l(fabsl(x))));
-    r = roundl(x * factor) / factor;
-    trace(("force %La (%.*Lg) to %La (%.*Lg)\n", x, digits, x, r, digits, r));
+	r = roundl(x);
+	if (fabsl(x - r) <= tolerance) {
+		trace(("snap %La (%.20Lg) to %La (%.20Lg)\n", x, x, r, r));
+		return r;
+	}
 
-    return r;
+	/* round to max_precision digits */
+	factor = powl(10L, max_precision - ceill(log10l(fabsl(x))));
+	r = roundl(x * factor) / factor;
+	trace(("round %La (%.20Lg) to %La (%.20Lg)\n", x, x, r, r));
+
+	return r;
 
 }
 
@@ -1524,8 +1522,7 @@ printstate(void)
 	x = 1.2345678e24L;
 	printf(" calculated:\n");
 	printf("  ULP is %.0Lf\n", nextafterl(x, INFINITY) - x);
-	printf("  detected epsilon is %Lg (%La)\n",
-			calculated_epsilon, calculated_epsilon);
+	printf("  detected epsilon is %Lg (%La)\n", epsilon, epsilon);
 
 	/* Unit in the Last Place */
 	// ULP(x) = LDBL_EPSILON × 2^(exp(x))
@@ -1914,14 +1911,14 @@ recall5(void)
 opreturn
 push_pi(void)
 {
-	push(pi);
+	result_push(pi);
 	return GOODOP;
 }
 
 opreturn
 push_e(void)
 {
-	push(e);
+	result_push(e);
 	return GOODOP;
 }
 
@@ -2166,6 +2163,17 @@ autop(void)
 	// info
 	snprintf(pending_info, sizeof(pending_info),
 		" autoprinting is now %s\n", autoprint ? "on" : "off");
+	return GOODOP;
+}
+
+opreturn
+rawfloat(void)
+{
+	raw_floats = !raw_floats;
+
+	// info
+	snprintf(pending_info, sizeof(pending_info),
+		" float snapping/rounding is now %s\n", raw_floats ? "off" : "on");
 	return GOODOP;
 }
 
@@ -3067,6 +3075,7 @@ struct oper opers[] = {
 	{"Help", Help,		"Show this list, including hidden commands" },
 	{"precedence", precedence, "List infix operator precedence" },
 	{"commands", commands,	"Hidden: show raw command table" },
+	{"rawfloats", rawfloat,	"Hidden: toggle snapping and rounding of floats" },
 	{"quit", quit,		0 },
 	{"q", quit,		0 },
 	{"exit", quit,		"Leave the calculator" },

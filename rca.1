@@ -278,7 +278,7 @@ To aid in reading long digit strings,
 will by default add commas to numbers it prints.
 These can be toggled with the
 .B c
-(or 
+(or
 .BR commas )
 command.  When enabled, commas will be added to numbers in every base.
 (Commas will never appear in the fractional part of a value.)
@@ -431,17 +431,17 @@ infix expressions,
 exponentation is right associative, and has lower precedence than unary minus.
 So each of these lines returns a result of 1 (true):
 .RS
-.IP 
+.IP
 .B ((2 ^ 3 ^ 2) == (2 ^ (3 ^ 2)))
 .I # i.e., 512
-.IP 
+.IP
 .B ((-3 ^ 2) == ((-3) ^ 2)))
 .I # i.e., 9
 .RE
 
 .RE
 
-.SH DATA TYPES and OVERFLOW
+.SH DATA TYPES, OVERFLOW, ACCURACY
 
 All stack values in
 .B rca
@@ -465,6 +465,18 @@ after switching to an integer mode, or while performing a bitwise
 operation.  Execution will proceed after the warning unless
 .B errorexit
 has been enabled.
+
+Floating point math by its nature is imprecise.  It's not uncommon for
+small rounding errors, and errors introduced by the necessary binary
+to decimal conversions, to change values in obvious ways.  Something
+that should be 0 may instead have a very tiny value, or two numbers which
+should be equal may differ by an insignificant amount.
+.B rca
+attempts to help by adjusting values pushed on the
+stack.  First, values within about 2e-18 of an integer are forced to that.
+integer.  Then, values are decimal-rounded to
+.BR rca 's
+maximum precision (usually 18 digits).
 
 .SH EXIT STATUS
 .B rca
