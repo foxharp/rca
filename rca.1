@@ -320,8 +320,8 @@ There are a handful of commands/pseudo-operators which control some
 aspects of
 .BR rca 's
 operation and appearance:
-.RS .1
-.IP \\(bu
+.RS
+.P
 The
 .BR F ,
 .BR D ,
@@ -332,27 +332,27 @@ and
 .B B
 commands select float or integer operation, along with the default
 base for output.
-.IP \\(bu
+.P
 The
 .B k
 (or
 .BR precision )
 command selects %g format for floating point output (e.g.,
 "1.2345e+09"), along with the number of significant digits.
-.IP \\(bu
+.P
 The
 .B K
 (or
 .BR decimals )
 command selects %f format for floating point output (e.g.,
 "1,234,500,000.00") along with the number of decimals after the point.
-.IP \\(bu
+.P
 The
 .B w
 (or
 .BR width )
 command selects the word width used in integer mode.
-.IP \\(bu
+.P
 The
 .B c
 (or
@@ -361,7 +361,7 @@ command acts as a toggle, and chooses whether printed values will include comma
 characters for readability.  This feature is enabled by default when
 .B rca
 starts.
-.IP \\(bu
+.P
 The
 .B a
 (or
@@ -437,14 +437,14 @@ right.
 .SH OPERATOR NOTES
 Most operators behave as they are commonly understood to.  A few need
 more specific documentation.
-.RS .1
-.IP \\(bu
+.RS
+.P
 .B modulo
 is a floating point operation.  It uses the C fmodl() library.
-.IP \\(bu
+.P
 .B frac
 applied to negative values will give a negative result.
-.IP \\(bu
+.P
 In an infix expression, any operator that takes two arguments expects
 them to be to the left and right of the operator.  This looks fine in
 the case of the symbolic operators (as in
@@ -460,7 +460,7 @@ works similarly:
 will return the result "30".  (In RPN, this would be
 .B 30 sin 30 cos
 .BR atan2 .)
-.IP \\(bu
+.P
 Trigonometric operations
 .RB ( sin ,
 .BR cos ,
@@ -471,7 +471,7 @@ Trigonometric operations
 and
 .BR atan2 )
 are disallowed in integer mode, since they'd make no sense.
-.IP \\(bu
+.P
 Bitwise operations
 .RB ( ~
 .BR << ,
@@ -485,7 +485,7 @@ Bitwise operations
 convert their operands to long long first, regardless of mode.  These
 operations will (as might be expected) discard fractional parts, and
 may discard significant digits, including the sign of the value.
-.IP \\(bu
+.P
 .B sum
 will pop and add up previous entries on the
 stack, stopping when the stack is empty, or when a
@@ -498,7 +498,7 @@ in order to limit its reach.
 .B sum
 is the only operator to consume more than 2 stack elements.
 
-.IP \\(bu
+.P
 The precedence and association of exponentiation
 .RB ( ^
 or
@@ -510,18 +510,15 @@ infix expressions,
 exponentation is right associative, and has lower precedence than unary minus.
 So each of these lines returns a result of 1 (true):
 .RS
-.IP
+.P
 .B ((2 ^ 3 ^ 2) == (2 ^ (3 ^ 2)))
 .I # i.e., 512
-.IP
+.P
 .B ((-3 ^ 2) == ((-3) ^ 2)))
 .I # i.e., 9
 .RE
 
-.RE
-
 .SH DATA TYPES, OVERFLOW, ACCURACY
-
 All stack values in
 .B rca
 are stored in
