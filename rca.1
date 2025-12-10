@@ -524,9 +524,9 @@ into the shell is straightforward:
 # capability from a POSIX shell.
 #
 # After including this code, use lines like this to calculate:
-#	foo=$(fe "$bar * pi")
+#       foo=$(fe "$bar * pi")
 # or like this for a conditional:
-#	if fc "(10 * 3) < $foo"; then ...
+#       if fc "(10 * 3) < $foo"; then ...
 
 _RCA_INIT="3K commas errorexit"  # $RCA_INIT can override this
 
@@ -536,21 +536,21 @@ _rca_run()    # support routine
     exitcode=$?
 
     if [ $exitcode -le 1 ]; then
-	echo $output
-	return $exitcode
+        echo $output
+        return $exitcode
     fi
 
     echo rca failure: $output >&2
     exit 1
 }
 
-fe()	# Evaluate a floating point expression.
+fe()    # Evaluate a floating point expression.
 {
     _rca_run "$*"
     return 0
 }
 
-fc()	 # Evaluate a floating point conditional expression.
+fc()     # Evaluate a floating point conditional expression.
 {
     _rca_run "$*" >/dev/null
 }
