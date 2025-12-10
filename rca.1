@@ -287,22 +287,6 @@ In addition, both commas and the "$" currency symbol will be
 silently stripped on input, which is convenient when doing arithmetic
 on copy/pasted data.
 
-.SH HELP
-A complete list of operators/commands can be obtained by entering
-.B ?
-or
-.BR help .
-Many operators have two names, and this is indicated in the
-.B help
-table.  A table showing operator precedence in infix expressions
-is available with the
-.B precedence
-command.
-
-If $PAGER is set in the environment, it will be invoked to display
-the help text.  Otherwise the text will be displayed directly to the
-terminal.
-
 .SH SPECIAL VALUES
 The
 .B pi
@@ -330,6 +314,97 @@ and
 .B recall
 with
 .BR r1 .)
+
+.SH CONFIGURATION
+There are a handful of commands/pseudo-operators which control some
+aspects of
+.BR rca 's
+operation and appearance:
+.RS .1
+.IP \\(bu
+The
+.BR F ,
+.BR D ,
+.BR U ,
+.BR H ,
+.BR O ,
+and
+.B B
+commands select float or integer operation, along with the default
+base for output.
+.IP \\(bu
+The
+.B k
+(or
+.BR precision )
+command selects %g format for floating point output (e.g.,
+"1.2345e+09"), along with the number of significant digits.
+.IP \\(bu
+The
+.B K
+(or
+.BR decimals )
+command selects %f format for floating point output (e.g.,
+"1,234,500,000.00") along with the number of decimals after the point.
+.IP \\(bu
+The
+.B w
+(or
+.BR width )
+command selects the word width used in integer mode.
+.IP \\(bu
+The
+.B c
+(or
+.BR commas )
+command acts as a toggle, and chooses whether printed values will include comma
+characters for readability.  This feature is enabled by default when
+.B rca
+starts.
+.IP \\(bu
+The
+.B a
+(or
+.BR autoprint )
+command acts as a toggle, and chooses whether
+.B rca
+will print the value at the  top of stack after every newline.  This will be
+suppressed if the last action on the previous line was to explicitly
+set that value, since to print it again immediately would be redundant.
+.B autoprint
+is enabled by default when
+.B rca
+starts.
+.RE
+
+All of the listed commands will print a confirmation message, but to
+avoid confusion, that message will only print if the command is the
+last on its line of input.
+
+.B rca
+doesn't have a configuration file that's read on startup.  It does,
+however, take commands from an environment variable called
+.BR RCA_INIT ,
+and after that from any arguments passed on the command line.  So initial
+conditions can be established by either of those methods.  All printed
+output from commands run via the RCA_INIT variable is suppressed.
+
+
+.SH HELP
+A complete list of operators/commands can be obtained by entering
+.B ?
+or
+.BR help .
+Many operators have two names, and this is indicated in the
+.B help
+table.  A table showing operator precedence in infix expressions
+is available with the
+.B precedence
+command.
+
+If $PAGER is set in the environment, it will be invoked to display
+the help text.  Otherwise the text will be displayed directly to the
+terminal.
 
 .SH OPERATOR PRECEDENCE
 When used as an RPN calculator, operator precedence isn't really
