@@ -38,6 +38,7 @@
 
 #include <stdlib.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
@@ -1806,7 +1807,7 @@ width(void)
 
 	// info
 	snprintf(pending_info, sizeof(pending_info),
-		" Words are now %d bits wide.%s\n", int_width,
+		" Integers are now %d bits wide.%s\n", int_width,
 			(mode == 'F') ? "  (Ignored in float mode!)":"");
 	// This is sort of an "info" message, except that it also
 	// does a big printall() down below.  So we'll keep printing
@@ -2354,7 +2355,7 @@ parse_tok(char *p, token *t, char **nextp)
 }
 
 void
-no_comm(char *cp)
+no_comments(char *cp)
 {
 	char *ncp;
 
@@ -2384,6 +2385,37 @@ flushinput(void)
 	input_ptr = NULL;
 }
 
+static int o_stdout_fd = -1;
+
+void
+suppress_stdout(void)
+{
+	fflush(stdout);
+
+	o_stdout_fd = dup(STDOUT_FILENO);
+
+	int null_fd = open("/dev/null", O_WRONLY);
+	if (null_fd == -1) {	// would be surprising
+		o_stdout_fd = -1;
+		return;
+	}
+
+	dup2(null_fd, STDOUT_FILENO);	// Redirect stdout to /dev/null
+	close(null_fd);		// Close the /dev/null file descriptor
+}
+
+void
+restore_stdout(void)
+{
+	if (o_stdout_fd == -1)
+		return;
+	fflush(stdout);
+	dup2(o_stdout_fd, STDOUT_FILENO);	// Restore original stdout
+	close(o_stdout_fd);
+	o_stdout_fd = -1;
+}
+
+
 /* on return, the global input_ptr is a string containing commands
  * to be executed
  */
@@ -2393,6 +2425,22 @@ fetch_line(void)
 	static int arg = 1;
 	static char *input_buf;
 	static size_t blen;
+	static boolean tried_rca_init;
+	char *rca_init;
+
+	if (!tried_rca_init) {
+		tried_rca_init = TRUE;
+		rca_init = getenv("RCA_INIT");
+		if (rca_init) {
+			suppress_stdout();
+			input_buf = malloc(strlen(rca_init + 1));
+			strcpy(input_buf, rca_init);
+			input_ptr = input_buf;
+			return 1;
+		}
+	}
+
+	restore_stdout();
 
 	/* if there are args on the command line, they're taken as
 	 * initial commands.  since only numbers can start with '-',
@@ -2407,6 +2455,7 @@ fetch_line(void)
 		for (arg = 1; arg < g_argc; arg++)
 			blen += strlen(g_argv[arg]) + 2;
 
+		if (input_buf) free(input_buf);
 		input_buf = malloc(blen);
 		if (!input_buf) {
 			perror("rca: malloc failure");
@@ -2419,7 +2468,7 @@ fetch_line(void)
 			strcat(input_buf, " ");
 		}
 
-		no_comm(input_buf);
+		no_comments(input_buf);
 
 		input_ptr = input_buf;
 		return 1;
@@ -2471,7 +2520,7 @@ fetch_line(void)
 
 #endif
 
-	no_comm(input_buf);
+	no_comments(input_buf);
 
 	input_ptr = input_buf;
 

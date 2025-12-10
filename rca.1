@@ -527,12 +527,14 @@ into the shell is straightforward:
 #       foo=$(fe "$bar * pi")
 # or like this for a conditional:
 #       if fc "(10 * 3) < $foo"; then ...
-
-_RCA_INIT="3K commas errorexit"  # $RCA_INIT can override this
+#
+# Set common initial conditions:
+# 3 decimal places, no commas, fail on error
+export RCA_INIT="3K commas errorexit"
 
 _rca_run()    # support routine
 {
-    output=$(rca "$_RCA_INIT $RCA_INIT" "( $* )" q)
+    output=$(rca "( $* )" q)
     exitcode=$?
 
     if [ $exitcode -le 1 ]; then
