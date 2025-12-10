@@ -50,7 +50,7 @@ H
 lastx |
  0xffff,ffff,fff5,5555
 20 width
- Words are now 20 bits wide.
+ Integers are now 20 bits wide.
  0x2
  0x1000
  0x5,5555
@@ -126,7 +126,7 @@ H
 4 <<
  0xf2e0
 12 width
- Words are now 12 bits wide.
+ Integers are now 12 bits wide.
  0x0
  0x2e0
 4 >>
@@ -146,7 +146,7 @@ d
 clear
  empty stack
 64w
- Words are now 64 bits wide.
+ Integers are now 64 bits wide.
 0x8765
 o
  0103,545
@@ -156,18 +156,18 @@ h
  0x8765,0000
 b
  0b00000000,00000000,00000000,00000000,10000111,01100101,00000000,00000000
-0 commas
+commas
  numeric punctuation is now off
  0x87650000
 16w
- Words are now 16 bits wide.
+ Integers are now 16 bits wide.
  0x0
 h
  0x0
 B
  Mode is binary.  Integer math with 16 bits.
  0b0000000000000000
-1 c
+c
  numeric punctuation is now on
  0b00000000,00000000
 b
@@ -176,7 +176,7 @@ D
  Mode is signed decimal.  Integer math with 16 bits.
  0
 32w
- Words are now 32 bits wide.
+ Integers are now 32 bits wide.
  0
 h
  0x0
@@ -198,7 +198,7 @@ D
  0
  -2,023,424,000
  314,159
-0 c
+c
  numeric punctuation is now off
  314159
 
@@ -230,7 +230,7 @@ O
  020100000000
 h
  0x81000000
-1 c
+c
  numeric punctuation is now on
  020,100,000,000
 h
@@ -264,13 +264,13 @@ F
 pi
  3.14159265358979324
 frac
- 0.141592653589793239
+ 0.14159265358979324
 pi
  3.14159265358979324
 chs
  -3.14159265358979324
 frac
- -0.141592653589793239
+ -0.14159265358979324
 pi
  3.14159265358979324
 int
@@ -292,13 +292,13 @@ pi
  3.14159265358979e+15
 15K
  will show at most 15 digits after the decimal.
- 3,141,592,653,589,793.00
+ 3,141,592,653,589,793.24
 5K
  will show at most 5 digits after the decimal.
- 3,141,592,653,589,793.00
+ 3,141,592,653,589,793.24
 1K
  will show at most 1 digit after the decimal.
- 3,141,592,653,589,793.0
+ 3,141,592,653,589,793.2
 0K
  will show no digits after the decimal.
  3,141,592,653,589,793
@@ -523,13 +523,13 @@ atan
  -19.05
 40 i2mm
  1,016
-0 c
+c
  numeric punctuation is now off
  1016
 3K
  will show at most 3 digits after the decimal.
  1016.000
-1 c
+c
  numeric punctuation is now on
  1,016.000
 clear
@@ -537,14 +537,14 @@ clear
 H
  Mode is hex.  Integer math with 32 bits.
 16w
- Words are now 16 bits wide.
+ Integers are now 16 bits wide.
 0xffff
 d
  -1
 u
  65,535
 32w
- Words are now 32 bits wide.
+ Integers are now 32 bits wide.
  0xffff,ffff
 d
  -1
@@ -557,14 +557,14 @@ d
 u
  65,535
 16w
- Words are now 16 bits wide.
+ Integers are now 16 bits wide.
  0xffff
 d
  -1
 u
  65,535
 2w
- Words are now 2 bits wide.
+ Integers are now 2 bits wide.
  0x3
 p
  0x3
