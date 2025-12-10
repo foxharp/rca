@@ -27,21 +27,18 @@ clean:
 	rm -f rca rca-norl rca-man.html rca-help.html
 
 # test files are simply verbatim output from an rca session.  program
-# output is always indented by one space, so we remove those lines before
-# feeding what's left to rca, and comparing the result, which should match
-# exactly.
+# output is always indented by one space, so we remove those lines
+# before feeding what's left (i.e., the input) to rca, and comparing
+# the result, which should match exactly.
 
 test:
-	egrep -v '^ ' rca_test.txt | ./rca | diff -u rca_test.txt -
+	egrep -v '^ ' rca_test.txt | ./rca | tee .test | diff -u rca_test.txt -
 	@ echo test succeeded
 
-newtest:
-	egrep -v '^ ' rca_test.txt | ./rca > new_rca_test.txt
-
 optest:
-	sed -e 's/^#.*//' optests.txt > .tests.txt
-	sed -e '/^ /d' .tests.txt | rca | diff -u .tests.txt -
+	egrep -v '^ ' optests.txt | ./rca | tee .test | diff -u optests.txt -
+	@ echo test succeeded
 
 tweaktest:
-	sed -e 's/^#.*//' tweaktests.txt > .tests.txt
-	sed -e '/^ /d' .tests.txt | rca | diff -u .tests.txt -
+	egrep -v '^ ' tweaktests.txt | ./rca | tee .test | diff -u tweaktests.txt -
+	@ echo test succeeded
