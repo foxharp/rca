@@ -819,6 +819,42 @@ trig_no_sense(void)
 	return BADOP;
 }
 
+int trig_degrees = 1;  // work in degrees by default
+
+opreturn
+use_degrees(void)
+{
+	ldouble wantdegrees;
+
+	if (!pop(&wantdegrees))
+		return BADOP;
+
+	trig_degrees = (wantdegrees != 0);
+
+	// info
+	snprintf(pending_info, sizeof(pending_info),
+		" trig functions will now use %s\n", trig_degrees ? "degrees" : "radians");
+	return GOODOP;
+}
+
+ldouble
+to_degrees(ldouble angle)
+{
+	if (trig_degrees)
+	    return (angle * 180.0L) / pi;
+	else
+	    return angle;
+}
+
+ldouble
+to_radians(ldouble angle)
+{
+	if (trig_degrees)
+	    return (angle * pi) / 180.0L;
+	else
+	    return angle;
+}
+
 opreturn
 sine(void)
 {
@@ -828,7 +864,7 @@ sine(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		result_push(sinl((a * pi) / 180.0));
+		result_push(sinl(to_radians(a)));
 		lastx = a;
 		return GOODOP;
 	}
@@ -844,7 +880,7 @@ asine(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		result_push((180.0 * asinl(a)) / pi);
+		result_push(to_degrees(asinl(a)));
 		lastx = a;
 		return GOODOP;
 	}
@@ -860,7 +896,7 @@ cosine(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		result_push(cosl((a * pi) / 180.0));
+		result_push(cosl(to_radians(a)));
 		lastx = a;
 		return GOODOP;
 	}
@@ -876,7 +912,7 @@ acosine(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		result_push(180.0 * acosl(a) / pi);
+		result_push(to_degrees(acosl(a)));
 		lastx = a;
 		return GOODOP;
 	}
@@ -893,7 +929,7 @@ tangent(void)
 
 	if (pop(&a)) {
 		// FIXME:  tan() goes infinite at +/-90
-		result_push(tanl(a * pi / 180.0));
+		result_push(tanl(to_radians(a)));
 		lastx = a;
 		return GOODOP;
 	}
@@ -909,7 +945,7 @@ atangent(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		result_push((180.0 * atanl(a)) / pi);
+		result_push(to_degrees(atanl(a)));
 		lastx = a;
 		return GOODOP;
 	}
@@ -926,7 +962,7 @@ atangent2(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			result_push((180.0 * atan2l(a,b)) / pi);
+			result_push(to_degrees(atan2l(a,b)));
 			lastx = b;
 			return GOODOP;
 		}
@@ -3047,7 +3083,7 @@ struct oper opers[] = {
 	{"xor", bitwise_xor,	"Bitwise AND, OR, and XOR of y and x", 2, 12 },
 	{"setb", setbit,	0, 2, 10 },
 	{"clearb", clearbit,	"Set and clear bit x in y", 2, 14 },
-	{"atan2", atangent2,    "Arctan of y/x (i.e., 2 operands, in degrees)", 2, 26 },
+	{"atan2", atangent2,    "Arctan of y/x (i.e., 2 operands)", 2, 26 },
 	{"", 0, 0},		// all-null entries cause blank line in output
     {"Numerical operators with one operand:", 0, 0},
 	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 24 },
@@ -3061,7 +3097,8 @@ struct oper opers[] = {
 	{"tan", tangent,        "", 1, 26 },
 	{"asin", asine,         0, 1, 26 },
 	{"acos", acosine,       0, 1, 26 },
-	{"atan", atangent,      "Trig functions (in degrees)", 1, 26 },
+	{"atan", atangent,      "Trig functions", 1, 26 },
+	{"degrees", use_degrees, "Trig functions work in degrees (1) or radians (0)" },
 	{"ln", log_natural,    	0, 1, 26 },
 	{"log2", log_base2,    	0, 1, 26 },
 	{"log10", log_base10,    	"Natural, base 2, and base 10 logarithms", 1, 26 },

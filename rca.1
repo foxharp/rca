@@ -363,6 +363,14 @@ enabled by default when
 starts.  The argument is 0 or non-zero.
 .P
 The
+.B degrees
+command chooses whether the trigonometric functions work with degrees
+or radians.
+Degrees are used by default when
+.B rca
+starts.  The argument is 0 or non-zero.
+.P
+The
 .B a
 (or
 .BR autoprint )
@@ -470,6 +478,11 @@ Trigonometric operations
 and
 .BR atan2 )
 are disallowed in integer mode, since they'd make no sense.
+By default the trig functions take and return angles in degrees.  The
+.B 0 degrees
+command will switch them to radians.
+.B 1 degrees
+will switch them back, of course.
 .P
 Bitwise operations
 .RB ( ~

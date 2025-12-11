@@ -90,6 +90,19 @@ asin
  91
 cos
  -0.0174524
+0 degrees
+ trig functions will now use radians
+ -0.0174524
+acos 180 * pi /
+ 91
+1 degrees
+ trig functions will now use degrees
+ 91
+cos
+ -0.0174524
+1 degrees
+ trig functions will now use degrees
+ -0.0174524
 lastx +
  90.9825
 frac
