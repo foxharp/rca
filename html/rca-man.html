@@ -48,15 +48,13 @@ The value at the top of the stack can be shown with the
 command, and the entire stack with
 <B>P</B>.
 
-Autoprinting (toggled with
-<B>a</B>
+Autoprinting (set with
+<B>1 a</B>
 
 (or
-<B>autoprint</B>)
+<B>1</B>autoprint<B>)</B>
 
-will print the top of the stack after every input line,
-(unless the last thing on that line is numeric, which would make
-the autoprinted output redundant).
+will print the top of the stack after every input line.
 <P>
 <A NAME="lbAE">&nbsp;</A>
 <H2>REVERSE POLISH NOTATION</H2>
@@ -398,13 +396,15 @@ To aid in reading long digit strings,
 <B>rca</B>
 
 will by default add commas to numbers it prints.
-These can be toggled with the
-<B>c</B>
+These can be disabled with
+<B>0 c</B>
 
 (or
-<B>commas</B>)
+<B>0</B>
 
-command.  When enabled, commas will be added to numbers in every base.
+<B>commas</B>).
+
+When enabled, commas will be added to numbers in every base.
 (Commas will never appear in the fractional part of a value.)
 <P>
 In addition, both commas and the &quot;$&quot; currency symbol will be
@@ -516,11 +516,12 @@ The
 (or
 <B>commas</B>)
 
-command acts as a toggle, and chooses whether printed values will include comma
-characters for readability.  This feature is enabled by default when
+command chooses whether printed
+values will include comma characters for readability.  This feature is
+enabled by default when
 <B>rca</B>
 
-starts.
+starts.  The argument is 0 or non-zero.
 <P>
 
 The
@@ -529,18 +530,18 @@ The
 (or
 <B>autoprint</B>)
 
-command acts as a toggle, and chooses whether
+command chooses whether
 <B>rca</B>
 
 will print the value at the  top of stack after every newline.  This will be
-suppressed if the last action on the previous line was to explicitly
+suppressed if the last action on the previous line explicitly
 set that value, since to print it again immediately would be redundant.
 <B>autoprint</B>
 
 is enabled by default when
 <B>rca</B>
 
-starts.
+starts.  The argument is 0 or non-zero.
 </DL>
 
 <P>
@@ -551,13 +552,12 @@ last on its line of input.
 <B>rca</B>
 
 doesn't have a configuration file that's read on startup.  It does,
-however, take commands from an environment variable called
+however, take commands from the environment variable
 <B>RCA_INIT</B>,
 
 and after that from any arguments passed on the command line.  So initial
 conditions can be established by either of those methods.  All printed
-output from commands run via the RCA_INIT variable is suppressed.
-<P>
+output from commands run via $RCA_INIT is suppressed.
 <P>
 <A NAME="lbAM">&nbsp;</A>
 <H2>HELP</H2>
@@ -840,8 +840,8 @@ into the shell is straightforward:
 #       if fc &quot;(10 * 3) &lt; $foo&quot;; then ...
 #
 # Set common initial conditions:
-# 3 decimal places, no commas, fail on error
-export RCA_INIT=&quot;3K commas errorexit&quot;
+# 3 decimals , no commas, fail on error.  Values previously set will override.
+export RCA_INIT=&quot;3K 0commas errorexit ${RCA_INIT:-}&quot;
 
 _rca_run()    # support routine
 {
