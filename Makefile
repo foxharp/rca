@@ -1,6 +1,6 @@
 
 # build both the readline and no-readline versions by default
-all: rca rca-norl rca.1 html
+all: rca rca-norl rca.1 copyrightcheck html 
 
 rca: rca.c
 	v="$$(git describe --dirty=+ 2>/dev/null)"; \
@@ -17,6 +17,12 @@ rca-norl: rca.c
 rca.1: rca.man
 	v="$$(date +%Y-%m-%d)"; \
 	sed -e "s/VERSIONSTRING/$${v}/g" rca.man > rca.1
+
+copyrightcheck:
+	@year=$$(date +%Y) ;\
+	echo Checking for $$year in licenses; \
+	grep -q "Copyright.*$$year" LICENSE && \
+	grep -q "Copyright.*$$year" rca.c
 
 html: readme.html html/rca-man.html html/rca-help.html
 
