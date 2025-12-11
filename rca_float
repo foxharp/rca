@@ -7,20 +7,20 @@
 # or like this for a conditional:
 #	if fc "(10 * 3) < $foo"; then ...
 
-export RCA_INIT="3K commas errorexit"
+export RCA_INIT="commas errorexit ${RCA_INIT:-}"
+
 
 _rca_run()    # support routine
 {
     output=$(rca "( $* )" q)
     exitcode=$?
 
-    if [ $exitcode -le 1 ]; then
-	echo $output
-	return $exitcode
-    fi
+    case $exitcode in
+    0|1) echo $output; return $exitcode ;;
+    esac
 
     echo rca failure: $output >&2
-    exit 1
+    exit $exitcode
 }
 
 fe()	# Evaluate a floating point expression.

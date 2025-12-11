@@ -602,7 +602,7 @@ into the shell is straightforward:
 #
 # Set common initial conditions:
 # 3 decimal places, no commas, fail on error
-export RCA_INIT="3K commas errorexit"
+export RCA_INIT="3K commas errorexit ${RCA_INIT:-}"
 
 _rca_run()    # support routine
 {
