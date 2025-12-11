@@ -33,6 +33,9 @@ htmlmv:
 	mv html/rca-man.html.new html/rca-man.html
 	mv html/rca-help.html.new html/rca-help.html
 
+readme:
+	@python3 -m markdown README.md
+
 clean:
 	rm -f rca rca-norl html/rca-man.html.new html/rca-help.html.new
 
