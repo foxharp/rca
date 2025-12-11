@@ -36,6 +36,10 @@
  *	rca help q | less
  */
 
+#ifndef VERSION
+#define VERSION "v?"
+#endif
+
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -2987,7 +2991,7 @@ rca -- a rich/RPN scientific and programmer's calculator\n\
 		}
 		op++;
 	}
-	fprintf(fout, "\n%78s\n", __FILE__ " built " __DATE__ " " __TIME__);
+	fprintf(fout, "\n%78s\n", "version " VERSION " built " __DATE__ " " __TIME__);
 	fprintf(fout, "\nTip:  Use \"rca help q | less\" to view this help\n");
 
 	if (fout_is_pipe) {

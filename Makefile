@@ -1,13 +1,21 @@
 
+# to tag a release, an annotated tag must be used.
+#  git tag -a v17 -m "Release v17"  [ tags HEAD, or given commit ]
 
 # build both the readline and no-readline versions by default
 all: rca rca-norl html
 
 rca: rca.c
-	gcc -g -Wall -Wextra -o rca -D USE_READLINE rca.c -lm -lreadline
+	v="$$(git describe --dirty=+ 2>/dev/null)"; \
+	gcc -g -Wall -Wextra -o rca \
+		-DVERSION=\"$${v}\" -D USE_READLINE \
+		rca.c -lm -lreadline
 
 rca-norl: rca.c
-	gcc -g -Wall -Wextra -o rca-norl rca.c -lm
+	v="$$(git describe --dirty=+ 2>/dev/null)"; \
+	gcc -g -Wall -Wextra -o rca-norl \
+		-DVERSION=\"$${v}\" \
+		rca.c -lm
 
 html: html/rca-man.html html/rca-help.html
 
