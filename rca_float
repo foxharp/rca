@@ -7,7 +7,7 @@
 # or like this for a conditional:
 #	if fc "(10 * 3) < $foo"; then ...
 
-export RCA_INIT="commas errorexit ${RCA_INIT:-}"
+export RCA_INIT="0commas errorexit ${RCA_INIT:-}"
 
 
 _rca_run()    # support routine

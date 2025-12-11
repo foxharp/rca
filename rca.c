@@ -1688,7 +1688,12 @@ setup_format_string(void)
 opreturn
 punctuation(void)
 {
-	punct = !punct;
+	ldouble wantcommas;
+
+	if (!pop(&wantcommas))
+		return BADOP;
+
+	punct = (wantcommas != 0);
 
 	// info
 	snprintf(pending_info, sizeof(pending_info),
@@ -2159,7 +2164,12 @@ units_km_mi(void)
 opreturn
 autop(void)
 {
-	autoprint = !autoprint;
+	ldouble wantautop;
+ 
+	if (!pop(&wantautop))
+		return BADOP;
+
+	autoprint = (wantautop != 0);
 
 	// info
 	snprintf(pending_info, sizeof(pending_info),
@@ -2170,7 +2180,12 @@ autop(void)
 opreturn
 rawfloat(void)
 {
-	raw_floats = !raw_floats;
+	ldouble wantraw;
+
+	if (!pop(&wantraw))
+		return BADOP;
+
+	raw_floats = (wantraw != 0); 
 
 	// info
 	snprintf(pending_info, sizeof(pending_info),
@@ -3135,9 +3150,9 @@ struct oper opers[] = {
 	{"width", width,	0 },
 	{"w", width,		"Set effective \"word size\" for integer modes" },
 	{"autoprint", autop,	0 },
-	{"a", autop,		"Toggle autoprinting on/off" },
+	{"a", autop,		"Set autoprinting on/off with 0/1" },
 	{"commas", punctuation,	0 },
-	{"c", punctuation,	"Toggle comma separators on/off" },
+	{"c", punctuation,	"Set comma separators on/off with 0/1" },
 	{"mode", modeinfo,	"Display current mode parameters" },
 	{"", 0, 0},
     {"Housekeeping:", 0, 0},
@@ -3146,7 +3161,7 @@ struct oper opers[] = {
 	{"Help", Help,		"Show this list, including hidden commands" },
 	{"precedence", precedence, "List infix operator precedence" },
 	{"commands", commands,	"Hidden: show raw command table" },
-	{"rawfloats", rawfloat,	"Hidden: toggle snapping and rounding of floats" },
+	{"rawfloats", rawfloat,	"Hidden: set snapping and rounding of floats" },
 	{"quit", quit,		0 },
 	{"q", quit,		0 },
 	{"exit", quit,		"Leave the calculator" },

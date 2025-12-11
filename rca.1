@@ -28,13 +28,11 @@ The value at the top of the stack can be shown with the
 .B p
 command, and the entire stack with
 .BR P .
-Autoprinting (toggled with
-.B a
+Autoprinting (set with
+.B 1 a
 (or
-.BR autoprint )
-will print the top of the stack after every input line,
-(unless the last thing on that line is numeric, which would make
-the autoprinted output redundant).
+.BR 1 autoprint )
+will print the top of the stack after every input line.
 
 .SH REVERSE POLISH NOTATION
 Numbers entered by the user are pushed onto a stack.  Operators pop
@@ -276,11 +274,12 @@ when storing the result.
 To aid in reading long digit strings,
 .B rca
 will by default add commas to numbers it prints.
-These can be toggled with the
-.B c
+These can be disabled with
+.B 0 c
 (or
-.BR commas )
-command.  When enabled, commas will be added to numbers in every base.
+.B 0
+.BR commas ).
+When enabled, commas will be added to numbers in every base.
 (Commas will never appear in the fractional part of a value.)
 
 In addition, both commas and the "$" currency symbol will be
@@ -357,24 +356,25 @@ The
 .B c
 (or
 .BR commas )
-command acts as a toggle, and chooses whether printed values will include comma
-characters for readability.  This feature is enabled by default when
+command chooses whether printed
+values will include comma characters for readability.  This feature is
+enabled by default when
 .B rca
-starts.
+starts.  The argument is 0 or non-zero.
 .P
 The
 .B a
 (or
 .BR autoprint )
-command acts as a toggle, and chooses whether
+command chooses whether
 .B rca
 will print the value at the  top of stack after every newline.  This will be
-suppressed if the last action on the previous line was to explicitly
+suppressed if the last action on the previous line explicitly
 set that value, since to print it again immediately would be redundant.
 .B autoprint
 is enabled by default when
 .B rca
-starts.
+starts.  The argument is 0 or non-zero.
 .RE
 
 All of the listed commands will print a confirmation message, but to
@@ -383,12 +383,11 @@ last on its line of input.
 
 .B rca
 doesn't have a configuration file that's read on startup.  It does,
-however, take commands from an environment variable called
+however, take commands from the environment variable
 .BR RCA_INIT ,
 and after that from any arguments passed on the command line.  So initial
 conditions can be established by either of those methods.  All printed
-output from commands run via the RCA_INIT variable is suppressed.
-
+output from commands run via $RCA_INIT is suppressed.
 
 .SH HELP
 A complete list of operators/commands can be obtained by entering
@@ -601,8 +600,8 @@ into the shell is straightforward:
 #       if fc "(10 * 3) < $foo"; then ...
 #
 # Set common initial conditions:
-# 3 decimal places, no commas, fail on error
-export RCA_INIT="3K commas errorexit ${RCA_INIT:-}"
+# 3 decimals , no commas, fail on error.  Values previously set will override.
+export RCA_INIT="3K 0commas errorexit ${RCA_INIT:-}"
 
 _rca_run()    # support routine
 {
