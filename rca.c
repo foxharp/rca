@@ -292,7 +292,7 @@ void
 push(ldouble n)
 {
 	struct num *p;
-	
+
 	p = (struct num *)calloc(1, sizeof(struct num));
 	if (!p)
 		memory_failure();
@@ -2209,7 +2209,7 @@ opreturn
 autop(void)
 {
 	ldouble wantautop;
- 
+
 	if (!pop(&wantautop))
 		return BADOP;
 
@@ -2229,7 +2229,7 @@ rawfloat(void)
 	if (!pop(&wantraw))
 		return BADOP;
 
-	raw_floats = (wantraw != 0); 
+	raw_floats = (wantraw != 0);
 
 	// info
 	snprintf(pending_info, sizeof(pending_info),
@@ -2493,7 +2493,7 @@ fetch_line(void)
 		if (rca_init) {
 			suppress_stdout();
 			input_buf = malloc(strlen(rca_init + 1));
-			if (!input_buf) 
+			if (!input_buf)
 				memory_failure();
 			strcpy(input_buf, rca_init);
 			input_ptr = input_buf;
@@ -2904,7 +2904,7 @@ precedence(void)
 			}
 			if (!prec_ops[op->prec]) {
 				prec_ops[op->prec] = (char *)calloc(1, 500);
-				if (!prec_ops[op->prec]) 
+				if (!prec_ops[op->prec])
 					memory_failure();
 				linelen[op->prec] = 0;
 			}
