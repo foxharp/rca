@@ -202,6 +202,13 @@ ldouble pre_infix_X;
 /* for store/recall */
 ldouble offstack[5];
 
+void
+memory_failure(void)
+{
+	perror("rca: malloc failure");
+	exit(3);
+}
+
 opreturn
 enable_errexit(void)
 {
@@ -284,12 +291,11 @@ tweak_float(ldouble x)
 void
 push(ldouble n)
 {
-	struct num *p = (struct num *)calloc(1, sizeof(struct num));
-
-	if (!p) {
-		perror("rca: calloc failure");
-		exit(3);
-	}
+	struct num *p;
+	
+	p = (struct num *)calloc(1, sizeof(struct num));
+	if (!p)
+		memory_failure();
 
 	if (mode == 'F') {
 		p->val = n;
@@ -376,10 +382,8 @@ tpush(token **tstackp, token *token)
 		t = token;
 	} else {
 		t = (struct token *)calloc(1, sizeof(struct token));
-		if (!t) {
-			perror("rca: calloc failure");
-			exit(3);
-		}
+		if (!t)
+			memory_failure();
 
 		*t = *token;
 		t->alloced = 1;
@@ -2489,6 +2493,8 @@ fetch_line(void)
 		if (rca_init) {
 			suppress_stdout();
 			input_buf = malloc(strlen(rca_init + 1));
+			if (!input_buf) 
+				memory_failure();
 			strcpy(input_buf, rca_init);
 			input_ptr = input_buf;
 			return 1;
@@ -2512,10 +2518,8 @@ fetch_line(void)
 
 		if (input_buf) free(input_buf);
 		input_buf = malloc(blen);
-		if (!input_buf) {
-			perror("rca: malloc failure");
-			exit(3);
-		}
+		if (!input_buf)
+			memory_failure();
 
 		*input_buf = '\0';
 		for (arg = 1; arg < g_argc; arg++) {
@@ -2900,11 +2904,9 @@ precedence(void)
 			}
 			if (!prec_ops[op->prec]) {
 				prec_ops[op->prec] = (char *)calloc(1, 500);
+				if (!prec_ops[op->prec]) 
+					memory_failure();
 				linelen[op->prec] = 0;
-			}
-			if (!prec_ops[op->prec]) {
-				perror("rca: calloc failure");
-				exit(3);
 			}
 			if (strcmp(op->name, "negate") == 0)
 				negate_prec = op->prec;
