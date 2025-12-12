@@ -9,13 +9,14 @@ rca \- a rich/RPN (and more) programmer's calculator
 At it's heart,
 .B rca
 is a command-line reverse polish notation (RPN) calculator inspired
-(very loosely) by the Hewlett-Packard operating model used in their
-long line of scientific calculators.  Operators include
-scientific, logical, and bitwise operators.  Word width can be
-limited, for working with values from any class of CPU.  In addition,
+(very loosely) by the long line of Hewlett-Packard scientific
+calculators.  Operators include scientific, logical, and bitwise
+operators.  In addition,
 .B rca
 can evaluate traditional infix expressions, greatly expanding its
-usefulness.  Input is free form, for the most part, and
+usefulness.  As a programmer's calculator, word width can be limited,
+for emulating the operation of any class of CPU.  Input is free form,
+for the most part, and
 .B rca
 is easily incorporated into shell scripts to provide floating point
 support.  Whitespace is usually optional, though there may be cases
@@ -28,28 +29,32 @@ The value at the top of the stack can be shown with the
 .B p
 command, and the entire stack with
 .BR P .
-Autoprinting (set with
+Autoprinting (toggled on with
 .B 1 a
 (or
-.BR 1 autoprint )
+.B 1
+.BR autoprint )
 will print the top of the stack after every input line.
 
 .SH REVERSE POLISH NOTATION
 Numbers entered by the user are pushed onto a stack.  Operators pop
 those stack entries, usually 1 or 2 at a time, and push the result of
 the operation back on the stack.  Operators exist which cover the
-usual arithemetic operations
+usual arithmetic operations
 .RB ( + ,
 .BR - ,
 etc),
-as well as functions (e.g.,
-.BR sin ,
+functions
+.RB ( sin ,
 .BR cos ,
-.BR sqrt ),
-bit-shifting
-.RB ( <<
-and
-.BR >>),
+.BR sqrt ,
+etc),
+bit-shifting and manipulation
+.RB ( << ,
+.BR >> ,
+.BR & ,
+.BR | ,
+etc),
 logical operations
 .RB ( && ,
 .BR || ),
@@ -57,10 +62,11 @@ and comparators
 .RB ( == ,
 .BR !=,
 .BR <=,
-etc).  There are also a few unit conversions available (e.g.,
+etc).  There are also unit conversions available (e.g.,
 .BR i2mm ,
 .BR oz2g ,
-.BR f2c ).
+.BR f2c ,
+and more).
 A complete list of operators can be obtained with the
 .B ?
 or
@@ -73,11 +79,11 @@ and
 
 .SH INFIX NOTATION
 .B rca
-supports infix style expressions (i.e., non-RPN expressions).  Such
+supports infix (i.e., traditional, normal) style expressions.  Such
 expressions must be fully enclosed in parentheses, and cannot cross to
 a new line.  (Infix expressions are translated to RPN by an
-impementation of Dijkstra's "shunting yard" algorithm, and then
-executed as usual.)  A single line of input can be a mix of RPN
+implementation of Dijkstra's "shunting yard" algorithm, and then
+executed as usual.) A single line of input can be a mix of RPN
 notation (unparenthesized) and complete infix expressions
 (parenthesized).  The infix expressions "escape" the RPN model, and
 are evaluated with fairly typical rules of precedence (see
@@ -115,7 +121,7 @@ can be used in an infix expression to reference the value of
 (the top of stack) when the expression was invoked.  (The top of
 stack will
 .I not
-be popped or replaced.) The five storage locations settable (only in
+be popped or replaced.) The five off-stack storage locations settable (only in
 RPN mode) with
 .B store
 or
@@ -123,15 +129,14 @@ or
 through
 .B s5
 can also be
-referenced, using
+accessed, by referencing
 .B r1
 through
 .BR r5 .
-The result of an infix expression will be
-pushed on the RPN stack.  If an error occurs during evaluation of an
-infix expression, evaluation will cease, and the stack will be left as
-it was at the point of the error.
-
+.P
+If an error occurs during evaluation of an infix expression,
+evaluation will cease, and the stack will be left as it was at the
+point of the error. 
 .SH OPERATING MODES
 .B rca
 can be configured into two modes of operation:  floating point (the default)
@@ -151,63 +156,60 @@ command, and integer, using one of
 
 The difference between the various integer modes lies purely in how
 values are displayed by default, but floating point and integer differ
-in a few addional ways.  Most math is done in long double, regardless
-of mode, but in integer mode all values are masked to the current word
-width, and sign extended, if necessary, before being pushed.  (This
-will also happen to all stack values at once when switching from floating
-point to an integer mode.)
+in a few additional ways.  Most math is done in long double, regardless
+of mode, but in integer mode all stack values are masked to the
+current word width, and sign extended, if necessary.
 
 The input base of a number is independent of the mode, and controlled
-entirely by how it is entered:  10, 0xa, 012, and 0b1010 and 1e01 are all
+entirely by how it is entered:  10, 0xa, 012, 0b1010 and 1e01 are all
 the same value.
 
 .SS Floating point
 In floating point mode (i.e.,
 .B F
-mode, the default mode on entry to
-.BR rca ),
-all operations use the full size of long double.  Printing can be
-controlled with the
+mode, all operations use the full size of long double.  Printing can
+be controlled by either the
 .B precision
-.BR ( k )
-command which specifies a number of digits for the printf "%g" format, or
+.RB ( k )
+command (which specifies a number of digits for the printf "%g" format), or
 by the
 .B decimals
-.BR ( K )
-command, which specifies the number of decimals for the printf "%f" format.
-So the value of pi multiplied by 1 million will display as 3.14159e+06
-with
+.RB ( K )
+command (which specifies the number of decimals for the printf "%f"
+format).  So the value of pi multiplied by 1 million will display as
+3.14159e+06 with
 .B 6 k
 or as 3,141,592.6535898 with
 .B 7
 .BR K .
 
-Scientific notation will be used when in
+Scientific notation (e.g., 1e09) will be used in
 .B precision
-mode any time the
+mode when the
 exponent is less than -4, or greater than the chosen precision.  (These
-choices from directly from printf.)
+cutoffs come from directly from printf.)
 .B rca
 will try to prevent you from printing with more than the available
-significant digits on the system.  The default
+significant digits on the system:  the default
 .B precision
 value is set based on this limit (18 digits for most modern PC
 architectures), and can't be raised above it.  However, if viewing %f
-output (after setting a
+output (by choosing a
 .B decimals
 value), it's easy to start seeing "unclean" bits if the magnitude of
 the number grows beyond the number of significant digits.  The numbers
-are really big at that point:  over 1e19 on a modern system.  So just
-don't do that -- use %g in those case, which will help somewhat.
+are really big at that point:  over 1e19 on a modern system.  Use
+.BR precision 's
+%g in those cases, which will hide insignificant digits.
 
 Because digital floating point is inexact, values are sometimes
 calculated which are
 .I almost
 correct (like .99999999999... instead of 1), but not quite.
 .B rca
-tries to help by snapping very close values to 0, or to adjacent
-integers, and by rounding when the precision limits of the floating
-point representation are reached.
+tries to help by "snapping" values that are very close to integers to
+those integers, and by rounding when the precision limits of the
+floating point representation are reached.
 
 .SS Integer
 Integer mode is selected with any of the following commands, which
@@ -238,15 +240,6 @@ viewed at any time in any format by using
 .BR o ,
 or
 .BR b .
-(The full stack can be printed with
-.BR F ,
-.BR D ,
-.BR U ,
-.BR H ,
-.BR O ,
-or
-.B B
-which also switches to that display mode.)
 
 By default the width of
 .BR rca 's
@@ -273,18 +266,16 @@ when storing the result.
 .SS Punctuation
 To aid in reading long digit strings,
 .B rca
-will by default add commas to numbers it prints.
-These can be disabled with
-.B 0 c
+can add commas to numbers it prints.  These can be toggled on or off
+with
+.BR 0 / 1
+.B c
 (or
-.B 0
 .BR commas ).
-When enabled, commas will be added to numbers in every base.
-(Commas will never appear in the fractional part of a value.)
+Commas will never appear in the fractional part of a value.
 
-In addition, both commas and the "$" currency symbol will be
-silently stripped on input, which is convenient when doing arithmetic
-on copy/pasted data.
+Both commas and the "$" currency symbol will be silently stripped on
+input, as a convenience for doing arithmetic on copy/pasted data.
 
 .SH SPECIAL VALUES
 The
@@ -315,8 +306,7 @@ with
 .BR r1 .)
 
 .SH CONFIGURATION
-There are a handful of commands/pseudo-operators which control some
-aspects of
+A few commands/pseudo-operators control aspects of
 .BR rca 's
 operation and appearance:
 .RS
@@ -331,56 +321,52 @@ and
 .B B
 commands select float or integer operation, along with the default
 base for output.
+.B rca
+starts in
+.B F
+mode.
 .P
-The
-.B k
+.B precision
 (or
-.BR precision )
-command selects %g format for floating point output (e.g.,
+.BR k )
+selects %g format for floating point output (e.g.,
 "1.2345e+09"), along with the number of significant digits.
+This format is selected on startup, with 6 significant digits.
 .P
-The
-.B K
+.B decimals
 (or
-.BR decimals )
-command selects %f format for floating point output (e.g.,
+.BR K )
+selects %f format for floating point output (e.g.,
 "1,234,500,000.00") along with the number of decimals after the point.
 .P
-The
-.B w
+.B width
 (or
-.BR width )
-command selects the word width used in integer mode.
+.BR w )
+selects the word width used in integer mode.  The startup default
+is the system maximum (likely 64).
 .P
-The
-.B c
+.B commas
 (or
-.BR commas )
-toggle command chooses whether printed
-values will include comma characters for readability.  This feature is
-enabled by default when
-.B rca
-starts.  The argument is 0 or non-zero.
+.BR c )
+toggles whether printed
+values will include comma characters for readability.  This is
+enabled by default.  The command's argument is 0 or non-zero.
 .P
-The
 .B degrees
-toggle command chooses whether the trigonometric functions work with degrees
-or radians.
-Degrees are used by default when
+toggles whether the trigonometric functions work with degrees or
+radians.  Degrees are selected when
 .B rca
 starts.  The argument is 0 or non-zero.
 .P
-The
-.B a
-(or
-.BR autoprint )
-toggle command chooses whether
-.B rca
-will print the value at the  top of stack after every newline.  This will be
-suppressed if the last action on the previous line explicitly
-set that value, since to print it again immediately would be redundant.
 .B autoprint
-is enabled by default when
+(or
+.BR a )
+toggles whether
+.B rca
+will print the value at the top of stack after every newline.  This
+printing will be suppressed if the last action on the previous line
+explicitly set that value, since to print it again immediately would
+be redundant.  Automatic printing is selected when
 .B rca
 starts.  The argument is 0 or non-zero.
 .RE
@@ -393,32 +379,27 @@ last on its line of input.
 doesn't have a configuration file that's read on startup.  It does,
 however, take commands from the environment variable
 .BR RCA_INIT ,
-and after that from any arguments passed on the command line.  So initial
+and from any arguments passed on the command line.  So initial
 conditions can be established by either of those methods.  All printed
-output from commands run via $RCA_INIT is suppressed.
+output from commands run from $RCA_INIT is suppressed.
 
 .SH HELP
 A complete list of operators/commands can be obtained by entering
-.B ?
-or
-.BR help .
-Many operators have two names, and this is indicated in the
 .B help
-table.  A table showing operator precedence in infix expressions
-is available with the
-.B precedence
-command.
-
-If $PAGER is set in the environment, it will be invoked to display
-the help text.  Otherwise the text will be displayed directly to the
-terminal.
+or
+.BR ? .
+Many operators have two names, and this is indicated in the command
+listing.  If $PAGER is set in the environment, it will be invoked to
+display the help text.  Otherwise the text will be shown directly
+to the terminal.
 
 .SH OPERATOR PRECEDENCE
-When used as an RPN calculator, operator precedence isn't really
+When used as an RPN calculator, operator precedence isn't 
 meaningful, since the stack paradigm makes all operators equal in that
 regard.  But when evaluating an infix expression, the relative
 precedence and associativity of operators is important.  The
-"precedence" command will give a list, whose output is reproduced
+.B precedence
+command will give a list, whose output is reproduced
 here.  Higher numbers denote higher precedence.  The 'R' flag denotes
 operators which are right associative.  All others group left to
 right.
@@ -446,6 +427,26 @@ Most operators behave as they are commonly understood to.  A few need
 more specific documentation.
 .RS
 .P
+The precedence and association of exponentiation
+.RB ( ^
+or
+.BR ** )
+is worth calling out,
+since implementations vary.  In
+.BR rca 's
+infix expressions,
+exponentiation is right associative, and has lower precedence than unary minus.
+So each of these lines returns a result of 1 (true):
+.RS
+.P
+.B ((2 ^ 3 ^ 2) == (2 ^ (3 ^ 2)))
+.I # i.e., 512
+.P
+.B ((-3 ^ 2) == ((-3) ^ 2)))
+.I # i.e., 9
+.RE
+
+.P
 .B modulo
 is a floating point operation.  It uses the C fmodl() library.
 .P
@@ -453,18 +454,21 @@ is a floating point operation.  It uses the C fmodl() library.
 applied to negative values will give a negative result.
 .P
 In an infix expression, any operator that takes two arguments expects
-them to be to the left and right of the operator.  This looks fine in
+them to be to the left and right of the operator.  This is expected in
 the case of the symbolic operators (as in
 .B 1 + 2
 ), but for the named
-operators it can be odd looking.  To set bit 3 in 0xf0, the expression
-looks like
+operators it can be odd looking.  
 .B (0xf0 setb
-.BR 3 ).
+.BR 3 ),
+for example,
+sets bit 3 in 0xf0.
 .B atan2
 works similarly:
 .B (sin 30 atan2 cos 30)
-will return the result "30".  (In RPN, this would be
+could also be written as
+.B ((sin 30) atan2 (cos 30))
+and will return the result "30".  (In RPN, this would be
 .B 30 sin 30 cos
 .BR atan2 .)
 .P
@@ -480,9 +484,9 @@ and
 are disallowed in integer mode, since they'd make no sense.
 By default the trig functions take and return angles in degrees.  The
 .B 0 degrees
-command will switch them to radians.
+toggle command will switch them to radians.
 .B 1 degrees
-will switch them back, of course.
+will switch them back.
 .P
 Bitwise operations
 .RB ( ~
@@ -509,26 +513,6 @@ The mark would be set before entering the data for a subsequent
 in order to limit its reach.
 .B sum
 is the only operator to consume more than 2 stack elements.
-
-.P
-The precedence and association of exponentiation
-.RB ( ^
-or
-.BR ** )
-is worth calling out,
-since implementations vary.  In
-.BR rca 's
-infix expressions,
-exponentation is right associative, and has lower precedence than unary minus.
-So each of these lines returns a result of 1 (true):
-.RS
-.P
-.B ((2 ^ 3 ^ 2) == (2 ^ (3 ^ 2)))
-.I # i.e., 512
-.P
-.B ((-3 ^ 2) == ((-3) ^ 2)))
-.I # i.e., 9
-.RE
 
 .SH DATA TYPES, OVERFLOW, ACCURACY
 All stack values in
@@ -560,24 +544,25 @@ to decimal conversions, to change values in obvious ways.  Something
 that should be 0 may instead have a very tiny value, or two numbers which
 should be equal may differ by an insignificant amount.
 .B rca
-attempts to help by adjusting values pushed on the
-stack.  First, values within about 2e-18 of an integer are forced to that.
-integer.  Then, values are decimal-rounded to
+attempts to help by adjusting values pushed on the stack.  First,
+values within about 2e-18 (system dependent) of an integer are forced
+to that.  integer.  Then, values are decimal-rounded to
 .BR rca 's
-maximum precision (usually 18 digits).
+maximum precision (again, usually 18 digits).
 
 .SH EXIT STATUS
 .B rca
-will normally exit with status 0 or 1; a non-zero value
-at the top of the stack causes a shell exit of 0, a 0 at top of stack
-causes an exit value of 1.  An exit status of 2 results if the stack
-is empty on normal exit.  An exit status of 3 comes from unrecoverable
-internal errors (e.g., failed memory allocation).  Operational warnings and
-errors regarding empty stacks and data types are normally assumed to be useful
-to the user, and execution proceeds. If the
+will normally exit with status 0 or 1:  to satisfy normal shell
+semantics, a non-zero value at the top of the stack causes an
+exit status of 0, and vice versa.  An exit status of 2 results if the
+stack is empty on normal exit.  An exit status of 3 comes from
+unrecoverable internal errors (e.g., failed memory allocation). 
+Operational warnings or errors regarding parsing, empty stacks, or
+data conversion are assumed be useful to the user, and non-fatal.  If
+the
 .B errorexit
-command has been given, then warnings and errors will result in an
-exit status of 4.  This can be useful when
+command has been given, then those warnings and errors will result in an
+exit status of 4.  This can be helpful when
 .B rca
 is used non-interactively.  (Once given,
 .B errorexit
@@ -585,10 +570,10 @@ cannot be rescinded.)
 
 .SH SHELL SUPPORT
 .B rca
-can take initial input from the command line, and returns a reasonable
-set of exit codes on either success or failure, so incorporating it
-into the shell is straightforward:
-\" CODE/ENDCODE preserve text verbatim
+can take initial input from the command line, and returns a helpful
+set of exit codes, so incorporating it into the shell is straightforward:
+
+\" create CODE/ENDCODE macros to preserve text verbatim
 .de CODE
 .br
 .nr saveIN \\n(.i   \" double the backslash when defining a macro
@@ -602,6 +587,7 @@ into the shell is straightforward:
 .RE
 .in \\n[saveIN]u    \" 'u' means 'units': do not scale this number
 ..
+
 .CODE
 
 # This shell snippet gives simple access to rca's floating point
