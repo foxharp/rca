@@ -1,10 +1,12 @@
-<!DOCTYPE html>
-<html>
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!-- This file was created with the aha Ansi HTML Adapter. https://github.com/theZiz/aha -->
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="application/xml+xhtml; charset=UTF-8"/>
 <title>rca calculator help text</title>
 </head>
-<body>
+<body style="font-size:125%">
 <pre>
 rca -- a rich/RPN scientific and programmer's calculator
  Any arguments on the command line are used as initial calculator input.
@@ -33,14 +35,15 @@ Numerical operators with two operands:
                &gt;&gt;, &lt;&lt;     Right/left logical shift of y by x bits
             &amp;, |, xor     Bitwise AND, OR, and XOR of y and x
          setb, clearb     Set and clear bit x in y
-                atan2     Arctan of y/x (i.e., 2 operands, in degrees)
 
 Numerical operators with one operand:
                     ~     Bitwise NOT of x (1's complement)
           chs, negate     Change sign of x (2's complement)
           recip, sqrt     Reciprocal and square root of x
         sin, cos, tan     
-     asin, acos, atan     Trig functions (in degrees)
+     asin, acos, atan     Trig functions
+                atan2     Arctan of y/x (2 operands)
+              degrees     Toggle trig functions: degrees (1) or radians (0)
       ln, log2, log10     Natural, base 2, and base 10 logarithms
        abs, frac, int     Absolute value, fractional and integer parts of x
                  (, )     Begin and end &quot;infix&quot; expression
@@ -87,8 +90,8 @@ Modes:
          precision, k     Float format: number of significant digits (%g)
           decimals, K     Float format: digits after decimal (%f)
              width, w     Set effective &quot;word size&quot; for integer modes
-         autoprint, a     Set autoprinting on/off with 0/1
-            commas, c     Set comma separators on/off with 0/1
+         autoprint, a     Toggle autoprinting on/off with 0/1
+            commas, c     Toggle comma separators on/off with 0/1
                  mode     Display current mode parameters
 
 Housekeeping:
@@ -99,7 +102,7 @@ Housekeeping:
             errorexit     Enable exit(4) on error or warning
                     #     Comment. The rest of the line will be ignored.
 
-                                              rca.c built Dec 11 2025 08:19:22
+                                         version v1 built Dec 12 2025 11:13:13
 
 Tip:  Use &quot;rca help q | less&quot; to view this help
 </pre>

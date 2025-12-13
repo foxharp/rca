@@ -1,914 +1,372 @@
-
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<HTML><HEAD><TITLE>Man page of rca</TITLE><style type="text/css">.mywidth { max-width:40em } </style> <div class="mywidth">
-</HEAD><BODY>
-<H1>rca</H1>
-<A HREF="#index">Index</A>
-
-<A NAME="lbAB">&nbsp;</A>
-<H2>NAME</H2>
-
-rca - a rich/RPN (and more) programmer's calculator
-<A NAME="lbAC">&nbsp;</A>
-<H2>SYNOPSIS</H2>
-
-<B>rca</B>
-
-<I>[ initial rca command text ]</I>
-
-<P>
-<A NAME="lbAD">&nbsp;</A>
-<H2>DESCRIPTION</H2>
-
-At it's heart,
-<B>rca</B>
-
-is a command-line reverse polish notation (RPN) calculator inspired
-(very loosely) by the Hewlett-Packard operating model used in their
-long line of scientific calculators.  Operators include
-scientific, logical, and bitwise operators.  Word width can be
-limited, for working with values from any class of CPU.  In addition,
-<B>rca</B>
-
-can evaluate traditional infix expressions, greatly expanding its
-usefulness.  Input is free form, for the most part, and
-<B>rca</B>
-
-is easily incorporated into shell scripts to provide floating point
-support.  Whitespace is usually optional, though there may be cases
-where ambiguity would get in the way.  Any text including and
-following a
-<B>#</B>
-
-character will be ignored as a comment.
-<P>
-The value at the top of the stack can be shown with the
-<B>p</B>
-
-command, and the entire stack with
-<B>P</B>.
-
-Autoprinting (set with
-<B>1 a</B>
-
-(or
-<B>1</B>autoprint<B>)</B>
-
-will print the top of the stack after every input line.
-<P>
-<A NAME="lbAE">&nbsp;</A>
-<H2>REVERSE POLISH NOTATION</H2>
-
-Numbers entered by the user are pushed onto a stack.  Operators pop
-those stack entries, usually 1 or 2 at a time, and push the result of
-the operation back on the stack.  Operators exist which cover the
-usual arithemetic operations
-(<B>+</B>,
-
-<B>-</B>,
-
-etc),
-as well as functions (e.g.,
-<B>sin</B>,
-
-<B>cos</B>,
-
-<B>sqrt</B>),
-
-bit-shifting
-(<B>&lt;&lt;</B>
-
-and
-<B>&gt;&gt;),</B>
-
-logical operations
-(<B>&amp;&amp;</B>,
-
-<B>||</B>),
-
-and comparators
-(<B>==</B>,
-
-<B>!=,</B>
-
-<B>&lt;=,</B>
-
-etc).  There are also a few unit conversions available (e.g.,
-<B>i2mm</B>,
-
-<B>oz2g</B>,
-
-<B>f2c</B>).
-
-A complete list of operators can be obtained with the
-<B>?</B>
-
-or
-<B>help</B>
-
-commands.  The top two elements on the stack, in HP tradition, are
-sometimes referred to as
-<I>x</I>
-
-and
-<I>y</I>.
-
-<P>
-<A NAME="lbAF">&nbsp;</A>
-<H2>INFIX NOTATION</H2>
-
-<B>rca</B>
-
-supports infix style expressions (i.e., non-RPN expressions).  Such
-expressions must be fully enclosed in parentheses, and cannot cross to
-a new line.  (Infix expressions are translated to RPN by an
-impementation of Dijkstra's &quot;shunting yard&quot; algorithm, and then
-executed as usual.)  A single line of input can be a mix of RPN
-notation (unparenthesized) and complete infix expressions
-(parenthesized).  The infix expressions &quot;escape&quot; the RPN model, and
-are evaluated with fairly typical rules of precedence (see
-<B>OPERATOR PRECEDENCE</B>
-
-below).  All input number formats are accepted in infix, just as in RPN.
-<P>
-
-All
-<B>rca</B>
-
-stack operators can be used as infix functions, including
-the unary operators (i.e.,
-<B>-</B>x
-
-<B>+</B>x
-
-<B>~</B>x
-
-<B>!</B>x),
-
-and all of the comparison,
-logical, and bitwise operators.  Infix expressions result in a value.  For
-example, the expression
-<B>(-3 + +5)</B>
-
-will result in &quot;2&quot; being pushed
-on the stack.  When single operand operators appear in infix expressions, the
-operand will always follow the operator.  With two operand operators,
-one operand will appear on either side of the operator.  So exponentiation
-would be written as
-<B>( 3 ** 2 )</B>
-
-(producing 9 as a result) and
-<B>(0 setb 3)</B>
-
-will give 8.  The expression
-<B>(sin 180 == cos 90)</B>
-
-has the value 1, i.e. &quot;true&quot;.
-<P>
-
-The special symbol
-<B>X</B>
-
-can be used in an infix expression to reference the value of
-<I>x</I>
-
-(the top of stack) when the expression was invoked.  (The top of
-stack will
-<I>not</I>
-
-be popped or replaced.) The five storage locations settable (only in
-RPN mode) with
-<B>store</B>
-
-or
-<B>s1</B>
-
-through
-<B>s5</B>
-
-can also be
-referenced, using
-<B>r1</B>
-
-through
-<B>r5</B>.
-
-The result of an infix expression will be
-pushed on the RPN stack.  If an error occurs during evaluation of an
-infix expression, evaluation will cease, and the stack will be left as
-it was at the point of the error.
-<P>
-<A NAME="lbAG">&nbsp;</A>
-<H2>OPERATING MODES</H2>
-
-<B>rca</B>
-
-can be configured into two modes of operation:  floating point (the default)
-using the
-<B>F</B>
-
-command, and integer, using one of
-<B>D</B>
-
-(signed decimal),
-<B>U</B>
-
-(unsigned decimal),
-<B>H</B>
-
-(hex),
-<B>O</B>
-
-(octal), or
-<B>B</B>
-
-(binary).
-<P>
-The difference between the various integer modes lies purely in how
-values are displayed by default, but floating point and integer differ
-in a few addional ways.  Most math is done in long double, regardless
-of mode, but in integer mode all values are masked to the current word
-width, and sign extended, if necessary, before being pushed.  (This
-will also happen to all stack values at once when switching from floating
-point to an integer mode.)
-<P>
-The input base of a number is independent of the mode, and controlled
-entirely by how it is entered:  10, 0xa, 012, and 0b1010 and 1e01 are all
-the same value.
-<P>
-<A NAME="lbAH">&nbsp;</A>
-<H3>Floating point</H3>
-
-In floating point mode (i.e.,
-<B>F</B>
-
-mode, the default mode on entry to
-<B>rca</B>),
-
-all operations use the full size of long double.  Printing can be
-controlled with the
-<B>precision</B>
-
-<B>(</B>k<B>)</B>
-
-command which specifies a number of digits for the printf &quot;%g&quot; format, or
-by the
-<B>decimals</B>
-
-<B>(</B>K<B>)</B>
-
-command, which specifies the number of decimals for the printf &quot;%f&quot; format.
-So the value of pi multiplied by 1 million will display as 3.14159e+06
-with
-<B>6 k</B>
-
-or as 3,141,592.6535898 with
-<B>7</B>
-
-<B>K</B>.
-
-<P>
-Scientific notation will be used when in
-<B>precision</B>
-
-mode any time the
-exponent is less than -4, or greater than the chosen precision.  (These
-choices from directly from printf.)
-<B>rca</B>
-
-will try to prevent you from printing with more than the available
-significant digits on the system.  The default
-<B>precision</B>
-
-value is set based on this limit (18 digits for most modern PC
-architectures), and can't be raised above it.  However, if viewing %f
-output (after setting a
-<B>decimals</B>
-
-value), it's easy to start seeing &quot;unclean&quot; bits if the magnitude of
-the number grows beyond the number of significant digits.  The numbers
-are really big at that point:  over 1e19 on a modern system.  So just
-don't do that -- use %g in those case, which will help somewhat.
-<P>
-Because digital floating point is inexact, values are sometimes
-calculated which are
-<I>almost</I>
-
-correct (like .99999999999... instead of 1), but not quite.
-<B>rca</B>
-
-tries to help by snapping very close values to 0, or to adjacent
-integers, and by rounding when the precision limits of the floating
-point representation are reached.
-<P>
-<A NAME="lbAI">&nbsp;</A>
-<H3>Integer</H3>
-
-Integer mode is selected with any of the following commands, which
-also choose the default display format:
-<B>D</B>
-
-(signed decimal),
-<B>U</B>
-
-(unsigned decimal),
-<B>H</B>
-
-(hex),
-<B>O</B>
-
-(octal), or
-<B>B</B>
-
-(binary).
-The default printing format is used by
-the
-<B>p</B>,
-
-<B>P</B>,
-
-and
-<B>autoprint</B>
-
-commands.
-Regardless of the default format, individual values can be
-viewed at any time in any format by using
-<B>f</B>,
-
-<B>d</B>,
-
-<B>u</B>,
-
-<B>h</B>,
-
-<B>o</B>,
-
-or
-<B>b</B>.
-
-(The full stack can be printed with
-<B>F</B>,
-
-<B>D</B>,
-
-<B>U</B>,
-
-<B>H</B>,
-
-<B>O</B>,
-
-or
-<B>B</B>
-
-which also switches to that display mode.)
-<P>
-By default the width of
-<B>rca</B>'s
-
-integers is the maximum supported, but it can be configured to as
-few as 2 bits using the
-<B>width</B>
-
-(or
-<B>w</B>)
-
-command.  The maximum supported width will be either the width of the
-<I>long long</I>
-
-data type, or of the
-<I>long double</I>
-
-mantissa, whichever is smaller.  This results in 64 bits on most PC
-architectures in 2025.  (An exception:  52 bits on Raspberry Pi
-when running a 32 bit OS)
-<P>
-Values will be masked to the chosen word width for both
-use and display, whether they are input by the user or result from an
-operation.  Arithmetic on all values will be signed.  If floating
-operations are used on width-restricted integers, the width
-restriction will be ignored for the operation, but masking will happen
-when storing the result.
-<P>
-<A NAME="lbAJ">&nbsp;</A>
-<H3>Punctuation</H3>
-
-To aid in reading long digit strings,
-<B>rca</B>
-
-will by default add commas to numbers it prints.
-These can be disabled with
-<B>0 c</B>
-
-(or
-<B>0</B>
-
-<B>commas</B>).
-
-When enabled, commas will be added to numbers in every base.
-(Commas will never appear in the fractional part of a value.)
-<P>
-In addition, both commas and the &quot;$&quot; currency symbol will be
-silently stripped on input, which is convenient when doing arithmetic
-on copy/pasted data.
-<P>
-<A NAME="lbAK">&nbsp;</A>
-<H2>SPECIAL VALUES</H2>
-
-The
-<B>pi</B>
-
-and
-<B>e</B>
-
-operators push the values of the obvious constants to the stack.
-<P>
-The
-<B>s1</B>
-
-through
-<B>s5</B>
-
-operators copy
-<I>x</I>
-
-to one of 5 off-stack storage locations (without
-disturbing the stack).  The
-<B>r1</B>
-
-through
-<B>r5</B>
-
-operators recall those values, pushing them onto the stack, and can
-also be used in infix expressions to reference those values.
-(<B>store</B>
-
-is synonymous with
-<B>s1</B>,
-
-and
-<B>recall</B>
-
-with
-<B>r1</B>.)
-
-<P>
-<A NAME="lbAL">&nbsp;</A>
-<H2>CONFIGURATION</H2>
-
-There are a handful of commands/pseudo-operators which control some
-aspects of
-<B>rca</B>'s
-
-operation and appearance:
-<DL COMPACT><DT><DD>
-<P>
-
-The
-<B>F</B>,
-
-<B>D</B>,
-
-<B>U</B>,
-
-<B>H</B>,
-
-<B>O</B>,
-
-and
-<B>B</B>
-
-commands select float or integer operation, along with the default
-base for output.
-<P>
-
-The
-<B>k</B>
-
-(or
-<B>precision</B>)
-
-command selects %g format for floating point output (e.g.,
-&quot;1.2345e+09&quot;), along with the number of significant digits.
-<P>
-
-The
-<B>K</B>
-
-(or
-<B>decimals</B>)
-
-command selects %f format for floating point output (e.g.,
-&quot;1,234,500,000.00&quot;) along with the number of decimals after the point.
-<P>
-
-The
-<B>w</B>
-
-(or
-<B>width</B>)
-
-command selects the word width used in integer mode.
-<P>
-
-The
-<B>c</B>
-
-(or
-<B>commas</B>)
-
-command chooses whether printed
-values will include comma characters for readability.  This feature is
-enabled by default when
-<B>rca</B>
-
-starts.  The argument is 0 or non-zero.
-<P>
-
-The
-<B>a</B>
-
-(or
-<B>autoprint</B>)
-
-command chooses whether
-<B>rca</B>
-
-will print the value at the  top of stack after every newline.  This will be
-suppressed if the last action on the previous line explicitly
-set that value, since to print it again immediately would be redundant.
-<B>autoprint</B>
-
-is enabled by default when
-<B>rca</B>
-
-starts.  The argument is 0 or non-zero.
-</DL>
-
-<P>
-All of the listed commands will print a confirmation message, but to
-avoid confusion, that message will only print if the command is the
-last on its line of input.
-<P>
-<B>rca</B>
-
-doesn't have a configuration file that's read on startup.  It does,
-however, take commands from the environment variable
-<B>RCA_INIT</B>,
-
-and after that from any arguments passed on the command line.  So initial
-conditions can be established by either of those methods.  All printed
-output from commands run via $RCA_INIT is suppressed.
-<P>
-<A NAME="lbAM">&nbsp;</A>
-<H2>HELP</H2>
-
-A complete list of operators/commands can be obtained by entering
-<B>?</B>
-
-or
-<B>help</B>.
-
-Many operators have two names, and this is indicated in the
-<B>help</B>
-
-table.  A table showing operator precedence in infix expressions
-is available with the
-<B>precedence</B>
-
-command.
-<P>
-If $PAGER is set in the environment, it will be invoked to display
-the help text.  Otherwise the text will be displayed directly to the
-terminal.
-<P>
-<A NAME="lbAN">&nbsp;</A>
-<H2>OPERATOR PRECEDENCE</H2>
-
-When used as an RPN calculator, operator precedence isn't really
-meaningful, since the stack paradigm makes all operators equal in that
-regard.  But when evaluating an infix expression, the relative
-precedence and associativity of operators is important.  The
-&quot;precedence&quot; command will give a list, whose output is reproduced
-here.  Higher numbers denote higher precedence.  The 'R' flag denotes
-operators which are right associative.  All others group left to
-right.
-<P>
-<BR>&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<B>&nbsp;(
-<BR>&nbsp;</B>&nbsp;2&nbsp;&nbsp;&nbsp;R&nbsp;&nbsp;<B>&nbsp;atan2&nbsp;recip&nbsp;sqrt&nbsp;sin&nbsp;cos&nbsp;tan&nbsp;asin&nbsp;acos&nbsp;atan&nbsp;ln&nbsp;log2&nbsp;log10
-<BR>&nbsp;</B>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<B>&nbsp;&nbsp;&nbsp;abs&nbsp;frac&nbsp;int&nbsp;i2mm&nbsp;mm2i&nbsp;ft2m&nbsp;m2ft&nbsp;mi2km&nbsp;km2mi&nbsp;f2c&nbsp;c2f
-<BR>&nbsp;</B>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<B>&nbsp;&nbsp;&nbsp;oz2g&nbsp;g2oz&nbsp;oz2ml&nbsp;ml2oz&nbsp;q2l&nbsp;l2q
-<BR>&nbsp;</B>&nbsp;3&nbsp;&nbsp;&nbsp;R&nbsp;&nbsp;<B>&nbsp;+&nbsp;-&nbsp;</B>&nbsp;&nbsp;&nbsp;(unary)
-<BR>&nbsp;&nbsp;4&nbsp;&nbsp;&nbsp;R&nbsp;&nbsp;<B>&nbsp;~&nbsp;chs&nbsp;negate&nbsp;!
-<BR>&nbsp;</B>&nbsp;5&nbsp;&nbsp;&nbsp;R&nbsp;&nbsp;<B>&nbsp;^&nbsp;**
-<BR>&nbsp;</B>&nbsp;6&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<B>&nbsp;*&nbsp;x&nbsp;/&nbsp;%
-<BR>&nbsp;</B>&nbsp;7&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<B>&nbsp;+&nbsp;-
-<BR>&nbsp;</B>&nbsp;8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<B>&nbsp;&gt;&gt;&nbsp;&lt;&lt;
-<BR>&nbsp;</B>&nbsp;9&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<B>&nbsp;&amp;&nbsp;clearb
-<BR>&nbsp;</B>&nbsp;10&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<B>&nbsp;xor
-<BR>&nbsp;</B>&nbsp;11&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<B>&nbsp;|&nbsp;setb
-<BR>&nbsp;</B>&nbsp;12&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<B>&nbsp;&lt;&nbsp;&lt;=&nbsp;&gt;&nbsp;&gt;=
-<BR>&nbsp;</B>&nbsp;13&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<B>&nbsp;==&nbsp;!=
-<BR>&nbsp;</B>&nbsp;14&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<B>&nbsp;&amp;&amp;
-<BR>&nbsp;</B>&nbsp;15&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<B>&nbsp;||
-<P>
-</B><A NAME="lbAO">&nbsp;</A>
-<H2>OPERATOR NOTES</H2>
-
-Most operators behave as they are commonly understood to.  A few need
-more specific documentation.
-<DL COMPACT><DT><DD>
-<P>
-
-<B>modulo</B>
-
-is a floating point operation.  It uses the C fmodl() library.
-<P>
-
-<B>frac</B>
-
-applied to negative values will give a negative result.
-<P>
-
-In an infix expression, any operator that takes two arguments expects
-them to be to the left and right of the operator.  This looks fine in
-the case of the symbolic operators (as in
-<B>1 + 2</B>
-
-), but for the named
-operators it can be odd looking.  To set bit 3 in 0xf0, the expression
-looks like
-<B>(0xf0 setb</B>
-
-<B>3</B>).
-
-<B>atan2</B>
-
-works similarly:
-<B>(sin 30 atan2 cos 30)</B>
-
-will return the result &quot;30&quot;.  (In RPN, this would be
-<B>30 sin 30 cos</B>
-
-<B>atan2</B>.)
-
-<P>
-
-Trigonometric operations
-(<B>sin</B>,
-
-<B>cos</B>,
-
-<B>tan</B>,
-
-<B>asin</B>,
-
-<B>acos</B>,
-
-<B>atan</B>,
-
-and
-<B>atan2</B>)
-
-are disallowed in integer mode, since they'd make no sense.
-<P>
-
-Bitwise operations
-(<B>~</B>
-
-<B>&lt;&lt;</B>,
-
-<B>&gt;&gt;</B>,
-
-<B>&amp;</B>,
-
-<B>|</B>,
-
-<B>xor</B>,
-
-<B>clearb</B>,
-
-<B>and</B>
-
-<B>setb</B>)
-
-convert their operands to long long first, regardless of mode.  These
-operations will (as might be expected) discard fractional parts, and
-may discard significant digits, including the sign of the value.
-<P>
-
-<B>sum</B>
-
-will pop and add up previous entries on the
-stack, stopping when the stack is empty, or when a
-stack marker previously set with the
-<B>mark</B>
-
-command is reached.
-The mark would be set before entering the data for a subsequent
-<B>sum,</B>
-
-in order to limit its reach.
-<B>sum</B>
-
-is the only operator to consume more than 2 stack elements.
-<P>
-<P>
-
-The precedence and association of exponentiation
-(<B>^</B>
-
-or
-<B>**</B>)
-
-is worth calling out,
-since implementations vary.  In
-<B>rca</B>'s
-
-infix expressions,
-exponentation is right associative, and has lower precedence than unary minus.
-So each of these lines returns a result of 1 (true):
-<DL COMPACT><DT><DD>
-<P>
-
-<B>((2 ^ 3 ^ 2) == (2 ^ (3 ^ 2)))</B>
-
-<I># i.e., 512</I>
-
-<P>
-
-<B>((-3 ^ 2) == ((-3) ^ 2)))</B>
-
-<I># i.e., 9</I>
-
-</DL>
-
-<P>
-</DL>
-<A NAME="lbAP">&nbsp;</A>
-<H2>DATA TYPES, OVERFLOW, ACCURACY</H2>
-
-All stack values in
-<B>rca</B>
-
-are stored in
-<I>long double</I>
-
-format.  This is convenient for a calculator
-which will primarily deal with floating point, but can be a problem with
-<B>rca</B>'s
-
-mixed model.  Many operations (primarily the bitwise operations, but
-also simply working in other bases and word widths) require conversion
-to integer.  The
-<I>long long</I>
-
-type is used in this case; results are
-converted back when finished.  If the conversion from
-<I>long double</I>
-
-to
-<I>long long</I>
-
-can't be done without loss, a warning is
-issued.  This may happen while printing the value in an integer base,
-after switching to an integer mode, or while performing a bitwise
-operation.  Execution will proceed after the warning unless
-<B>errorexit</B>
-
-has been enabled.
-<P>
-Floating point math by its nature is imprecise.  It's not uncommon for
-small rounding errors, and errors introduced by the necessary binary
-to decimal conversions, to change values in obvious ways.  Something
-that should be 0 may instead have a very tiny value, or two numbers which
-should be equal may differ by an insignificant amount.
-<B>rca</B>
-
-attempts to help by adjusting values pushed on the
-stack.  First, values within about 2e-18 of an integer are forced to that.
-integer.  Then, values are decimal-rounded to
-<B>rca</B>'s
-
-maximum precision (usually 18 digits).
-<P>
-<A NAME="lbAQ">&nbsp;</A>
-<H2>EXIT STATUS</H2>
-
-<B>rca</B>
-
-will normally exit with status 0 or 1; a non-zero value
-at the top of the stack causes a shell exit of 0, a 0 at top of stack
-causes an exit value of 1.  An exit status of 2 results if the stack
-is empty on normal exit.  An exit status of 3 comes from unrecoverable
-internal errors (e.g., failed memory allocation).  Operational warnings and
-errors regarding empty stacks and data types are normally assumed to be useful
-to the user, and execution proceeds. If the
-<B>errorexit</B>
-
-command has been given, then warnings and errors will result in an
-exit status of 4.  This can be useful when
-<B>rca</B>
-
-is used non-interactively.  (Once given,
-<B>errorexit</B>
-
-cannot be rescinded.)
-<P>
-<A NAME="lbAR">&nbsp;</A>
-<H2>SHELL SUPPORT</H2>
-
-<B>rca</B>
-
-can take initial input from the command line, and returns a reasonable
-set of exit codes on either success or failure, so incorporating it
-into the shell is straightforward:
-
-
-
-<BR>
-
-
-<DL COMPACT><DT><DD>
-<PRE>
-
-# This shell snippet gives simple access to rca's floating point
-# capability from a POSIX shell.
-#
-# After including this code, use lines like this to calculate:
-#       foo=$(fe &quot;$bar * pi&quot;)
-# or like this for a conditional:
-#       if fc &quot;(10 * 3) &lt; $foo&quot;; then ...
-#
-# Set common initial conditions:
-# 3 decimals , no commas, fail on error.  Values previously set will override.
-export RCA_INIT=&quot;3K 0commas errorexit ${RCA_INIT:-}&quot;
-
-_rca_run()    # support routine
-{
-    output=$(rca &quot;( $* )&quot; q)
-    exitcode=$?
-
-    if [ $exitcode -le 1 ]; then
-        echo $output
-        return $exitcode
-    fi
-
-    echo rca failure: $output &gt;&amp;2
-    exit 1
-}
-
-fe()    # Evaluate a floating point expression.
-{
-    _rca_run &quot;$*&quot;
-    return 0
-}
-
-fc()     # Evaluate a floating point conditional expression.
-{
-    _rca_run &quot;$*&quot; &gt;/dev/null
-}
-
-
-</PRE>
-
-</DL>
-
-
-
-<P>
-<P>
-<A NAME="lbAS">&nbsp;</A>
-<H2>AUTHOR</H2>
-
-Paul Fox created
-<B>rca</B>
-
-(formerly called &quot;ca&quot;) very slowly over a span of decades, starting in 1993.
-<P>
-<P>
-
-<HR>
-<A NAME="index">&nbsp;</A><H2>Index</H2>
-<DL>
-<DT><A HREF="#lbAB">NAME</A><DD>
-<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
-<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
-<DT><A HREF="#lbAE">REVERSE POLISH NOTATION</A><DD>
-<DT><A HREF="#lbAF">INFIX NOTATION</A><DD>
-<DT><A HREF="#lbAG">OPERATING MODES</A><DD>
-<DL>
-<DT><A HREF="#lbAH">Floating point</A><DD>
-<DT><A HREF="#lbAI">Integer</A><DD>
-<DT><A HREF="#lbAJ">Punctuation</A><DD>
-</DL>
-<DT><A HREF="#lbAK">SPECIAL VALUES</A><DD>
-<DT><A HREF="#lbAL">CONFIGURATION</A><DD>
-<DT><A HREF="#lbAM">HELP</A><DD>
-<DT><A HREF="#lbAN">OPERATOR PRECEDENCE</A><DD>
-<DT><A HREF="#lbAO">OPERATOR NOTES</A><DD>
-<DT><A HREF="#lbAP">DATA TYPES, OVERFLOW, ACCURACY</A><DD>
-<DT><A HREF="#lbAQ">EXIT STATUS</A><DD>
-<DT><A HREF="#lbAR">SHELL SUPPORT</A><DD>
-<DT><A HREF="#lbAS">AUTHOR</A><DD>
-</DL>
-<HR>
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!-- This file was created with the aha Ansi HTML Adapter. https://github.com/theZiz/aha -->
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="application/xml+xhtml; charset=UTF-8"/>
+<title>rca(1) man page</title>
+</head>
+<body style="font-size:125%">
+<pre>
+<span style="font-style:italic;">rca</span>(1)                      General Commands Manual                     <span style="font-style:italic;">rca</span>(1)
+
+<span style="font-weight:bold;">NAME</span>
+       rca - a rich/RPN (and more) programmer's calculator
+
+<span style="font-weight:bold;">SYNOPSIS</span>
+       <span style="font-weight:bold;">rca </span><span style="font-style:italic;font-weight:bold;"></span><span style="font-style:italic;">[</span> <span style="font-style:italic;">initial</span> <span style="font-style:italic;">rca</span> <span style="font-style:italic;">command</span> <span style="font-style:italic;">text</span> <span style="font-style:italic;">]</span>
+
+<span style="font-weight:bold;">DESCRIPTION</span>
+       At it's heart, <span style="font-weight:bold;">rca </span>is a command-line reverse polish notation (RPN) cal‐
+       culator inspired (very loosely) by the long line of Hewlett-Packard
+       scientific calculators.  Operators include scientific, logical, and
+       bitwise operators.  In addition, <span style="font-weight:bold;">rca </span>can evaluate traditional infix ex‐
+       pressions, greatly expanding its usefulness.  As a programmer's calcu‐
+       lator, word width can be limited, for emulating the operation of any
+       class of CPU.  Input is free form, for the most part, and <span style="font-weight:bold;">rca </span>is easily
+       incorporated into shell scripts to provide floating point support.
+       Whitespace is usually optional, though there may be cases where ambigu‐
+       ity would get in the way.  Any text including and following a <span style="font-weight:bold;"># </span>charac‐
+       ter will be ignored as a comment.
+
+       The value at the top of the stack can be shown with the <span style="font-weight:bold;">p </span>command, and
+       the entire stack with <span style="font-weight:bold;">P</span>.  Autoprinting (toggled on with <span style="font-weight:bold;">1 a </span>(or <span style="font-weight:bold;">1 auto‐</span>
+       <span style="font-weight:bold;">print</span>) will print the top of the stack after every input line.
+
+<span style="font-weight:bold;">REVERSE POLISH NOTATION</span>
+       Numbers entered by the user are pushed onto a stack.  Operators pop
+       those stack entries, usually 1 or 2 at a time, and push the result of
+       the operation back on the stack.  Operators exist which cover the usual
+       arithmetic operations (<span style="font-weight:bold;">+</span>, <span style="font-weight:bold;">-</span>, etc), functions (<span style="font-weight:bold;">sin</span>, <span style="font-weight:bold;">cos</span>, <span style="font-weight:bold;">sqrt</span>, etc),
+       bit-shifting and manipulation (<span style="font-weight:bold;">&lt;&lt;</span>, <span style="font-weight:bold;">&gt;&gt;</span>, <span style="font-weight:bold;">&amp;</span>, <span style="font-weight:bold;">|</span>, etc), logical operations
+       (<span style="font-weight:bold;">&amp;&amp;</span>, <span style="font-weight:bold;">||</span>), and comparators (<span style="font-weight:bold;">==</span>, <span style="font-weight:bold;">!=, &lt;=, </span>etc).  There are also unit con‐
+       versions available (e.g., <span style="font-weight:bold;">i2mm</span>, <span style="font-weight:bold;">oz2g</span>, <span style="font-weight:bold;">f2c</span>, and more).  A complete list
+       of operators can be obtained with the <span style="font-weight:bold;">?  </span>or <span style="font-weight:bold;">help </span>commands.  The top two
+       elements on the stack, in HP tradition, are sometimes referred to as <span style="font-style:italic;">x</span>
+       and <span style="font-style:italic;">y</span>.
+
+<span style="font-weight:bold;">INFIX NOTATION</span>
+       <span style="font-weight:bold;">rca </span>supports infix (i.e., traditional, normal) style expressions.  Such
+       expressions must be fully enclosed in parentheses, and cannot cross to
+       a new line.  (Infix expressions are translated to RPN by an implementa‐
+       tion of Dijkstra's &quot;shunting yard&quot; algorithm, and then executed as
+       usual.) A single line of input can be a mix of RPN notation (unparen‐
+       thesized) and complete infix expressions (parenthesized).  The infix
+       expressions &quot;escape&quot; the RPN model, and are evaluated with fairly typi‐
+       cal rules of precedence (see <span style="font-weight:bold;">OPERATOR PRECEDENCE </span>below).  All input
+       number formats are accepted in infix, just as in RPN.
+
+       All <span style="font-weight:bold;">rca </span>stack operators can be used as infix functions, including the
+       unary operators (i.e., <span style="font-weight:bold;">-</span>x <span style="font-weight:bold;">+</span>x <span style="font-weight:bold;">~</span>x <span style="font-weight:bold;">!</span>x), and all of the comparison, logi‐
+       cal, and bitwise operators.  Infix expressions result in a value.  For
+       example, the expression <span style="font-weight:bold;">(-3 + +5) </span>will result in &quot;2&quot; being pushed on
+       the stack.  When single operand operators appear in infix expressions,
+       the operand will always follow the operator.  With two operand opera‐
+       tors, one operand will appear on either side of the operator.  So expo‐
+       nentiation would be written as <span style="font-weight:bold;">( 3 ** 2 ) </span>(producing 9 as a result) and
+       <span style="font-weight:bold;">(0 setb 3) </span>will give 8.  The expression <span style="font-weight:bold;">(sin 180 == cos 90) </span>has the
+       value 1, i.e. &quot;true&quot;.
+
+       The special symbol <span style="font-weight:bold;">X </span>can be used in an infix expression to reference
+       the value of <span style="font-style:italic;">x</span> (the top of stack) when the expression was invoked.
+       (The top of stack will <span style="font-style:italic;">not</span> be popped or replaced.) The five off-stack
+       storage locations settable (only in RPN mode) with <span style="font-weight:bold;">store </span>or <span style="font-weight:bold;">s1 </span>through
+       <span style="font-weight:bold;">s5 </span>can also be accessed, by referencing <span style="font-weight:bold;">r1 </span>through <span style="font-weight:bold;">r5</span>.
+
+       If an error occurs during evaluation of an infix expression, evaluation
+       will cease, and the stack will be left as it was at the point of the
+       error.
+
+<span style="font-weight:bold;">OPERATING MODES</span>
+       <span style="font-weight:bold;">rca </span>can be configured into two modes of operation:  floating point (the
+       default) using the <span style="font-weight:bold;">F </span>command, and integer, using one of <span style="font-weight:bold;">D </span>(signed deci‐
+       mal), <span style="font-weight:bold;">U </span>(unsigned decimal), <span style="font-weight:bold;">H </span>(hex), <span style="font-weight:bold;">O </span>(octal), or <span style="font-weight:bold;">B </span>(binary).
+
+       The difference between the various integer modes lies purely in how
+       values are displayed by default, but floating point and integer differ
+       in a few additional ways.  Most math is done in long double, regardless
+       of mode, but in integer mode all stack values are masked to the current
+       word width, and sign extended, if necessary.
+
+       The input base of a number is independent of the mode, and controlled
+       entirely by how it is entered:  10, 0xa, 012, 0b1010 and 1e01 are all
+       the same value.
+
+   <span style="font-weight:bold;">Floating point</span>
+       In floating point mode (i.e., <span style="font-weight:bold;">F </span>mode, all operations use the full size
+       of long double.  Printing can be controlled by either the <span style="font-weight:bold;">precision </span>(<span style="font-weight:bold;">k</span>)
+       command (which specifies a number of digits for the printf &quot;%g&quot; for‐
+       mat), or by the <span style="font-weight:bold;">decimals </span>(<span style="font-weight:bold;">K</span>) command (which specifies the number of
+       decimals for the printf &quot;%f&quot; format).  So the value of pi multiplied by
+       1 million will display as 3.14159e+06 with <span style="font-weight:bold;">6 k </span>or as 3,141,592.6535898
+       with <span style="font-weight:bold;">7 K</span>.
+
+       Scientific notation (e.g., 1e09) will be used in <span style="font-weight:bold;">precision </span>mode when
+       the exponent is less than -4, or greater than the chosen precision.
+       (These cutoffs come from directly from printf.)  <span style="font-weight:bold;">rca </span>will try to pre‐
+       vent you from printing with more than the available significant digits
+       on the system:  the default <span style="font-weight:bold;">precision </span>value is set based on this limit
+       (18 digits for most modern PC architectures), and can't be raised above
+       it.  However, if viewing %f output (by choosing a <span style="font-weight:bold;">decimals </span>value), it's
+       easy to start seeing &quot;unclean&quot; bits if the magnitude of the number
+       grows beyond the number of significant digits.  The numbers are really
+       big at that point:  over 1e19 on a modern system.  Use <span style="font-weight:bold;">precision</span>'s %g
+       in those cases, which will hide insignificant digits.
+
+       Because digital floating point is inexact, values are sometimes calcu‐
+       lated which are <span style="font-style:italic;">almost</span> correct (like .99999999999... instead of 1), but
+       not quite.  <span style="font-weight:bold;">rca </span>tries to help by &quot;snapping&quot; values that are very close
+       to integers to those integers, and by rounding when the precision lim‐
+       its of the floating point representation are reached.
+
+   <span style="font-weight:bold;">Integer</span>
+       Integer mode is selected with any of the following commands, which also
+       choose the default display format: <span style="font-weight:bold;">D </span>(signed decimal), <span style="font-weight:bold;">U </span>(unsigned dec‐
+       imal), <span style="font-weight:bold;">H </span>(hex), <span style="font-weight:bold;">O </span>(octal), or <span style="font-weight:bold;">B </span>(binary).  The default printing format
+       is used by the <span style="font-weight:bold;">p</span>, <span style="font-weight:bold;">P</span>, and <span style="font-weight:bold;">autoprint </span>commands.  Regardless of the default
+       format, individual values can be viewed at any time in any format by
+       using <span style="font-weight:bold;">f</span>, <span style="font-weight:bold;">d</span>, <span style="font-weight:bold;">u</span>, <span style="font-weight:bold;">h</span>, <span style="font-weight:bold;">o</span>, or <span style="font-weight:bold;">b</span>.
+
+       By default the width of <span style="font-weight:bold;">rca</span>'s integers is the maximum supported, but it
+       can be configured to as few as 2 bits using the <span style="font-weight:bold;">width </span>(or <span style="font-weight:bold;">w</span>) command.
+       The maximum supported width will be either the width of the <span style="font-style:italic;">long</span> <span style="font-style:italic;">long</span>
+       data type, or of the <span style="font-style:italic;">long</span> <span style="font-style:italic;">double</span> mantissa, whichever is smaller.  This
+       results in 64 bits on most PC architectures in 2025.  (An exception:
+       52 bits on Raspberry Pi when running a 32 bit OS)
+
+       Values will be masked to the chosen word width for both use and dis‐
+       play, whether they are input by the user or result from an operation.
+       Arithmetic on all values will be signed.  If floating operations are
+       used on width-restricted integers, the width restriction will be ig‐
+       nored for the operation, but masking will happen when storing the re‐
+       sult.
+
+   <span style="font-weight:bold;">Punctuation</span>
+       To aid in reading long digit strings, <span style="font-weight:bold;">rca </span>can add commas to numbers it
+       prints.  These can be toggled on or off with <span style="font-weight:bold;">0</span>/<span style="font-weight:bold;">1 c </span>(or <span style="font-weight:bold;">commas</span>).  Commas
+       will never appear in the fractional part of a value.
+
+       Both commas and the &quot;$&quot; currency symbol will be silently stripped on
+       input, as a convenience for doing arithmetic on copy/pasted data.
+
+<span style="font-weight:bold;">SPECIAL VALUES</span>
+       The <span style="font-weight:bold;">pi </span>and <span style="font-weight:bold;">e </span>operators push the values of the obvious constants to the
+       stack.
+
+       The <span style="font-weight:bold;">s1 </span>through <span style="font-weight:bold;">s5 </span>operators copy <span style="font-style:italic;">x</span> to one of 5 off-stack storage loca‐
+       tions (without disturbing the stack).  The <span style="font-weight:bold;">r1 </span>through <span style="font-weight:bold;">r5 </span>operators re‐
+       call those values, pushing them onto the stack, and can also be used in
+       infix expressions to reference those values.  (<span style="font-weight:bold;">store </span>is synonymous with
+       <span style="font-weight:bold;">s1</span>, and <span style="font-weight:bold;">recall </span>with <span style="font-weight:bold;">r1</span>.)
+
+<span style="font-weight:bold;">CONFIGURATION</span>
+       A few commands/pseudo-operators control aspects of <span style="font-weight:bold;">rca</span>'s operation and
+       appearance:
+
+              The <span style="font-weight:bold;">F</span>, <span style="font-weight:bold;">D</span>, <span style="font-weight:bold;">U</span>, <span style="font-weight:bold;">H</span>, <span style="font-weight:bold;">O</span>, and <span style="font-weight:bold;">B </span>commands select float or integer opera‐
+              tion, along with the default base for output.  <span style="font-weight:bold;">rca </span>starts in <span style="font-weight:bold;">F</span>
+              mode.
+
+              <span style="font-weight:bold;">precision </span>(or <span style="font-weight:bold;">k</span>) selects %g format for floating point output
+              (e.g., &quot;1.2345e+09&quot;), along with the number of significant dig‐
+              its.  This format is selected on startup, with 6 significant
+              digits.
+
+              <span style="font-weight:bold;">decimals </span>(or <span style="font-weight:bold;">K</span>) selects %f format for floating point output
+              (e.g., &quot;1,234,500,000.00&quot;) along with the number of decimals af‐
+              ter the point.
+
+              <span style="font-weight:bold;">width </span>(or <span style="font-weight:bold;">w</span>) selects the word width used in integer mode.  The
+              startup default is the system maximum (likely 64).
+
+              <span style="font-weight:bold;">commas </span>(or <span style="font-weight:bold;">c</span>) toggles whether printed values will include comma
+              characters for readability.  This is enabled by default.  The
+              command's argument is 0 or non-zero.
+
+              <span style="font-weight:bold;">degrees </span>toggles whether the trigonometric functions work with
+              degrees or radians.  Degrees are selected when <span style="font-weight:bold;">rca </span>starts.  The
+              argument is 0 or non-zero.
+
+              <span style="font-weight:bold;">autoprint </span>(or <span style="font-weight:bold;">a</span>) toggles whether <span style="font-weight:bold;">rca </span>will print the value at the
+              top of stack after every newline.  This printing will be sup‐
+              pressed if the last action on the previous line explicitly set
+              that value, since to print it again immediately would be redun‐
+              dant.  Automatic printing is selected when <span style="font-weight:bold;">rca </span>starts.  The ar‐
+              gument is 0 or non-zero.
+
+       All of the listed commands will print a confirmation message, but to
+       avoid confusion, that message will only print if the command is the
+       last on its line of input.
+
+       <span style="font-weight:bold;">rca </span>doesn't have a configuration file that's read on startup.  It does,
+       however, take commands from the environment variable <span style="font-weight:bold;">RCA_INIT</span>, and from
+       any arguments passed on the command line.  So initial conditions can be
+       established by either of those methods.  All printed output from com‐
+       mands run from $RCA_INIT is suppressed.
+
+<span style="font-weight:bold;">HELP</span>
+       A complete list of operators/commands can be obtained by entering <span style="font-weight:bold;">help</span>
+       or <span style="font-weight:bold;">?</span>.  Many operators have two names, and this is indicated in the com‐
+       mand listing.  If $PAGER is set in the environment, it will be invoked
+       to display the help text.  Otherwise the text will be shown directly to
+       the terminal.
+
+<span style="font-weight:bold;">OPERATOR PRECEDENCE</span>
+       When used as an RPN calculator, operator precedence isn't meaningful,
+       since the stack paradigm makes all operators equal in that regard.  But
+       when evaluating an infix expression, the relative precedence and asso‐
+       ciativity of operators is important.  The <span style="font-weight:bold;">precedence </span>command will give
+       a list, whose output is reproduced here.  Higher numbers denote higher
+       precedence.  The 'R' flag denotes operators which are right associa‐
+       tive.  All others group left to right.
+
+         1       <span style="font-weight:bold;">(</span>
+         2   R   <span style="font-weight:bold;">atan2 recip sqrt sin cos tan asin acos atan ln log2 log10</span>
+                   <span style="font-weight:bold;">abs frac int i2mm mm2i ft2m m2ft mi2km km2mi f2c c2f</span>
+                   <span style="font-weight:bold;">oz2g g2oz oz2ml ml2oz q2l l2q</span>
+         3   R   <span style="font-weight:bold;">+ -    </span>(unary)
+         4   R   <span style="font-weight:bold;">~ chs negate !</span>
+         5   R   <span style="font-weight:bold;">^ **</span>
+         6       <span style="font-weight:bold;">* x / %</span>
+         7       <span style="font-weight:bold;">+ -</span>
+         8       <span style="font-weight:bold;">&gt;&gt; &lt;&lt;</span>
+         9       <span style="font-weight:bold;">&amp; clearb</span>
+         10      <span style="font-weight:bold;">xor</span>
+         11      <span style="font-weight:bold;">| setb</span>
+         12      <span style="font-weight:bold;">&lt; &lt;= &gt; &gt;=</span>
+         13      <span style="font-weight:bold;">== !=</span>
+         14      <span style="font-weight:bold;">&amp;&amp;</span>
+         15      <span style="font-weight:bold;">||</span>
+
+<span style="font-weight:bold;">OPERATOR NOTES</span>
+       Most operators behave as they are commonly understood to.  A few need
+       more specific documentation.
+
+              The precedence and association of exponentiation (<span style="font-weight:bold;">^ </span>or <span style="font-weight:bold;">**</span>) is
+              worth calling out, since implementations vary.  In <span style="font-weight:bold;">rca</span>'s infix
+              expressions, exponentiation is right associative, and has lower
+              precedence than unary minus.  So each of these lines returns a
+              result of 1 (true):
+
+                     <span style="font-weight:bold;">((2 ^ 3 ^ 2) == (2 ^ (3 ^ 2))) </span><span style="font-style:italic;font-weight:bold;"></span><span style="font-style:italic;">#</span> <span style="font-style:italic;">i.e.,</span> <span style="font-style:italic;">512</span>
+
+                     <span style="font-weight:bold;">((-3 ^ 2) == ((-3) ^ 2))) </span><span style="font-style:italic;font-weight:bold;"></span><span style="font-style:italic;">#</span> <span style="font-style:italic;">i.e.,</span> <span style="font-style:italic;">9</span>
+
+              <span style="font-weight:bold;">modulo </span>is a floating point operation.  It uses the C fmodl() li‐
+              brary.
+
+              <span style="font-weight:bold;">frac </span>applied to negative values will give a negative result.
+
+              In an infix expression, any operator that takes two arguments
+              expects them to be to the left and right of the operator.  This
+              is expected in the case of the symbolic operators (as in <span style="font-weight:bold;">1 + 2</span>
+              ), but for the named operators it can be odd looking.  <span style="font-weight:bold;">(0xf0</span>
+              <span style="font-weight:bold;">setb 3</span>), for example, sets bit 3 in 0xf0.  <span style="font-weight:bold;">atan2 </span>works simi‐
+              larly: <span style="font-weight:bold;">(sin 30 atan2 cos 30) </span>could also be written as <span style="font-weight:bold;">((sin 30)</span>
+              <span style="font-weight:bold;">atan2 (cos 30)) </span>and will return the result &quot;30&quot;.  (In RPN, this
+              would be <span style="font-weight:bold;">30 sin 30 cos atan2</span>.)
+
+              Trigonometric operations (<span style="font-weight:bold;">sin</span>, <span style="font-weight:bold;">cos</span>, <span style="font-weight:bold;">tan</span>, <span style="font-weight:bold;">asin</span>, <span style="font-weight:bold;">acos</span>, <span style="font-weight:bold;">atan</span>, and
+              <span style="font-weight:bold;">atan2</span>) are disallowed in integer mode, since they'd make no
+              sense.  By default the trig functions take and return angles in
+              degrees.  The <span style="font-weight:bold;">0 degrees </span>toggle command will switch them to radi‐
+              ans.  <span style="font-weight:bold;">1 degrees </span>will switch them back.
+
+              Bitwise operations (<span style="font-weight:bold;">~ &lt;&lt;</span>, <span style="font-weight:bold;">&gt;&gt;</span>, <span style="font-weight:bold;">&amp;</span>, <span style="font-weight:bold;">|</span>, <span style="font-weight:bold;">xor</span>, <span style="font-weight:bold;">clearb</span>, <span style="font-weight:bold;">and setb</span>) con‐
+              vert their operands to long long first, regardless of mode.
+              These operations will (as might be expected) discard fractional
+              parts, and may discard significant digits, including the sign of
+              the value.
+
+              <span style="font-weight:bold;">sum </span>will pop and add up previous entries on the stack, stopping
+              when the stack is empty, or when a stack marker previously set
+              with the <span style="font-weight:bold;">mark </span>command is reached.  The mark would be set before
+              entering the data for a subsequent <span style="font-weight:bold;">sum, </span>in order to limit its
+              reach.  <span style="font-weight:bold;">sum </span>is the only operator to consume more than 2 stack
+              elements.
+
+<span style="font-weight:bold;">DATA TYPES, OVERFLOW, ACCURACY</span>
+       All stack values in <span style="font-weight:bold;">rca </span>are stored in <span style="font-style:italic;">long</span> <span style="font-style:italic;">double</span> format.  This is con‐
+       venient for a calculator which will primarily deal with floating point,
+       but can be a problem with <span style="font-weight:bold;">rca</span>'s mixed model.  Many operations (primar‐
+       ily the bitwise operations, but also simply working in other bases and
+       word widths) require conversion to integer.  The <span style="font-style:italic;">long</span> <span style="font-style:italic;">long</span> type is used
+       in this case; results are converted back when finished.  If the conver‐
+       sion from <span style="font-style:italic;">long</span> <span style="font-style:italic;">double</span> to <span style="font-style:italic;">long</span> <span style="font-style:italic;">long</span> can't be done without loss, a warn‐
+       ing is issued.  This may happen while printing the value in an integer
+       base, after switching to an integer mode, or while performing a bitwise
+       operation.  Execution will proceed after the warning unless <span style="font-weight:bold;">errorexit</span>
+       has been enabled.
+
+       Floating point math by its nature is imprecise.  It's not uncommon for
+       small rounding errors, and errors introduced by the necessary binary to
+       decimal conversions, to change values in obvious ways.  Something that
+       should be 0 may instead have a very tiny value, or two numbers which
+       should be equal may differ by an insignificant amount.  <span style="font-weight:bold;">rca </span>attempts to
+       help by adjusting values pushed on the stack.  First, values within
+       about 2e-18 (system dependent) of an integer are forced to that.  inte‐
+       ger.  Then, values are decimal-rounded to <span style="font-weight:bold;">rca</span>'s maximum precision
+       (again, usually 18 digits).
+
+<span style="font-weight:bold;">EXIT STATUS</span>
+       <span style="font-weight:bold;">rca </span>will normally exit with status 0 or 1:  to satisfy normal shell se‐
+       mantics, a non-zero value at the top of the stack causes an exit status
+       of 0, and vice versa.  An exit status of 2 results if the stack is
+       empty on normal exit.  An exit status of 3 comes from unrecoverable in‐
+       ternal errors (e.g., failed memory allocation).  Operational warnings
+       or errors regarding parsing, empty stacks, or data conversion are as‐
+       sumed be useful to the user, and non-fatal.  If the <span style="font-weight:bold;">errorexit </span>command
+       has been given, then those warnings and errors will result in an exit
+       status of 4.  This can be helpful when <span style="font-weight:bold;">rca </span>is used non-interactively.
+       (Once given, <span style="font-weight:bold;">errorexit </span>cannot be rescinded.)
+
+<span style="font-weight:bold;">SHELL SUPPORT</span>
+       <span style="font-weight:bold;">rca </span>can take initial input from the command line, and returns a helpful
+       set of exit codes, so incorporating it into the shell is straightfor‐
+       ward:
+
+              # This shell snippet gives simple access to rca's floating point
+              # capability from a POSIX shell.
+              #
+              # After including this code, use lines like this to calculate:
+              #       foo=$(fe &quot;$bar * pi&quot;)
+              # or like this for a conditional:
+              #       if fc &quot;(10 * 3) &lt; $foo&quot;; then ...
+              #
+              # Set common initial conditions:
+              # 3 decimals , no commas, fail on error.  Values previously set will override.
+              export RCA_INIT=&quot;3K 0commas errorexit ${RCA_INIT:-}&quot;
+
+              _rca_run()    # support routine
+              {
+                  output=$(rca &quot;( $* )&quot; q)
+                  exitcode=$?
+
+                  if [ $exitcode -le 1 ]; then
+                      echo $output
+                      return $exitcode
+                  fi
+
+                  echo rca failure: $output &gt;&amp;2
+                  exit 1
+              }
+
+              fe()    # Evaluate a floating point expression.
+              {
+                  _rca_run &quot;$*&quot;
+                  return 0
+              }
+
+              fc()     # Evaluate a floating point conditional expression.
+              {
+                  _rca_run &quot;$*&quot; &gt;/dev/null
+              }
+
+<span style="font-weight:bold;">AUTHOR</span>
+       Paul Fox created <span style="font-weight:bold;">rca </span>(formerly called &quot;ca&quot;) very slowly over a span of
+       decades, starting in 1993.
+
+                                   2025-12-1                            <span style="font-style:italic;">rca</span>(1)
+</pre>
+</body>
+</html>
