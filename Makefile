@@ -20,17 +20,15 @@ rca-norl: rca.c
 html: html/rca-man.html html/rca-help.html
 
 html/rca-man.html: FORCE
-	man2html rca.1 | \
-	    sed -e '/Content-type:/d' \
-		-e 's/.*TITLE.*/&<style type="text\/css">.mywidth { max-width:40em } <\/style> <div class="mywidth">/' \
-		-e 's/Section: User.*/<A HREF="#index">Index<\/A>/' \
-		-e '/HREF.*man2html/d' \
-		-e '/This document was created by/,$$ d' \
-		    > html/rca-man.html.new
+	MAN_KEEP_FORMATTING=1 MANWIDTH=75 \
+	    man --no-justification --no-hyphenation --local-file rca.1 | \
+	     aha -w -t "rca(1) man page" --style 'font-size:125%' | \
+	      sed -e 's/text-decoration: *underline;/font-style:italic;/g' \
+		> html/rca-man.html.new
 
 html/rca-help.html: FORCE
 	PAGER= rca help q | \
-	    ./txt2html.sh "rca calculator help text" \
+	    aha -t "rca calculator help text" --style 'font-size:125%' \
 		> html/rca-help.html.new
 
 htmldiff:
