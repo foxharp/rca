@@ -1,4 +1,4 @@
-.TH rca 1 2025-12-1
+.TH rca 1 VERSIONSTRING
 .SH NAME
 rca \- a rich/RPN (and more) programmer's calculator
 .SH SYNOPSIS

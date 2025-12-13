@@ -3,7 +3,7 @@
 #  git tag -a v17 -m "Release v17"  [ tags HEAD, or given commit ]
 
 # build both the readline and no-readline versions by default
-all: rca rca-norl html
+all: rca rca-norl rca.1 html
 
 rca: rca.c
 	v="$$(git describe --dirty=+ 2>/dev/null)"; \
@@ -16,6 +16,10 @@ rca-norl: rca.c
 	gcc -g -Wall -Wextra -o rca-norl \
 		-DVERSION=\"$${v}\" \
 		rca.c -lm
+
+rca.1: rca.man
+	v="$$(date +%Y-%m-%d)"; \
+	sed -e "s/VERSIONSTRING/$${v}/g" rca.man > rca.1
 
 html: html/rca-man.html html/rca-help.html
 
@@ -43,7 +47,7 @@ readme:
 	@python3 -m markdown README.md
 
 clean:
-	rm -f rca rca-norl html/rca-man.html.new html/rca-help.html.new
+	rm -f rca rca-norl rca.1 html/rca-man.html.new html/rca-help.html.new
 
 # test files are simply verbatim output from an rca session.  program
 # output is always indented by one space, so we remove those lines
