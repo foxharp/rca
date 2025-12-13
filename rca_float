@@ -3,12 +3,13 @@
 # capability from a POSIX shell.
 #
 # After including this code, use lines like this to calculate:
-#	foo=$(fe "$bar * pi")
+#       foo=$(fe "$bar * pi")
 # or like this for a conditional:
-#	if fc "(10 * 3) < $foo"; then ...
-
-export RCA_INIT="0commas errorexit ${RCA_INIT:-}"
-
+#       if fc "(10 * 3) < $foo"; then ...
+#
+# Set common initial conditions.  Values previously set will override.
+# 3 decimals , no commas, fail on error.
+export RCA_INIT="3K 0commas errorexit ${RCA_INIT:-}"
 
 _rca_run()    # support routine
 {
@@ -16,20 +17,22 @@ _rca_run()    # support routine
     exitcode=$?
 
     case $exitcode in
-    0|1) echo $output; return $exitcode ;;
+    0|1)
+        echo $output
+        return $exitcode ;;
     esac
 
     echo rca failure: $output >&2
     exit $exitcode
 }
 
-fe()	# Evaluate a floating point expression.
+fe()    # Evaluate a floating point expression.
 {
     _rca_run "$*"
     return 0
 }
 
-fc()	 # Evaluate a floating point conditional expression.
+fc()     # Evaluate a floating point conditional expression.
 {
     _rca_run "$*" >/dev/null
 }

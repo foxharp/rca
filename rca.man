@@ -598,8 +598,8 @@ set of exit codes, so incorporating it into the shell is straightforward:
 # or like this for a conditional:
 #       if fc "(10 * 3) < $foo"; then ...
 #
-# Set common initial conditions:
-# 3 decimals , no commas, fail on error.  Values previously set will override.
+# Set common initial conditions.  Values previously set will override.
+# 3 decimals , no commas, fail on error.
 export RCA_INIT="3K 0commas errorexit ${RCA_INIT:-}"
 
 _rca_run()    # support routine
@@ -607,13 +607,14 @@ _rca_run()    # support routine
     output=$(rca "( $* )" q)
     exitcode=$?
 
-    if [ $exitcode -le 1 ]; then
+    case $exitcode in
+    0|1)
         echo $output
-        return $exitcode
-    fi
+        return $exitcode ;;
+    esac
 
     echo rca failure: $output >&2
-    exit 1
+    exit $exitcode
 }
 
 fe()    # Evaluate a floating point expression.
