@@ -1,6 +1,17 @@
 
-# to tag a release, an annotated tag must be used.
-#  git tag -a v17 -m "Release v17"  [ tags HEAD, or given commit ]
+# to release, an annotated tag must be used.
+# verify:
+#  git status
+# tag:
+#  git tag -a v17 -m "Release v17"  [ tags HEAD ]
+# build:
+#  make clean all
+# build html:
+#  make html
+#  make htmldiff
+#  make htmlmv
+# git commit ./html
+# 
 
 # build both the readline and no-readline versions by default
 all: rca rca-norl rca.1 html
@@ -21,7 +32,10 @@ rca.1: rca.man
 	v="$$(date +%Y-%m-%d)"; \
 	sed -e "s/VERSIONSTRING/$${v}/g" rca.man > rca.1
 
-html: html/rca-man.html html/rca-help.html
+html: readme.html html/rca-man.html html/rca-help.html
+
+readme.html: FORCE
+	python3 -m markdown README.md >readme.html
 
 html/rca-man.html: FORCE
 	MAN_KEEP_FORMATTING=1 MANWIDTH=75 \
@@ -31,7 +45,7 @@ html/rca-man.html: FORCE
 		> html/rca-man.html.new
 
 html/rca-help.html: FORCE
-	PAGER= rca help q | \
+	PAGER= ./rca help q | \
 	    aha -t "rca calculator help text" --style 'font-size:125%' \
 		> html/rca-help.html.new
 
@@ -47,7 +61,8 @@ readme:
 	@python3 -m markdown README.md
 
 clean:
-	rm -f rca rca-norl rca.1 html/rca-man.html.new html/rca-help.html.new
+	rm -f rca rca-norl rca.1 .test \
+		html/rca-man.html.new html/rca-help.html.new
 
 # test files are simply verbatim output from an rca session.  program
 # output is always indented by one space, so we remove those lines
