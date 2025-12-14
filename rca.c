@@ -2520,7 +2520,7 @@ fetch_line(void)
 		rca_init = getenv("RCA_INIT");
 		if (rca_init) {
 			suppress_stdout();
-			input_buf = malloc(strlen(rca_init + 1));
+			input_buf = malloc(strlen(rca_init) + 1);
 			if (!input_buf)
 				memory_failure();
 			strcpy(input_buf, rca_init);
