@@ -2206,6 +2206,34 @@ units_km_mi(void)
 }
 
 opreturn
+units_deg_rad(void)
+{
+	ldouble a;
+
+	if (pop(&a)) {
+		a = to_radians(a);
+		result_push(a);
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
+units_rad_deg(void)
+{
+	ldouble a;
+
+	if (pop(&a)) {
+		a = to_degrees(a);
+		result_push(a);
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
+opreturn
 autop(void)
 {
 	ldouble wantautop;
@@ -3166,6 +3194,8 @@ struct oper opers[] = {
 	{"ml2oz", units_ml_oz,    "ounces / milliliters", 1, 26 },
 	{"q2l", units_qt_l,     0, 1, 26 },
 	{"l2q", units_l_qt,     "quarts / liters", 1, 26 },
+	{"d2r", units_deg_rad,     0, 1, 26 },
+	{"r2d", units_rad_deg,     "degrees / radians", 1, 26 },
 	{"", 0, 0},
     {"Display:", 0, 0},
 	{"P", printall,		"Print whole stack according to mode" },

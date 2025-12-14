@@ -393,7 +393,7 @@ left to right.  (This list has no meaning for RPN.)
  \fR 1      \fB (
  \fR 2   R  \fB atan2 recip sqrt sin cos tan asin acos atan ln log2 log10
  \fR        \fB   abs frac int i2mm mm2i ft2m m2ft mi2km km2mi f2c c2f
- \fR        \fB   oz2g g2oz oz2ml ml2oz q2l l2q
+ \fR        \fB   oz2g g2oz oz2ml ml2oz q2l l2q d2r r2d
  \fR 3   R  \fB + - \fR   (unary)
  \fR 4   R  \fB ~ chs negate !
  \fR 5   R  \fB ^ **
