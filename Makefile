@@ -69,12 +69,16 @@ clean:
 # before feeding what's left (i.e., the input) to rca, and comparing
 # the result, which should match exactly.
 
+tests:  test optest tweaktest
+
 test:
 	egrep -v '^ ' rca_test.txt | ./rca | tee .test | diff -u rca_test.txt -
 	@ echo test succeeded
 
+# valgrind messes with floating point.  only optests.txt avoids high
+# precision FP, so only it works under valgrind.
 optest:
-	egrep -v '^ ' optests.txt | ./rca | tee .test | diff -u optests.txt -
+	egrep -v '^ ' optests.txt | valgrind -q ./rca | tee .test | diff -u optests.txt -
 	@ echo test succeeded
 
 tweaktest:
