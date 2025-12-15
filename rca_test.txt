@@ -410,6 +410,13 @@ sum
 (2 ^ 3 ^ 2)
  512
 (8 / (3 - 3))
+ inf
+0invalidok
+ calculations resulting in nan or +/-inf are now disallowed
+ inf
+pop
+ 512
+(8 / (3 - 3))
  math error: would divide by zero
  0
 (4 + 5)

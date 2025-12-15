@@ -348,6 +348,14 @@ chooses the size of integers, in bits. (Startup: system maximum, likely 64).
 toggles whether degrees are used by the trig functions, instead of
 radians.  (Startup:  enabled)
 .P
+.B invalidok
+toggles whether math operations which will result in invalid or
+infinite results are allowed.  If allowed, those operations will return
+.B nan or
+.BR inf ,
+and those results will propagate to further operations.
+(Startup:  enabled)
+.P
 .B commas
 (or
 .BR c )

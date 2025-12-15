@@ -454,6 +454,25 @@ tdump(token **tstackp)
 	printf("\n");
 }
 
+// NaN, +/-inf
+int invalid_ok = 1;
+
+opreturn
+allow_nan(void)
+{
+	ldouble allow;
+
+	if (!pop(&allow))
+		return BADOP;
+
+	invalid_ok = (allow != 0);
+
+	// info
+	snprintf(pending_info, sizeof(pending_info),
+		" calculations resulting in nan or +/-inf are now %sallowed\n",
+			invalid_ok ? "" : "dis");
+	return GOODOP;
+}
 
 opreturn
 add(void)
@@ -510,7 +529,7 @@ divide(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			if (b != 0.0) {
+			if (invalid_ok || b != 0.0) {
 				result_push(a / b);
 			} else {
 				push(a);
@@ -534,7 +553,7 @@ modulo(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			if (b != 0) {
+			if (invalid_ok || b != 0) {
 				result_push(fmodl(a,b));
 			} else {
 				push(a);
@@ -558,12 +577,14 @@ y_to_the_x(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			if (a >= 0 || floorl(b) == b) {
+			if (invalid_ok ||
+				(!(a < 0 && floorl(b) != b) &&
+				 !(a == 0 && b < 0))) {
 				result_push(powl(a, b));
 			} else {
 				push(a);
 				push(b);
-				printf(" math error: result would be complex\n");
+				printf(" math error: result would be infinite or complex\n");
 				might_errexit();
 				return BADOP;
 			}
@@ -782,7 +803,7 @@ recip(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		if (a != 0.0) {
+		if (invalid_ok || a != 0.0) {
 			result_push(1.0 / a);
 			lastx = a;
 			return GOODOP;
@@ -802,7 +823,7 @@ squarert(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		if (a >= 0.0) {
+		if (invalid_ok || a >= 0.0) {
 			result_push(sqrtl(a));
 			lastx = a;
 			return GOODOP;
@@ -980,7 +1001,7 @@ log_worker(int which)
 	ldouble n, l;
 
 	if (pop(&n)) {
-		if (n <= 0) {
+		if (!invalid_ok && n <= 0) {
 			push(n);
 			printf(" math error: log of 0 or negative\n");
 			might_errexit();
@@ -3119,7 +3140,6 @@ struct oper opers[] = {
 	{"acos", acosine,       0, 1, 26 },
 	{"atan", atangent,      "Trig functions", 1, 26 },
 	{"atan2", atangent2,    "Arctan of y/x (2 operands)", 2, 26 },
-	{"degrees", use_degrees, "Toggle trig functions: degrees (1) or radians (0)" },
 	{"ln", log_natural,    	0, 1, 26 },
 	{"log2", log_base2,    	0, 1, 26 },
 	{"log10", log_base10,    	"Natural, base 2, and base 10 logarithms", 1, 26 },
@@ -3213,6 +3233,8 @@ struct oper opers[] = {
 	{"K", decimal_length,	"Float format: digits after decimal (%f)" },
 	{"width", width,	0 },
 	{"w", width,		"Set effective \"word size\" for integer modes" },
+	{"degrees", use_degrees, "Toggle trig functions: degrees (1) or radians (0)" },
+	{"invalidok", allow_nan, "Toggle invalid mathematical result checks with 0/1" },
 	{"autoprint", autop,	0 },
 	{"a", autop,		"Toggle autoprinting on/off with 0/1" },
 	{"commas", punctuation,	0 },
