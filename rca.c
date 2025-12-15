@@ -2290,16 +2290,7 @@ quit(void)
 size_t stralnum(char *s, char **endptr)
 {
 	char *ns = s;
-	while (isalnum(*ns))
-		ns++;
-	*endptr = ns;
-	return ns - s;
-}
-
-size_t strpunct(char *s, char **endptr)
-{
-	char *ns = s;
-	while (ispunct(*ns))
+	while (isalnum(*ns) || *ns == '_')
 		ns++;
 	*endptr = ns;
 	return ns - s;
