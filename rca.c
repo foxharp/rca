@@ -186,6 +186,8 @@ int max_int_width;
 int int_width;
 long long int_sign_bit;
 long long int_mask;
+long long int_max;
+long long int_min;
 
 /* this is used to control floating point error */
 long double epsilon;
@@ -1327,16 +1329,33 @@ putoct(unsigned long long n)
 }
 
 boolean
-check_overflow(ldouble n)
+check_overflow(ldouble *np, boolean conv)
 {
-	return (n >= LLONG_MAX || n <= LLONG_MIN);
+	ldouble n = *np;
+	boolean changed;
+
+	if (isnan(n) || !isfinite(n)) {
+	    n = 0;
+	    changed = 1;
+	} else if (n != sign_extend((long long)n & int_mask)) {
+	    n = sign_extend((long long)n & int_mask);
+	    changed = 1;
+	} else {
+	    changed = 0;
+	}
+
+	if (conv)
+		*np = n;
+
+	return changed;
 }
 
 void
-show_overflow(boolean o)
+show_overflow(boolean changed, ldouble old_n)
 {
-	if (o) {
-		printf("     warning: integer conversion overflow\n");
+	if (changed) {
+		printf("     warning: integer truncation, was %.*Lg\n",
+			float_digits, old_n);
 		might_errexit();
 	} else {
 		putchar('\n');
@@ -1389,56 +1408,54 @@ print_floating(ldouble n)
 
 }
 
+
 void
-print_n(ldouble n, int format)
+print_n(ldouble *np, int format, boolean conv)
 {
+	ldouble old_n, n;
 	long long ln;
 	long long mask = int_mask;
 	long long signbit;
 	unsigned long long uln;
-	boolean ovfl;
+	boolean changed;
 
 	suppress_autoprint = TRUE;
 
-	if (mode == 'F' && format == 'f') {
-		mask = ~0;	// no masking in float mode
+	old_n = n = *np;
+
+	if (format == 'F') {
 		print_floating(n);
 		return;
 	}
 
 	// mode can be float but we can still print in hex, binary format, etc
 
-	ovfl = check_overflow(n);
+	changed = check_overflow(&n, conv);
 
 	switch (format) {
 	case 'H':
 		ln = (long long)n & mask;
 		printf(" 0x");
 		puthex(ln);
-		show_overflow(ovfl);
 		break;
 	case 'O':
 		ln = (long long)n & mask;
 		printf(" 0");
 		putoct(ln);
-		show_overflow(ovfl);
 		break;
 	case 'B':
 		ln = (long long)n & mask;
 		printf(" 0b");
 		putbinary(ln);
-		show_overflow(ovfl);
 		break;
 	case 'U':
 		uln = (unsigned long long)n & mask;
 		printf(punct ? " %'llu" : " %llu", uln);
-		show_overflow(ovfl);
 		break;
 	case 'D':
 		ln = (long long)n;
 		if (mode == 'F' || int_width == LONGLONG_BITS) {
 			printf(punct ? " %'lld" : " %lld", ln);
-			show_overflow(ovfl);
 		} else {
 			/* shenanigans to make pos/neg numbers appear
 			 * properly.  our masked/shortened numbers
@@ -1458,38 +1475,41 @@ print_n(ldouble n, int format)
 				printf(" ");
 			}
 			printf(punct ? "%'lld" : "%lld", t);
-			show_overflow(ovfl);
 		}
 		break;
 	default:
-		print_floating(n);
-		break;
+		printf(" error: default case in print_n()\n");
+		return;
 	}
+
+	show_overflow(changed, old_n);
+	*np = n;
+
 }
 
 void
 print_top(int format)
 {
 	if (stack)
-		print_n(stack->val, format);
+		print_n(&stack->val, format, 0);
 }
 
 void
-printstack(struct num *s)
+printstack(boolean conv, struct num *s)
 {
 	if (!s)
 		return;
 
 	if (s->next)
-		printstack(s->next);
+		printstack(conv, s->next);
 
-	print_n(s->val, mode);
+	print_n(&(s->val), mode, conv);
 }
 
 opreturn
 printall(void)
 {
-	printstack(stack);
+	printstack(0,stack);
 	return GOODOP;
 }
 
@@ -1560,8 +1580,11 @@ printstate(void)
 	printf(" format string for float mode: \"%s\"\n", format_string);
 	putchar('\n');
 
+	printf(" integer width is %d bits\n", int_width);
 	printf(" int_mask:     0x"); puthex(int_mask);     putchar('\n');
 	printf(" int_sign_bit: 0x"); puthex(int_sign_bit); putchar('\n');
+	printf(" int_max:      0x"); puthex(int_max);	   putchar('\n');
+	printf(" int_min:      0x"); puthex(int_min);	   putchar('\n');
 	putchar('\n');
 
 	s = stack;
@@ -1581,6 +1604,7 @@ printstate(void)
 	putchar('\n');
 	printf(" native sizes (bits):\n");
 	printf("  long long:\t%lu\n", (unsigned long)(8 * sizeof(long long)));
+	printf("  LLONG_MIN: %Lx, LLONG_MAX: %Lx\n", LLONG_MIN, LLONG_MAX);
 	printf("  long double:\t%lu\n", (unsigned long)(8 * sizeof(long double)));
 	printf("  LDBL_MANT_DIG: %u\n", LDBL_MANT_DIG);
 	printf("  LDBL_MAX: %.20Lg\n", LDBL_MAX);
@@ -1663,6 +1687,7 @@ modeinfo(void)
 void
 mask_stack(void)
 {
+    return;
 	struct num *s;
 	for (s = stack; s; s = s->next)
 		s->val = sign_extend((long long)s->val & int_mask);
@@ -1674,7 +1699,8 @@ modehex(void)
 	mode = 'H';
 	mask_stack();
 	showmode();
-	return printall();
+	printstack(1,stack);
+	return GOODOP;
 }
 
 opreturn
@@ -1683,7 +1709,8 @@ modebin(void)
 	mode = 'B';
 	mask_stack();
 	showmode();
-	return printall();
+	printstack(1,stack);
+	return GOODOP;
 }
 
 opreturn
@@ -1692,7 +1719,8 @@ modeoct(void)
 	mode = 'O';
 	mask_stack();
 	showmode();
-	return printall();
+	printstack(1,stack);
+	return GOODOP;
 }
 
 opreturn
@@ -1701,7 +1729,8 @@ modedec(void)
 	mode = 'D';
 	mask_stack();
 	showmode();
-	return printall();
+	printstack(1,stack);
+	return GOODOP;
 }
 
 opreturn
@@ -1710,7 +1739,8 @@ modeuns(void)
 	mode = 'U';
 	mask_stack();
 	showmode();
-	return printall();
+	printstack(1,stack);
+	return GOODOP;
 }
 
 opreturn
@@ -1718,7 +1748,8 @@ modefloat(void)
 {
 	mode = 'F';
 	showmode();
-	return printall();
+	printstack(1,stack);
+	return GOODOP;
 }
 
 void
@@ -1848,10 +1879,15 @@ setup_width(int bits)
 	int_width = bits;
 	int_sign_bit = (1LL << (int_width - 1));
 
-	if (int_width == LONGLONG_BITS)
+	if (int_width == LONGLONG_BITS) {
 		int_mask = ~0;
-	else
+		int_max = LLONG_MAX;
+		int_min = LLONG_MIN;
+	} else {
 		int_mask = (1LL << int_width) - 1;
+		int_max = int_mask >> 1;
+		int_min = sign_extend(int_sign_bit);
+	}
 }
 
 opreturn
@@ -1886,17 +1922,12 @@ width(void)
 		printf("%s", pending_info);
 	*pending_info = '\0';
 
-	if (mode == 'F') {
+	if (mode == 'F')
 		printf(" In float mode, width is recorded but not applied.\n");
-		return GOODOP;
-	} else {
-		/* need to mask and sign extend anything on the stack
-		 * if we've shortened word length.
-		 */
-		mask_stack();
+	else
+		printstack(1,stack);
 
-		return printall();
-	}
+	return GOODOP;
 }
 
 opreturn
