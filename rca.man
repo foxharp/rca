@@ -483,6 +483,17 @@ will switch them back.  Also, the
 operators convert the angle units directly.
 Trig operations aren't allowed in integer mode, since they'd make no sense.
 .P
+Some operations will return non-finite (
+.RI ( +inf / -inf )
+or invalid
+.RI ( nan )
+results.  The operations
+can simply be prohibited, instead, using the
+.B 0 invalidok
+toggle command.  (Some overflow cases may cause
+.I inf
+results regarless.)
+.P
 Bitwise operations
 .RB ( ~
 .BR << ,
@@ -532,6 +543,10 @@ after switching to an integer mode, or while performing a bitwise
 operation.  Execution will proceed after the warning unless
 .B errorexit
 has been enabled.
+
+Some floating point operations may result in invalid (nan, "not a
+number") or +inf or -inf (infinity).  When converting to integer mode,
+these will all be converted to 0.
 
 Floating point math by its nature is imprecise.  It's not uncommon for
 small rounding errors, and errors introduced by the necessary binary
