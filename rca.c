@@ -1330,7 +1330,7 @@ putoct(unsigned long long n)
 }
 
 boolean
-check_overflow(ldouble *np, boolean conv)
+check_int_truncation(ldouble *np, boolean conv)
 {
 	ldouble n = *np;
 	boolean changed;
@@ -1352,7 +1352,7 @@ check_overflow(ldouble *np, boolean conv)
 }
 
 void
-show_overflow(boolean changed, ldouble old_n)
+show_int_truncation(boolean changed, ldouble old_n)
 {
 	if (!changed) {
 		putchar('\n');
@@ -1382,6 +1382,18 @@ print_floating(ldouble n)
 	    char *p;
 	    int decimals, leadingdigits = 0;
 
+	    /* The goal is to reduce the number of non-significant
+	     * digits shown.  If decimals is set to 6, then 123e12
+	     * would show "123,000,000,000,000.000000" which is
+	     * showing more than max_precision significant digits.  As
+	     * long as some of the excess digits are beyond the
+	     * decimal point, we can trim some from that end.  So the
+	     * code below gives us "123,000,000,000,000.000".  But that
+	     * only works for a while.  If the number gets 1e6 times
+	     * bigger, then we have this: "123,000,000,000,000,000,000",
+	     * and we're back to showing more than we should.  (At that
+	     * point the user should be switching to %g mode.)
+	     */
 	    snprintf(buf, sizeof(buf), format_string, float_digits, n);
 
 	    for (p = buf; *p && *p != '.'; p++) {
@@ -1399,10 +1411,6 @@ print_floating(ldouble n)
 		if (decimals <= 0) decimals = 0;
 
 		snprintf(buf, sizeof(buf), format_string, decimals, n);
-		// remove trailing zeros
-		//p = buf + strlen(buf) - 1;
-		//while (p > buf && *p == '0')
-		//    *p-- = '\0';
 	    }
 	    puts(buf);
 
@@ -1433,10 +1441,27 @@ print_n(ldouble *np, int format, boolean conv)
 		return;
 	}
 
-	// mode can be float but we can still print in hex, binary format, etc
+	/* this is a little messy.  this is the general "print a
+	 * number" routine, but because it's called at the deep end of
+	 * a recursive loop when printing a stack, it also gets
+	 * saddled for converting values on the stack.  the conversion
+	 * needs to happen when switching from float mode to an
+	 * integer mode:  values need to be masked and sign extended
+	 * (if word length is less than native), and we need to do it
+	 * here so we can print a message about the conversion
+	 * alongside the converted value.
+	 */
 
-	changed = check_overflow(&n, conv);
 
+	/* check for integer masking, and optionally modify the original.
+	 * we'll do that if we're changing modes, but not if we're just
+	 * printing in another mode's format.
+	 */
+	changed = check_int_truncation(&n, conv);
+
+	/* mode can be float but we can still print in hex, binary
+	 * format, etc
+	 */
 	switch (format) {
 	case 'H':
 		ln = (long long)n & mask;
@@ -1487,7 +1512,7 @@ print_n(ldouble *np, int format, boolean conv)
 		return;
 	}
 
-	show_overflow(changed, old_n);
+	show_int_truncation(changed, old_n);
 	*np = n;
 
 }
@@ -1689,20 +1714,10 @@ modeinfo(void)
 	return GOODOP;
 }
 
-void
-mask_stack(void)
-{
-    return;
-	struct num *s;
-	for (s = stack; s; s = s->next)
-		s->val = sign_extend((long long)s->val & int_mask);
-}
-
 opreturn
 modehex(void)
 {
 	mode = 'H';
-	mask_stack();
 	showmode();
 	printstack(1,stack);
 	return GOODOP;
@@ -1712,7 +1727,6 @@ opreturn
 modebin(void)
 {
 	mode = 'B';
-	mask_stack();
 	showmode();
 	printstack(1,stack);
 	return GOODOP;
@@ -1722,7 +1736,6 @@ opreturn
 modeoct(void)
 {
 	mode = 'O';
-	mask_stack();
 	showmode();
 	printstack(1,stack);
 	return GOODOP;
@@ -1732,7 +1745,6 @@ opreturn
 modedec(void)
 {
 	mode = 'D';
-	mask_stack();
 	showmode();
 	printstack(1,stack);
 	return GOODOP;
@@ -1742,7 +1754,6 @@ opreturn
 modeuns(void)
 {
 	mode = 'U';
-	mask_stack();
 	showmode();
 	printstack(1,stack);
 	return GOODOP;
