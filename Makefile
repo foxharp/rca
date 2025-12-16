@@ -1,18 +1,4 @@
 
-# to release, an annotated tag must be used.
-# verify:
-#  git status
-# tag:
-#  git tag -a v17 -m "Release v17"  [ tags HEAD ]
-# build:
-#  make clean all
-# build html:
-#  make html
-#  make htmldiff
-#  make htmlmv
-# git commit ./html
-# 
-
 # build both the readline and no-readline versions by default
 all: rca rca-norl rca.1 html
 
