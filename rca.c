@@ -1354,13 +1354,17 @@ check_overflow(ldouble *np, boolean conv)
 void
 show_overflow(boolean changed, ldouble old_n)
 {
-	if (changed) {
-		printf("     warning: integer truncation, was %.*Lg\n",
-			float_digits, old_n);
-		might_errexit();
-	} else {
+	if (!changed) {
 		putchar('\n');
+		return;
 	}
+
+	if (mode == 'F')
+		printf("     # warning: integer display shows changed value\n");
+	else
+		printf("     # warning: value modified by integer conversion, was %.*Lg\n", float_digits, old_n);
+
+	might_errexit();
 }
 
 int
