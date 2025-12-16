@@ -1010,6 +1010,7 @@ log_worker(int which)
 			return BADOP;
 		}
 		switch(which) {
+		default:  // warning suppression
 		case 0: l = logl(n); break;
 		case 2: l = log2l(n); break;
 		case 10:l = log10l(n); break;
@@ -2948,7 +2949,8 @@ precedence(void)
 #define NUM_PRECEDENCE 30
 	static char *prec_ops[NUM_PRECEDENCE] = {0};
 	int linelen[NUM_PRECEDENCE] = {0};
-	int prec, i, negate_prec;
+	int prec, i;
+	int negate_prec = 0; // warning suppression 
 	static int precedence_generated;
 
 	printf("Precedence for operators in infix expressions, from \n");

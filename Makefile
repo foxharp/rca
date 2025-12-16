@@ -18,13 +18,13 @@ all: rca rca-norl rca.1 html
 
 rca: rca.c
 	v="$$(git describe --dirty=+ 2>/dev/null)"; \
-	gcc -g -Wall -Wextra -o rca \
+	gcc -g -O -Wall -Wextra -o rca \
 		-DVERSION=\"$${v}\" -D USE_READLINE \
 		rca.c -lm -lreadline
 
 rca-norl: rca.c
 	v="$$(git describe --dirty=+ 2>/dev/null)"; \
-	gcc -g -Wall -Wextra -o rca-norl \
+	gcc -g -O -Wall -Wextra -o rca-norl \
 		-DVERSION=\"$${v}\" \
 		rca.c -lm
 
