@@ -42,7 +42,7 @@ foobar
 
 H
  Mode is hex.  Integer math with 64 bits.
- 0x2
+ 0x2     # warning: value modified by integer conversion, was 2.60841
  0x1000
 0xfffff
 0xaaaaa ~ &
@@ -53,7 +53,7 @@ lastx |
  Integers are now 20 bits wide.
  0x2
  0x1000
- 0x5,5555
+ 0x5,5555     # warning: value modified by integer conversion, was -699051
 clear
  empty stack
 0xfffff
@@ -125,15 +125,15 @@ l2q
 c2f
  62.0196026477562
 o
- 076
+ 076     # warning: integer display shows changed value
 h
- 0x3e
+ 0x3e     # warning: integer display shows changed value
 0xf0 +
  302.019602647756
 H
  Mode is hex.  Integer math with 20 bits.
- 0x0
- 0x12e
+ 0x0     # warning: value modified by integer conversion, was 0.982547593562717
+ 0x12e     # warning: value modified by integer conversion, was 302.019602647756
 0xf00 |
  0xf2e
 4 <<
@@ -141,7 +141,7 @@ H
 12 width
  Integers are now 12 bits wide.
  0x0
- 0x2e0
+ 0x2e0     # warning: value modified by integer conversion, was 62176
 4 >>
  0x2e
 0xf00 |
@@ -174,7 +174,7 @@ b
  0x87650000
 16w
  Integers are now 16 bits wide.
- 0x0
+ 0x0     # warning: value modified by integer conversion, was 2271543296
 h
  0x0
 B
@@ -205,7 +205,7 @@ H
  Mode is hex.  Integer math with 32 bits.
  0x0
  0x8765,0000
- 0x4,cb2f
+ 0x4,cb2f     # warning: value modified by integer conversion, was 314159.265358979
 D
  Mode is signed decimal.  Integer math with 32 bits.
  0
@@ -325,7 +325,7 @@ pi
  showing 10 significant digits.
  3.141592654e+15
 d
- 3,141,592,653,589,793
+ 3,141,592,653,589,793     # warning: integer display shows changed value
 f
  3.141592654e+15
 pi
@@ -406,7 +406,12 @@ sum
  2
 (3- -2)
  5
-
+-3 log2
+ nan
+(log10 -4)
+ nan
+==
+ 0
 (2 ^ 3 ^ 2)
  512
 (8 / (3 - 3))
@@ -578,7 +583,7 @@ u
  65,535
 16w
  Integers are now 16 bits wide.
- 0xffff
+ 0xffff     # warning: value modified by integer conversion, was 6.55e+04
 d
  -1
 u
