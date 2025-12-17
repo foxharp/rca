@@ -42,7 +42,7 @@ foobar
 
 H
  Mode is hex.  Integer math with 64 bits.
- 0x2     # warning: value modified by integer conversion, was 2.60841
+ 0x2     # warning: value modified by integer conversion, was 2.60840734641020676
  0x1000
 0xfffff
 0xaaaaa ~ &
@@ -51,9 +51,7 @@ lastx |
  0xffff,ffff,fff5,5555
 20 width
  Integers are now 20 bits wide.
- 0x2
- 0x1000
- 0x5,5555     # warning: value modified by integer conversion, was -699051
+ 0x5,5555
 clear
  empty stack
 0xfffff
@@ -114,7 +112,7 @@ store
 km2mi
  15.7828
 15k
- showing 15 significant digits.
+ will show 15 significant digits.
  15.78282848
 oz2g
  447.43529599376
@@ -132,16 +130,15 @@ h
  302.019602647756
 H
  Mode is hex.  Integer math with 20 bits.
- 0x0     # warning: value modified by integer conversion, was 0.982547593562717
- 0x12e     # warning: value modified by integer conversion, was 302.019602647756
+ 0x0     # warning: value modified by integer conversion, was 0.982547593562716898
+ 0x12e     # warning: value modified by integer conversion, was 302.019602647756157
 0xf00 |
  0xf2e
 4 <<
  0xf2e0
 12 width
  Integers are now 12 bits wide.
- 0x0
- 0x2e0     # warning: value modified by integer conversion, was 62176
+ 0x2e0
 4 >>
  0x2e
 0xf00 |
@@ -174,7 +171,7 @@ b
  0x87650000
 16w
  Integers are now 16 bits wide.
- 0x0     # warning: value modified by integer conversion, was 2271543296
+ 0x0
 h
  0x0
 B
@@ -205,7 +202,7 @@ H
  Mode is hex.  Integer math with 32 bits.
  0x0
  0x8765,0000
- 0x4,cb2f     # warning: value modified by integer conversion, was 314159.265358979
+ 0x4,cb2f     # warning: value modified by integer conversion, was 314159.265358979324
 D
  Mode is signed decimal.  Integer math with 32 bits.
  0
@@ -273,7 +270,7 @@ clear
 F
  Mode is float.  Displaying 15 digits of total precision.
 32k
- showing the maximum of 18 significant digits.
+ will show the maximum of 18 significant digits.
 pi
  3.14159265358979324
 frac
@@ -297,7 +294,7 @@ int
 pi
  3.14159265358979324
 15k
- showing 15 significant digits.
+ will show 15 significant digits.
  3.14159265358979
 pi
  3.14159265358979
@@ -316,13 +313,13 @@ pi
  will show no digits after the decimal.
  3,141,592,653,589,793
 15k
- showing 15 significant digits.
+ will show 15 significant digits.
  3.14159265358979e+15
 1k
- showing 1 significant digit.
+ will show 1 significant digit.
  3e+15
 10k
- showing 10 significant digits.
+ will show 10 significant digits.
  3.141592654e+15
 d
  3,141,592,653,589,793     # warning: integer display shows changed value
@@ -540,7 +537,7 @@ atan
 10 chs * 10 chs atan2
  -115.000
 7k
- showing 7 significant digits.
+ will show 7 significant digits.
  -115
 ( i2mm -.75 )
  -19.05
@@ -581,7 +578,7 @@ u
  65,535
 16w
  Integers are now 16 bits wide.
- 0xffff     # warning: value modified by integer conversion, was 6.55e+04
+ 0xffff
 d
  -1
 u

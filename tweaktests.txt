@@ -163,7 +163,7 @@ e 5 ln ^ 5 ==
 # =============================
 
 18 precision
- showing 18 significant digits.
+ will show 18 significant digits.
  0
 
 0 commas
