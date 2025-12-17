@@ -1927,9 +1927,12 @@ width(void)
 	// info
 	snprintf(pending_info, sizeof(pending_info),
 		" Integers are now %d bits wide.\n", int_width);
-	if (mode == 'F')
+	if (mode == 'F') {
 		strcat(pending_info,
 		" In float mode, integer width is recorded but ignored.\n");
+	} else {
+		mask_stack();
+	}
 
 	return GOODOP;
 }
