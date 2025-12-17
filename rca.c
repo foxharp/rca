@@ -1836,8 +1836,12 @@ precision(void)
 
 	// info
 	snprintf(pending_info, sizeof(pending_info),
-		" showing %s%d significant digit%s.\n", limited,
+		" will show %s%d significant digit%s.\n", limited,
 		float_digits, float_digits == 1 ? "" : "s");
+
+	if (mode != 'F')
+		strcat(pending_info,
+		" In integer mode, float precision is recorded but ignored.\n");
 
 	return GOODOP;
 }
@@ -1869,6 +1873,11 @@ decimal_length(void)
 		snprintf(pending_info, sizeof(pending_info),
 			" will show at most %d digit%s after the decimal.\n",
 			float_digits, float_digits == 1 ? "" : "s");
+
+	if (mode != 'F')
+		strcat(pending_info,
+		" In integer mode, float decimal length is recorded but ignored.\n");
+
 
 	return GOODOP;
 }
@@ -1927,19 +1936,10 @@ width(void)
 
 	// info
 	snprintf(pending_info, sizeof(pending_info),
-		" Integers are now %d bits wide.%s\n", int_width,
-			(mode == 'F') ? "  (Ignored in float mode!)":"");
-	// This is sort of an "info" message, except that it also
-	// does a big printall() down below.  So we'll keep printing
-	// it mid-commandline, for now.
-	if (*pending_info)
-		printf("%s", pending_info);
-	*pending_info = '\0';
-
+		" Integers are now %d bits wide.\n", int_width);
 	if (mode == 'F')
-		printf(" In float mode, width is recorded but not applied.\n");
-	else
-		printstack(1,stack);
+		strcat(pending_info,
+		" In float mode, integer width is recorded but ignored.\n");
 
 	return GOODOP;
 }
