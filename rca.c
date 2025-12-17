@@ -1428,7 +1428,6 @@ print_n(ldouble *np, int format, boolean conv)
 	ldouble old_n, n;
 	long long ln;
 	long long mask = int_mask;
-	long long signbit;
 	unsigned long long uln;
 	boolean changed;
 
@@ -1495,10 +1494,9 @@ print_n(ldouble *np, int format, boolean conv)
 			 */
 			long long t;
 
-			signbit = 1LL << (int_width - 1);
-			mask = (long long)int_mask & ~signbit;
-			if (ln & signbit) {	// negative
-				t = signbit - (ln & mask);
+			mask = (long long)int_mask & ~int_sign_bit;
+			if (ln & int_sign_bit) {	// negative
+				t = int_sign_bit - (ln & mask);
 				printf(" -");
 			} else {
 				t = ln & mask;
