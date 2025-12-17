@@ -456,26 +456,6 @@ tdump(token **tstackp)
 	printf("\n");
 }
 
-// NaN, +/-inf
-int invalid_ok = 1;
-
-opreturn
-allow_nan(void)
-{
-	ldouble allow;
-
-	if (!pop(&allow))
-		return BADOP;
-
-	invalid_ok = (allow != 0);
-
-	// info
-	snprintf(pending_info, sizeof(pending_info),
-		" calculations resulting in nan or +/-inf are now %sallowed\n",
-			invalid_ok ? "" : "dis");
-	return GOODOP;
-}
-
 opreturn
 add(void)
 {
@@ -531,15 +511,7 @@ divide(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			if (invalid_ok || b != 0.0) {
-				result_push(a / b);
-			} else {
-				push(a);
-				push(b);
-				printf(" math error: would divide by zero\n");
-				might_errexit();
-				return BADOP;
-			}
+			result_push(a / b);
 			lastx = b;
 			return GOODOP;
 		}
@@ -555,15 +527,7 @@ modulo(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			if (invalid_ok || b != 0) {
-				result_push(fmodl(a,b));
-			} else {
-				push(a);
-				push(b);
-				printf(" math error: would divide by zero\n");
-				might_errexit();
-				return BADOP;
-			}
+			result_push(fmodl(a,b));
 			lastx = b;
 			return GOODOP;
 		}
@@ -579,17 +543,7 @@ y_to_the_x(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			if (invalid_ok ||
-				(!(a < 0 && floorl(b) != b) &&
-				 !(a == 0 && b < 0))) {
-				result_push(powl(a, b));
-			} else {
-				push(a);
-				push(b);
-				printf(" math error: result would be infinite or complex\n");
-				might_errexit();
-				return BADOP;
-			}
+			result_push(powl(a, b));
 			lastx = b;
 			return GOODOP;
 		}
@@ -805,16 +759,7 @@ recip(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		if (invalid_ok || a != 0.0) {
-			result_push(1.0 / a);
-			lastx = a;
-			return GOODOP;
-		} else {
-			push(a);
-			printf(" math error: would divide by zero\n");
-			might_errexit();
-			return BADOP;
-		}
+		result_push(1.0 / a);
 	}
 	return BADOP;
 }
@@ -825,16 +770,7 @@ squarert(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		if (invalid_ok || a >= 0.0) {
-			result_push(sqrtl(a));
-			lastx = a;
-			return GOODOP;
-		} else {
-			push(a);
-			printf(" math error: can't take root of negative\n");
-			might_errexit();
-			return BADOP;
-		}
+		result_push(sqrtl(a));
 	}
 	return BADOP;
 }
@@ -1003,12 +939,6 @@ log_worker(int which)
 	ldouble n, l;
 
 	if (pop(&n)) {
-		if (!invalid_ok && n <= 0) {
-			push(n);
-			printf(" math error: log of 0 or negative\n");
-			might_errexit();
-			return BADOP;
-		}
 		switch(which) {
 		default:  // warning suppression
 		case 0: l = logl(n); break;
@@ -3280,7 +3210,6 @@ struct oper opers[] = {
 	{"width", width,	0 },
 	{"w", width,		"Set effective \"word size\" for integer modes" },
 	{"degrees", use_degrees, "Toggle trig functions: degrees (1) or radians (0)" },
-	{"invalidok", allow_nan, "Toggle invalid mathematical result checks with 0/1" },
 	{"autoprint", autop,	0 },
 	{"a", autop,		"Toggle autoprinting on/off with 0/1" },
 	{"commas", punctuation,	0 },

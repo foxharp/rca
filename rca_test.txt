@@ -417,13 +417,11 @@ sum
 (8 / (3 - 3))
  inf
 0invalidok
- calculations resulting in nan or +/-inf are now disallowed
- inf
+ error: unrecognized input 'invalidok'
 pop
- 512
+ inf
 (8 / (3 - 3))
- math error: would divide by zero
- 0
+ inf
 (4 + 5)
  9
 (4 + * 5)
