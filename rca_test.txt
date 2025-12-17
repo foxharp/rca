@@ -41,9 +41,9 @@ foobar
  error: unrecognized input 'foobar'
 
 H
- Mode is hex.  Integer math with 64 bits.
  0x2     # warning: accuracy lost, was 2.60840734641020676
  0x1000
+ Mode is hex.  Integer math with 64 bits.
 0xfffff
 0xaaaaa ~ &
  0x5,5555
@@ -129,9 +129,9 @@ h
 0xf0 +
  302.019602647756
 H
- Mode is hex.  Integer math with 20 bits.
  0x0     # warning: accuracy lost, was 0.982547593562716898
  0x12e     # warning: accuracy lost, was 302.019602647756157
+ Mode is hex.  Integer math with 20 bits.
 0xf00 |
  0xf2e
 4 <<
@@ -175,16 +175,16 @@ b
 h
  0x0
 B
- Mode is binary.  Integer math with 16 bits.
  0b0000000000000000
+ Mode is binary.  Integer math with 16 bits.
 1c
  numeric punctuation is now on
  0b00000000,00000000
 b
  0b00000000,00000000
 D
- Mode is signed decimal.  Integer math with 16 bits.
  0
+ Mode is signed decimal.  Integer math with 16 bits.
 32w
  Integers are now 32 bits wide.
  0
@@ -193,21 +193,21 @@ h
 0x8765,0000
 
 F
- Mode is float.  Displaying 15 digits of total precision.
  0
  -2,023,424,000
+ Mode is float.  Displaying 15 digits of total precision.
 pi 100,000 *
  314,159.265358979
 H
- Mode is hex.  Integer math with 32 bits.
  0x0
  0x8765,0000
  0x4,cb2f     # warning: accuracy lost, was 314159.265358979324
+ Mode is hex.  Integer math with 32 bits.
 D
- Mode is signed decimal.  Integer math with 32 bits.
  0
  -2,023,424,000
  314,159
+ Mode is signed decimal.  Integer math with 32 bits.
 0c
  numeric punctuation is now off
  314159
@@ -234,8 +234,8 @@ chs
  0x7effffff
 
 O
- Mode is octal.  Integer math with 32 bits.
  017677777777
+ Mode is octal.  Integer math with 32 bits.
 ~
  020100000000
 h
@@ -250,9 +250,9 @@ h
 dup
  017,677,777,777
 O
+ 017,677,777,777
+ 017,677,777,777
  Mode is octal.  Integer math with 32 bits.
- 017,677,777,777
- 017,677,777,777
 h
  0x7eff,ffff
 16 <<
