@@ -112,7 +112,7 @@ store
 km2mi
  15.7828
 15k
- will show 15 significant digits.
+ Will show 15 significant digits.
  15.78282848
 oz2g
  447.43529599376
@@ -167,7 +167,7 @@ h
 b
  0b00000000,00000000,00000000,00000000,10000111,01100101,00000000,00000000
 0 commas
- numeric punctuation is now off
+ Numeric punctuation is now off
  0x87650000
 16w
  Integers are now 16 bits wide.
@@ -178,7 +178,7 @@ B
  0b0000000000000000
  Mode is binary.  Integer math with 16 bits.
 1c
- numeric punctuation is now on
+ Numeric punctuation is now on
  0b00000000,00000000
 b
  0b00000000,00000000
@@ -209,7 +209,7 @@ D
  314,159
  Mode is signed decimal.  Integer math with 32 bits.
 0c
- numeric punctuation is now off
+ Numeric punctuation is now off
  314159
 
 # comment test
@@ -241,7 +241,7 @@ O
 h
  0x81000000
 1 commas
- numeric punctuation is now on
+ Numeric punctuation is now on
  020,100,000,000
 h
  0x8100,0000
@@ -270,7 +270,7 @@ clear
 F
  Mode is float.  Displaying 15 digits of total precision.
 32k
- will show the maximum of 18 significant digits.
+ Will show the maximum of 18 significant digits.
 pi
  3.14159265358979324
 frac
@@ -294,32 +294,32 @@ int
 pi
  3.14159265358979324
 15k
- will show 15 significant digits.
+ Will show 15 significant digits.
  3.14159265358979
 pi
  3.14159265358979
 10 15 ^ *
  3.14159265358979e+15
 15K
- will show at most 15 digits after the decimal.
+ Will show at most 15 digits after the decimal.
  3,141,592,653,589,793.24
 5K
- will show at most 5 digits after the decimal.
+ Will show at most 5 digits after the decimal.
  3,141,592,653,589,793.24
 1K
- will show at most 1 digit after the decimal.
+ Will show at most 1 digit after the decimal.
  3,141,592,653,589,793.2
 0K
- will show no digits after the decimal.
+ Will show no digits after the decimal.
  3,141,592,653,589,793
 15k
- will show 15 significant digits.
+ Will show 15 significant digits.
  3.14159265358979e+15
 1k
- will show 1 significant digit.
+ Will show 1 significant digit.
  3e+15
 10k
- will show 10 significant digits.
+ Will show 10 significant digits.
  3.141592654e+15
 d
  3,141,592,653,589,793     # warning: display format loses accuracy
@@ -472,7 +472,7 @@ pop
  0
 
 3K
- will show at most 3 digits after the decimal.
+ Will show at most 3 digits after the decimal.
  0.000
 
 25 tan
@@ -537,20 +537,20 @@ atan
 10 chs * 10 chs atan2
  -115.000
 7k
- will show 7 significant digits.
+ Will show 7 significant digits.
  -115
 ( i2mm -.75 )
  -19.05
 40 i2mm
  1,016
 0 c
- numeric punctuation is now off
+ Numeric punctuation is now off
  1016
 3K
- will show at most 3 digits after the decimal.
+ Will show at most 3 digits after the decimal.
  1016.000
 1 c
- numeric punctuation is now on
+ Numeric punctuation is now on
  1,016.000
 clear
  empty stack

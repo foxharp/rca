@@ -1812,7 +1812,7 @@ punctuation(void)
 	punct = (wantcommas != 0);
 
 	// info
-	pending_printf( " numeric punctuation is now %s\n",
+	pending_printf( " Numeric punctuation is now %s\n",
 		punct ? "on" : "off");
 	setup_format_string();
 	return GOODOP;
@@ -1841,7 +1841,7 @@ precision(void)
 	setup_format_string();
 
 	// info
-	pending_printf(" will show %s%d significant digit%s.\n", limited,
+	pending_printf(" Will show %s%d significant digit%s.\n", limited,
 		float_digits, float_digits == 1 ? "" : "s");
 
 	if (mode != 'F')
@@ -1872,9 +1872,9 @@ decimal_length(void)
 
 	// info
 	if (float_digits == 0)
-		pending_printf(" will show no digits after the decimal.\n");
+		pending_printf(" Will show no digits after the decimal.\n");
 	else
-		pending_printf(" will show at most %d digit%s after the decimal.\n",
+		pending_printf(" Will show at most %d digit%s after the decimal.\n",
 			float_digits, float_digits == 1 ? "" : "s");
 
 	if (mode != 'F')
@@ -2325,7 +2325,7 @@ autop(void)
 	autoprint = (wantautop != 0);
 
 	// info
-	pending_printf(" autoprinting is now %s\n", autoprint ? "on" : "off");
+	pending_printf(" Autoprinting is now %s\n", autoprint ? "on" : "off");
 	return GOODOP;
 }
 
@@ -2340,7 +2340,7 @@ rawfloat(void)
 	raw_floats = (wantraw != 0);
 
 	// info
-	pending_printf( " float snapping/rounding is now %s\n",
+	pending_printf( " Float snapping/rounding is now %s\n",
 		raw_floats ? "off" : "on");
 	return GOODOP;
 }
