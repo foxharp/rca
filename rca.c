@@ -41,6 +41,7 @@
 #endif
 
 #include <stdlib.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -164,6 +165,7 @@ boolean suppress_autoprint = FALSE;
 /* informative feedback is only printed if the command generating it
  * is followed by a newline */
 char pending_info[1024];
+void pending_printf(const char *fmt, ...);
 
 /* if true, will decorate numbers, like "1,333,444".  */
 boolean punct = TRUE;
@@ -847,8 +849,8 @@ use_degrees(void)
 	trig_degrees = (wantdegrees != 0);
 
 	// info
-	snprintf(pending_info, sizeof(pending_info),
-		" trig functions will now use %s\n", trig_degrees ? "degrees" : "radians");
+	pending_printf(" trig functions will now use %s\n",
+		trig_degrees ? "degrees" : "radians");
 	return GOODOP;
 }
 
@@ -1245,6 +1247,30 @@ exchange(void)
 		push(b);
 	}
 	return BADOP;
+}
+
+
+void
+pending_printf(const char *fmt, ...)
+{
+	int n, remaining;
+	va_list ap;
+	static int used;
+
+	if (!pending_info[0]) used = 0;
+
+	remaining = sizeof(pending_info) - used;
+	if (remaining <= 0) return;
+
+	va_start(ap, fmt);
+	n = vsnprintf(pending_info + used, remaining, fmt, ap);
+	va_end(ap);
+
+	if (n >= 0 && n < remaining)
+		used += n;
+	else
+		used += remaining;
+
 }
 
 void
@@ -1665,7 +1691,7 @@ void
 showmode(void)
 {
 
-	printf(" Mode is %s. ", mode2name());
+	pending_printf(" Mode is %s. ", mode2name());
 
 	if (mode == 'F') {
 		char *msg;
@@ -1677,9 +1703,9 @@ showmode(void)
 			/* float_digits == 7 gives:  123.4560000  */
 			msg = "after the decimal";
 		}
-		printf(" Displaying %u digits %s.\n", float_digits, msg);
+		pending_printf(" Displaying %u digits %s.\n", float_digits, msg);
 	} else {
-		printf(" Integer math with %d bits.\n", int_width);
+		pending_printf(" Integer math with %d bits.\n", int_width);
 	}
 
 	suppress_autoprint = TRUE;
@@ -1786,8 +1812,8 @@ punctuation(void)
 	punct = (wantcommas != 0);
 
 	// info
-	snprintf(pending_info, sizeof(pending_info),
-		" numeric punctuation is now %s\n", punct ? "on" : "off");
+	pending_printf( " numeric punctuation is now %s\n",
+		punct ? "on" : "off");
 	setup_format_string();
 	return GOODOP;
 }
@@ -1815,13 +1841,12 @@ precision(void)
 	setup_format_string();
 
 	// info
-	snprintf(pending_info, sizeof(pending_info),
-		" will show %s%d significant digit%s.\n", limited,
+	pending_printf(" will show %s%d significant digit%s.\n", limited,
 		float_digits, float_digits == 1 ? "" : "s");
 
 	if (mode != 'F')
-		strcat(pending_info,
-		" In integer mode, float precision is recorded but ignored.\n");
+		pending_printf(" In integer mode, float precision"
+				" is recorded but ignored.\n");
 
 	return GOODOP;
 }
@@ -1847,16 +1872,14 @@ decimal_length(void)
 
 	// info
 	if (float_digits == 0)
-		snprintf(pending_info, sizeof(pending_info),
-			" will show no digits after the decimal.\n");
+		pending_printf(" will show no digits after the decimal.\n");
 	else
-		snprintf(pending_info, sizeof(pending_info),
-			" will show at most %d digit%s after the decimal.\n",
+		pending_printf(" will show at most %d digit%s after the decimal.\n",
 			float_digits, float_digits == 1 ? "" : "s");
 
 	if (mode != 'F')
-		strcat(pending_info,
-		" In integer mode, float decimal length is recorded but ignored.\n");
+		pending_printf(" In integer mode, float decimal"
+				" length is recorded but ignored.\n");
 
 
 	return GOODOP;
@@ -1925,11 +1948,10 @@ width(void)
 	setup_width(bits);
 
 	// info
-	snprintf(pending_info, sizeof(pending_info),
-		" Integers are now %d bits wide.\n", int_width);
+	pending_printf(" Integers are now %d bits wide.\n", int_width);
 	if (mode == 'F') {
-		strcat(pending_info,
-		" In float mode, integer width is recorded but ignored.\n");
+		pending_printf(" In float mode, integer width"
+				" is recorded but ignored.\n");
 	} else {
 		mask_stack();
 	}
@@ -2303,8 +2325,7 @@ autop(void)
 	autoprint = (wantautop != 0);
 
 	// info
-	snprintf(pending_info, sizeof(pending_info),
-		" autoprinting is now %s\n", autoprint ? "on" : "off");
+	pending_printf(" autoprinting is now %s\n", autoprint ? "on" : "off");
 	return GOODOP;
 }
 
@@ -2319,8 +2340,8 @@ rawfloat(void)
 	raw_floats = (wantraw != 0);
 
 	// info
-	snprintf(pending_info, sizeof(pending_info),
-		" float snapping/rounding is now %s\n", raw_floats ? "off" : "on");
+	pending_printf( " float snapping/rounding is now %s\n",
+		raw_floats ? "off" : "on");
 	return GOODOP;
 }
 
