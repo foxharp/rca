@@ -299,7 +299,7 @@ push(ldouble n)
 	if (!p)
 		memory_failure();
 
-	if (mode == 'F') {
+	if (mode == 'F' || !isfinite(n)) {
 		p->val = n;
 		trace(("pushed %Lg/0x%llx\n", n, (long long)(p->val)));
 	} else {
@@ -316,7 +316,9 @@ push(ldouble n)
 void
 result_push(ldouble n)
 {
-	push(tweak_float(n));
+	if (isfinite(n))
+		n = tweak_float(n);
+	push(n);
 }
 
 boolean
@@ -552,6 +554,30 @@ y_to_the_x(void)
 	return BADOP;
 }
 
+int
+bothfinite(ldouble a, ldouble b)
+{
+	if (isfinite(a) && isfinite(b))
+		return 1;
+
+	// nan is more insidious than inf, so propagate it if present
+	if (isnan(a)) {
+		push(a);
+		return 0;
+	} else if (isnan(b)) {
+		push(b);
+		return 0;
+	}
+	if (!isfinite(a)) {
+		push(a);
+		return 0;
+	} else if (!isfinite(b)) {
+		push(b);
+		return 0;
+	}
+	return 1;
+}
+
 opreturn
 rshift(void)
 {
@@ -561,6 +587,9 @@ rshift(void)
 		if (pop(&a)) {
 			unsigned long long i;  // want logical shift, not arithmetic
 			long long j;
+
+			if (!bothfinite(a, b))
+				return GOODOP;
 
 			i = (unsigned long long)a;
 			j = (long long)b;
@@ -590,6 +619,9 @@ lshift(void)
 		if (pop(&a)) {
 			long long i, j;
 
+			if (!bothfinite(a, b))
+				return GOODOP;
+
 			i = (long long)a;
 			j = (long long)b;
 			if (j < 0) {
@@ -617,6 +649,9 @@ bitwise_and(void)
 		if (pop(&a)) {
 			long long i, j;
 
+			if (!bothfinite(a, b))
+				return GOODOP;
+
 			i = (long long)a;
 			j = (long long)b;
 			push(i & j);
@@ -636,6 +671,9 @@ bitwise_or(void)
 	if (pop(&b)) {
 		if (pop(&a)) {
 			long long i, j;
+
+			if (!bothfinite(a, b))
+				return GOODOP;
 
 			i = (long long)a;
 			j = (long long)b;
@@ -657,6 +695,9 @@ bitwise_xor(void)
 		if (pop(&a)) {
 			long long i, j;
 
+			if (!bothfinite(a, b))
+				return GOODOP;
+
 			i = (long long)a;
 			j = (long long)b;
 			push(i ^ j);
@@ -676,6 +717,9 @@ setbit(void)
 	if (pop(&b)) {
 		if (pop(&a)) {
 			long long i, j;
+
+			if (!bothfinite(a, b))
+				return GOODOP;
 
 			i = (long long)a;
 			j = (long long)b;
@@ -697,6 +741,9 @@ clearbit(void)
 		if (pop(&a)) {
 			long long i, j;
 
+			if (!bothfinite(a, b))
+				return GOODOP;
+
 			i = (long long)a;
 			j = (long long)b;
 			push(i & ~(1LL << j));
@@ -714,6 +761,11 @@ bitwise_not(void)
 	ldouble a;
 
 	if (pop(&a)) {
+		if (!isfinite(a)) {
+			push(a);
+			return GOODOP;
+		}
+
 		push(~(long long)a);
 		lastx = a;
 		return GOODOP;
@@ -1263,16 +1315,14 @@ boolean
 check_int_truncation(ldouble *np, boolean conv)
 {
 	ldouble n = *np;
-	boolean changed;
+	boolean changed = 0;
 
 	if (isnan(n) || !isfinite(n)) {
-	    n = 0;
-	    changed = 1;
+		n = sign_extend(int_sign_bit);
+		changed = 1;
 	} else if (n != sign_extend((long long)n & int_mask)) {
-	    n = sign_extend((long long)n & int_mask);
-	    changed = 1;
-	} else {
-	    changed = 0;
+		n = sign_extend((long long)n & int_mask);
+		changed = 1;
 	}
 
 	if (conv)
@@ -1365,7 +1415,7 @@ print_n(ldouble *np, int format, boolean conv)
 
 	old_n = n = *np;
 
-	if (format == 'F') {
+	if (format == 'F' || !isfinite(n)) {
 		print_floating(n);
 		return;
 	}
@@ -1840,6 +1890,16 @@ setup_width(int bits)
 		int_mask = (1LL << int_width) - 1;
 		int_max = int_mask >> 1;
 		int_min = sign_extend(int_sign_bit);
+	}
+}
+
+void
+mask_stack(void)
+{
+	struct num *s;
+	for (s = stack; s; s = s->next) {
+		if (isfinite(s->val))
+			s->val = sign_extend((long long)s->val & int_mask);
 	}
 }
 

@@ -525,9 +525,11 @@ operation.  Execution will proceed after the warning unless
 .B errorexit
 has been enabled.
 
-Some floating point operations may result in invalid (nan, "not a
-number") or +inf or -inf (infinity).  When converting to integer mode,
-these will all be converted to 0.
+Some floating point operations may result in invalid ("nan", i.e., "not a
+number") or "+inf" or "-inf" (i.e., infinity).  When converting to
+integer mode, these values will be preserved, along with their
+semantics:  any computation involving nan will return nan, and
+any conditionals involving nan will return false.
 
 Floating point math by its nature is imprecise.  It's not uncommon for
 small rounding errors, and errors introduced by the necessary binary
