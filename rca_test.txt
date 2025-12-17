@@ -42,7 +42,7 @@ foobar
 
 H
  Mode is hex.  Integer math with 64 bits.
- 0x2     # warning: value modified by integer conversion, was 2.60840734641020676
+ 0x2     # warning: accuracy lost, was 2.60840734641020676
  0x1000
 0xfffff
 0xaaaaa ~ &
@@ -123,15 +123,15 @@ l2q
 c2f
  62.0196026477562
 o
- 076     # warning: integer display shows changed value
+ 076     # warning: display format loses accuracy
 h
- 0x3e     # warning: integer display shows changed value
+ 0x3e     # warning: display format loses accuracy
 0xf0 +
  302.019602647756
 H
  Mode is hex.  Integer math with 20 bits.
- 0x0     # warning: value modified by integer conversion, was 0.982547593562716898
- 0x12e     # warning: value modified by integer conversion, was 302.019602647756157
+ 0x0     # warning: accuracy lost, was 0.982547593562716898
+ 0x12e     # warning: accuracy lost, was 302.019602647756157
 0xf00 |
  0xf2e
 4 <<
@@ -202,7 +202,7 @@ H
  Mode is hex.  Integer math with 32 bits.
  0x0
  0x8765,0000
- 0x4,cb2f     # warning: value modified by integer conversion, was 314159.265358979324
+ 0x4,cb2f     # warning: accuracy lost, was 314159.265358979324
 D
  Mode is signed decimal.  Integer math with 32 bits.
  0
@@ -322,7 +322,7 @@ pi
  will show 10 significant digits.
  3.141592654e+15
 d
- 3,141,592,653,589,793     # warning: integer display shows changed value
+ 3,141,592,653,589,793     # warning: display format loses accuracy
 f
  3.141592654e+15
 pi

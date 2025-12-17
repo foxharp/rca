@@ -1340,9 +1340,9 @@ show_int_truncation(boolean changed, ldouble old_n)
 	}
 
 	if (mode == 'F')
-		printf("     # warning: integer display shows changed value\n");
+		printf("     # warning: display format loses accuracy\n");
 	else
-		printf("     # warning: value modified by integer conversion, was %.*Lg\n", max_precision, old_n);
+		printf("     # warning: accuracy lost, was %.*Lg\n", max_precision, old_n);
 
 	might_errexit();
 }
