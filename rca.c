@@ -3213,7 +3213,7 @@ struct oper opers[] = {
 	{"clear", clear,	"Clear stack" },
 	{"pop", rolldown,	"Pop (and discard) x" },
 	{"push", enter,		0 },
-	{"enter", enter,	"Push (a duplicate of) x" },
+	{"dup", enter,	"Push (a duplicate of) x" },
 	{"lastx", repush,	0 },
 	{"lx", repush,		"Fetch previous value of x", -1 },
 	{"exch", exchange,	0 },

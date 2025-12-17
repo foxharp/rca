@@ -250,7 +250,7 @@ h
  0x8100,0000
 ~
  017,677,777,777
-enter
+dup
  017,677,777,777
 O
  Mode is octal.  Integer math with 32 bits.
