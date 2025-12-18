@@ -1638,7 +1638,7 @@ printstate(void)
 	putchar('\n');
 	printf(" native sizes (bits):\n");
 	printf("  long long:\t%lu\n", (unsigned long)(8 * sizeof(long long)));
-	printf("  LLONG_MIN: %Lx, LLONG_MAX: %Lx\n", LLONG_MIN, LLONG_MAX);
+	printf("  LLONG_MIN: %llx, LLONG_MAX: %llx\n", LLONG_MIN, LLONG_MAX);
 	printf("  long double:\t%lu\n", (unsigned long)(8 * sizeof(long double)));
 	printf("  LDBL_MANT_DIG: %u\n", LDBL_MANT_DIG);
 	printf("  LDBL_MAX: %.20Lg\n", LDBL_MAX);
@@ -3053,10 +3053,12 @@ commands(void)
 		if (op->func ) {
 			if (lastop && lastop->func == op->func )
 				printf("%10s\t%d\t%d\t%s\n",
-				op->name, op->operands, op->prec, op->help ?: "");
+				op->name, op->operands, op->prec,
+					op->help ? op->help : "");
 			else
 				printf("%-10s\t%d\t%d\t%s\n",
-				op->name, op->operands, op->prec, op->help ?: "");
+				op->name, op->operands, op->prec,
+					op->help ? op->help : "");
 		}
 		lastop = op;
 		op++;
