@@ -261,19 +261,29 @@ operations are used on width-restricted integers, the width
 restriction will be ignored for the operation, but masking will happen
 when storing the result.
 
-.SS Punctuation
-To aid in reading long digit strings,
+.SS Numeric grouping
 .B rca
-can add commas to numbers it prints.  These can be toggled on or off
-with
+can add commas (or the locale's "thousands separator") to group the
+numbers it prints.  These separators can be toggled on or off with
 .BR 0 / 1
-.B c
+.B g
 (or
-.BR commas ).
-Commas will never appear in the fractional part of a value.
+.BR groups ).
+Separators will never appear in the fractional part of a value.  The
+grouping is strictly cosmetic, based on the printed digits.  No
+bitwise separation (e.g., into bytes) is implied.
 
-Both commas and the "$" currency symbol will be silently stripped on
-input, as a convenience for doing arithmetic on copy/pasted data.
+Numeric grouping will not be functional if the locale doesn't define
+a thousands separator.  Also, numeric grouping may not be functional if
+.B rca
+is built with libraries other than glibc.  (In that case the
+.B groups
+command will be missing entirely.)
+
+On input, the locale's currency symbol and thousands separator will be
+ignored, as a convenience for doing arithmetic on copy/pasted data. 
+If the locale isn't configured, then for this purpose only these
+symbols will be set to defaults of '$', and ',', respectively.
 
 .SH SPECIAL VALUES
 The
@@ -500,7 +510,24 @@ The mark would be set before entering the data for a subsequent
 in order to limit its reach.
 .B sum
 is the only operator to consume more than 2 stack elements.
+.RE
 
+.SH LOCALE
+The locale is consulted for just three things.
+.P
+The locale chooses the decimal point.  Usually this is '.', but
+is also commonly ','.
+.P
+If the locale defines a thousands separator, it will be used for
+numeric grouping, and will be ignored during input.  If the locale
+doesn't define a thousands separator, there will be no numeric grouping.
+.P
+If the locale defines a currency symbol, and its value doesn't
+match the name of any
+.B rca
+command, it will be ignored on input.
+If the locale doesn't define a currency symbol, it will be set to
+"$", and ignored on input.
 .SH DATA TYPES, OVERFLOW, ACCURACY
 All stack values in
 .B rca

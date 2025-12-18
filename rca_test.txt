@@ -166,8 +166,8 @@ h
  0x8765,0000
 b
  0b00000000,00000000,00000000,00000000,10000111,01100101,00000000,00000000
-0 commas
- Numeric punctuation is now off
+0 groups
+ Numeric grouping is now off
  0x87650000
 16w
  Integers are now 16 bits wide.
@@ -177,8 +177,8 @@ h
 B
  0b0000000000000000
  Mode is binary.  Integer math with 16 bits.
-1c
- Numeric punctuation is now on
+1g
+ Numeric grouping is now on
  0b00000000,00000000
 b
  0b00000000,00000000
@@ -208,8 +208,8 @@ D
  -2,023,424,000
  314,159
  Mode is signed decimal.  Integer math with 32 bits.
-0c
- Numeric punctuation is now off
+0g
+ Numeric grouping is now off
  314159
 
 # comment test
@@ -240,8 +240,8 @@ O
  020100000000
 h
  0x81000000
-1 commas
- Numeric punctuation is now on
+1 groups
+ Numeric grouping is now on
  020,100,000,000
 h
  0x8100,0000
@@ -543,14 +543,14 @@ atan
  -19.05
 40 i2mm
  1,016
-0 c
- Numeric punctuation is now off
+0 g
+ Numeric grouping is now off
  1016
 3K
  Will show at most 3 digits after the decimal.
  1016.000
-1 c
- Numeric punctuation is now on
+1 g
+ Numeric grouping is now on
  1,016.000
 clear
  empty stack

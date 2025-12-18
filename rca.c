@@ -58,6 +58,20 @@
 #include <readline/history.h>
 #endif
 
+/* libraries that I believe support %' for adding commas to %d, %f, etc */
+#if defined(__GLIBC__) || defined(__APPLE__)
+# define PRINTF_GROUPING 1
+#else
+# define PRINTF_GROUPING 0
+#endif
+
+/* these are filled in from the locale, if possible, otherwise
+ * they'll default to period, comma, and dollar-sign */
+char *decimal_pt;   // locale decimal_point
+int decimal_pt_len;
+char *group_sep, *group_sep_input;   // locale thousands_sep
+char *currency ;   // locale currency_symbol
+
 /* who are we? */
 char *progname;
 
@@ -168,7 +182,7 @@ char pending_info[1024];
 void pending_printf(const char *fmt, ...);
 
 /* if true, will decorate numbers, like "1,333,444".  */
-boolean punct = TRUE;
+boolean digitgroups = PRINTF_GROUPING;
 
 /* Floating point precision.  This may become either the total
  * displayed precision, or the number of digits after the decimal,
@@ -1294,8 +1308,8 @@ putbinary2(int width, long long mask, unsigned long long n)
 
 	for (i = bytes - 1; i >= 0; i--) {
 		putbinarybyte(mask >> (8 * i), n >> (8 * i));
-		if (punct && i >= 1)	// commas every 8 bits
-			putchar(',');
+		if (digitgroups && i >= 1)	// commas every 8 bits
+			fputs(group_sep, stdout);
 	}
 }
 
@@ -1318,8 +1332,8 @@ puthex(unsigned long long n)
 		return;
 	}
 	puthex((n / 0x10000));
-	if (punct)
-		putchar(',');
+	if (digitgroups)
+		fputs(group_sep, stdout);
 	printf("%04llx", n % 0x10000);
 }
 
@@ -1332,8 +1346,8 @@ putoct(unsigned long long n)
 		return;
 	}
 	putoct(n / 01000);
-	if (punct)
-		putchar(',');
+	if (digitgroups)
+		fputs(group_sep, stdout);
 	printf("%03llo", n % 01000);
 }
 
@@ -1374,6 +1388,12 @@ show_int_truncation(boolean changed, ldouble old_n)
 }
 
 int
+match_dp(char *p)
+{
+	return (strncmp(p, decimal_pt, decimal_pt_len) == 0);
+}
+
+int
 min(int a, int b)
 {
 	return (a < b) ? a : b;
@@ -1402,7 +1422,7 @@ print_floating(ldouble n)
 	     */
 	    snprintf(buf, sizeof(buf), format_string, float_digits, n);
 
-	    for (p = buf; *p && *p != '.'; p++) {
+	    for (p = buf; *p && !match_dp(p); p++) {
 		if (isdigit(*p))
 		    leadingdigits++;
 	    }
@@ -1485,12 +1505,12 @@ print_n(ldouble *np, int format, boolean conv)
 		break;
 	case 'U':
 		uln = (unsigned long long)n & mask;
-		printf(punct ? " %'llu" : " %llu", uln);
+		printf(digitgroups ? " %'llu" : " %llu", uln);
 		break;
 	case 'D':
 		ln = (long long)n;
 		if (mode == 'F' || int_width == LONGLONG_BITS) {
-			printf(punct ? " %'lld" : " %lld", ln);
+			printf(digitgroups ? " %'lld" : " %lld", ln);
 		} else {
 			/* shenanigans to make pos/neg numbers appear
 			 * properly.  our masked/shortened numbers
@@ -1508,7 +1528,7 @@ print_n(ldouble *np, int format, boolean conv)
 				t = ln & mask;
 				printf(" ");
 			}
-			printf(punct ? "%'lld" : "%lld", t);
+			printf(digitgroups ? "%'lld" : "%lld", t);
 		}
 		break;
 	default:
@@ -1647,11 +1667,8 @@ printstate(void)
 	printf(" calculated:\n");
 	printf("  ULP is %.0Lf\n", nextafterl(x, INFINITY) - x);
 	printf("  detected epsilon is %Lg (%La)\n", epsilon, epsilon);
-
-	/* Unit in the Last Place */
-	// ULP(x) = LDBL_EPSILON × 2^(exp(x))
-
-
+	printf("\n decimal_pt is '%s', group_sep is '%s', currency is '%s'\n",
+		decimal_pt ?: "null", group_sep ?: "null", currency ?: "null");
 
 	suppress_autoprint = TRUE;
 	return GOODOP;
@@ -1788,7 +1805,7 @@ setup_format_string(void)
 	   So there are just four forms to deal with here.
 	 */
 
-	if (punct) {
+	if (digitgroups) {
 		if (float_specifier == 'f')
 			format_string = "%'.*Lf";
 		else
@@ -1802,19 +1819,22 @@ setup_format_string(void)
 }
 
 opreturn
-punctuation(void)
+grouping(void)
 {
-	ldouble wantcommas;
+	ldouble wantsep;
 
-	if (!pop(&wantcommas))
+	if (!pop(&wantsep))
 		return BADOP;
 
-	punct = (wantcommas != 0);
+	digitgroups = (wantsep != 0);
 
 	// info
-	pending_printf( " Numeric punctuation is now %s\n",
-		punct ? "on" : "off");
+	pending_printf( " Numeric grouping is now %s\n",
+		digitgroups ? "on" : "off");
 	setup_format_string();
+	if (digitgroups && !group_sep[0])
+		pending_printf( " No thousands separator defined in the "
+			"current locale, so no numeric grouping.\n");
 	return GOODOP;
 }
 
@@ -2404,9 +2424,9 @@ parse_tok(char *p, token *t, char **nextp)
 	int sign = 1;
 
 	/* be sure + and - are bound closely to numbers */
-	if (*p == '+' && (*(p + 1) == '.' || isdigit(*(p + 1)))) {
+	if (*p == '+' && (match_dp(p + 1) || isdigit(*(p + 1)))) {
 		p++;
-	} else if (*p == '-' && (*(p + 1) == '.' || isdigit(*(p + 1)))) {
+	} else if (*p == '-' && (match_dp(p + 1) || isdigit(*(p + 1)))) {
 		sign = -1;
 		p++;
 	}
@@ -2441,7 +2461,7 @@ parse_tok(char *p, token *t, char **nextp)
 		t->val.val = ln * sign;
 		return 1;
 
-	} else if (isdigit(*p) || (*p == '.')) {
+	} else if (isdigit(*p) || match_dp(p)) {
 		// decimal
 		long double dd = strtold(p, nextp);
 
@@ -2512,27 +2532,50 @@ parse_tok(char *p, token *t, char **nextp)
 	return 1;
 }
 
+char *
+strremoveall(char *haystack, const char *needle)
+{
+    size_t len = strlen(needle);
+    if (len > 0) {
+        char *p = haystack;
+
+        while ((p = strstr(p, needle)) != NULL)
+            memmove(p, p + len, strlen(p + len) + 1);
+    }
+    return haystack;
+}
+
 void
 no_comments(char *cp)
 {
 	char *ncp;
 
-	/* first eliminate comments */
+	/* Eliminate comments */
 	if ((ncp = strchr(cp, '#')) != NULL)
 		*ncp = '\0';
 
-	/* then eliminate commas from numbers, like "1,345,011".  this
-	 * removes them from the whole line; a side-effect is that
-	 * there can be no commas in commands.
+	/* Eliminate the thousands separator from numbers, like
+	 * "1,345,011".  This removes them from the entire line, would
+	 * be a problem except:  the only simple ascii separators used
+	 * in locales are '.' and ',', which we don't use anywhere
+	 * else.  (Removing '.' is safe, because if the separator is
+	 * '.', then the decimal point isn't.)  All the others are
+	 * unicode sequences, which we don't use either.  So the
+	 * command line won't be harmed by this removal.  Some locales
+	 * use a space as a separator, but it's a "hard" space,
+	 * represented as unicode.
 	 */
-	ncp = cp;
-	while ((ncp = strchr(ncp, ',')) != NULL)
-		memmove(ncp, ncp + 1, strlen(ncp));
+	if (group_sep_input[0])
+		strremoveall(cp, group_sep_input);
 
-	/* same for '$' signs */
-	ncp = cp;
-	while ((ncp = strchr(ncp, '$')) != NULL)
-		memmove(ncp, ncp + 1, strlen(ncp));
+	/* Same for currency symbols.  They're mostly unicode
+	 * sequences or punctuation (e.g., '$'), which are safe to
+	 * remove.  But some are plain ascii.  We checked earlier to
+	 * be sure the currency symbol doesn't match any of our
+	 * commands.
+	 */
+	if (currency && currency[0])
+		strremoveall(cp, currency);
 }
 
 static char *input_ptr = NULL;
@@ -3155,6 +3198,65 @@ Help(void)
 	return showhelp(1);
 }
 
+void
+locale_init(void)
+{
+	struct lconv *lc;
+
+	setlocale(LC_ALL, "");
+
+	lc = localeconv();
+
+	/* fetch the decimal point */
+	decimal_pt = lc->decimal_point;
+	decimal_pt_len = strlen(decimal_pt);
+
+	/* fetch the thousands separator
+	 * group_sep will be used only for output 
+	 * group_sep_input only for input */
+	group_sep_input = group_sep = lc->thousands_sep;
+
+	/* if there's no thousands separator, default the one, that
+	 * will clean up program input to ",", but only if the decimal
+	 * point is ".".  this lets us safely strip commas from input
+	 * even if the locale isn't set up */
+	if (!group_sep_input[0]) {
+		if (strcmp(decimal_pt, ".") == 0)
+			group_sep_input = ",";
+	}
+
+	/* fetch the currency symbol.  default to '$' */
+	currency = lc->currency_symbol;
+	if (!currency[0]) {
+		/* as above, this lets us strip '$', even if the
+		 * locale isn't set up.  we don't use currency for
+		 * output purposes */
+		currency = "$";
+	} else {
+		/* make sure the currency symbol doesn't conflict with
+		 * any command names, because we're going to simply
+		 * delete the symbol from input lines before parsing. 
+		 * A few are known to match, or be substrings of, our
+		 * commands.
+		 */
+
+		/* first check if it's unicode.  if so, no worries. */
+		if (!isascii(*currency))
+			return;
+
+		/* then search for it in the command list */
+		oper *op = opers;
+		while (op->name) {
+			if (strstr(op->name, currency)) {
+				currency = 0;
+				break;
+			}
+			op++;
+		}
+	}
+	
+}
+
 /* the opers[] table doesn't initialize everything explicitly */
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 
@@ -3298,8 +3400,10 @@ struct oper opers[] = {
 	{"degrees", use_degrees, "Toggle trig functions: degrees (1) or radians (0)" },
 	{"autoprint", autop,	0 },
 	{"a", autop,		"Toggle autoprinting on/off with 0/1" },
-	{"commas", punctuation,	0 },
-	{"c", punctuation,	"Toggle comma separators on/off with 0/1" },
+#if PRINTF_GROUPING
+	{"groups", grouping,	0 },
+	{"g", grouping,		"Toggle numeric separators (i.e., commas) on/off (0/1)" },
+#endif
 	{"mode", modeinfo,	"Display current mode parameters" },
 	{"", 0, 0},
     {"Housekeeping:", 0, 0},
@@ -3333,8 +3437,7 @@ main(int argc, char *argv[])
 	g_argc = argc;
 	g_argv = argv;
 
-	/* apparently needed to make the %'Ld format for commas work */
-	setlocale(LC_ALL, "");
+	locale_init();
 
 	setup_width(0);
 	setup_format_string();
