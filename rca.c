@@ -161,10 +161,11 @@ int stack_mark;
  */
 typedef struct token token;
 typedef struct oper oper;
+typedef opreturn(*opfunc) (void);
 
 struct oper {
 	char *name;
-	opreturn(*func) (void);
+	opfunc func;
 	char *help;
 	int operands;	/* used only by infix code */
 	int prec;	/* used only by infix code */
@@ -3195,7 +3196,11 @@ rca -- a rich/RPN scientific and programmer's calculator\n\
 \n\
 ");
 	char cbuf[1000];
+	opfunc prevfunc;
+
 	cbuf[0] = '\0';
+	prevfunc = 0;
+
 	while (op->name) {
 		if (!*op->name) {
 			fprintf(fout, "\n");
@@ -3205,17 +3210,25 @@ rca -- a rich/RPN scientific and programmer's calculator\n\
 				/* hidden command */ ;
 			} else if (!op->func) {
 				fprintf(fout, "%s\n", op->name);
-			} else if (!op->help) {
-				strcat(cbuf, " ");
-				strcat(cbuf, op->name);
-				strcat(cbuf, ",");
 			} else {
-				strcat(cbuf, " ");
+				if (cbuf[0]) { // continuing
+					if (op->func == prevfunc)
+						strcat(cbuf, op->help ?
+							", or " : ", ");
+					else
+						strcat(cbuf, ", ");
+				} else {
+					strcat(cbuf, " ");
+				}
 				strcat(cbuf, op->name);
-				fprintf(fout, "%21s     %s\n", cbuf, op->help);
-				cbuf[0] = '\0';
+				if (op->help) {
+					fprintf(fout, "%21s     %s\n",
+						cbuf, op->help);
+					cbuf[0] = '\0';
+				}
 			}
 		}
+		prevfunc = op->func;
 		op++;
 	}
 	fprintf(fout, "\n%78s\n", "version " VERSION " built " __DATE__ " " __TIME__);
@@ -3321,7 +3334,7 @@ struct oper opers[] = {
 	{"+", add,		0, 2, 18 },
 	{"-", subtract,		"Add and subtract x and y", 2, 18 },
 	{"*", multiply,		0, 2, 20 },
-	{"x", multiply,		"Two ways to multiply x and y", 2, 20 },
+	{"x", multiply,		"Multiply x and y", 2, 20 },
 	{"/", divide,		0, 2, 20 },
 	{"%", modulo,		"Divide and modulo of y by x", 2, 20 },
 	{"^", y_to_the_x,	0, 2, 22 },
@@ -3373,7 +3386,7 @@ struct oper opers[] = {
 	{"clear", clear,	"Clear stack" },
 	{"pop", rolldown,	"Pop (and discard) x" },
 	{"push", enter,		0 },
-	{"dup", enter,	"Push (a duplicate of) x" },
+	{"dup", enter,		"Push (a duplicate of) x" },
 	{"lastx", repush,	0 },
 	{"lx", repush,		"Fetch previous value of x", -1 },
 	{"exch", exchange,	0 },
@@ -3388,12 +3401,12 @@ struct oper opers[] = {
 	{"s2", store2,		0 },
 	{"s3", store3,		0 },
 	{"s4", store4,		0 },
-	{"s5", store5,	"Save x off-stack (to 5 locations)" },
+	{"s5", store5,		"Save x off-stack (to 5 locations)" },
 	{"r1", recall1,		0, -1 },
 	{"r2", recall2,		0, -1 },
 	{"r3", recall3,		0, -1 },
 	{"r4", recall4,		0, -1 },
-	{"r5", recall5,	"Fetch x (from 5 locations)", -1 },
+	{"r5", recall5,		"Fetch x (from 5 locations)", -1 },
 	{"X", push_pre_infix_x,	"Hidden: push pre-infix value of x", -1 },
 	{"pi", push_pi,		"Push constant pi", -1 },
 	{"e", push_e,		"Push constant e", -1 },
@@ -3409,12 +3422,12 @@ struct oper opers[] = {
 	{"c2f", units_C_F,      "degrees F/C", 1, 26 },
 	{"oz2g", units_oz_g,    0, 1, 26 },
 	{"g2oz", units_g_oz,    "ounces / grams", 1, 26 },
-	{"oz2ml", units_oz_ml,    0, 1, 26 },
-	{"ml2oz", units_ml_oz,    "ounces / milliliters", 1, 26 },
+	{"oz2ml", units_oz_ml,  0, 1, 26 },
+	{"ml2oz", units_ml_oz,  "ounces / milliliters", 1, 26 },
 	{"q2l", units_qt_l,     0, 1, 26 },
 	{"l2q", units_l_qt,     "quarts / liters", 1, 26 },
-	{"d2r", units_deg_rad,     0, 1, 26 },
-	{"r2d", units_rad_deg,     "degrees / radians", 1, 26 },
+	{"d2r", units_deg_rad,  0, 1, 26 },
+	{"r2d", units_rad_deg,  "degrees / radians", 1, 26 },
 	{"", 0, 0},
     {"Display:", 0, 0},
 	{"P", printall,		"Print whole stack according to mode" },
@@ -3435,12 +3448,12 @@ struct oper opers[] = {
 	{"H", modehex,		0 },
 	{"O", modeoct,		0 },
 	{"B", modebin,		"     hex, octal, or binary modes" },
-	{"precision",		precision, 0 },
+	{"precision", precision, 0 },
 	{"k", precision,	"Float format: number of significant digits (%g)" },
-	{"decimals",		decimal_length, 0 },
+	{"decimals", decimal_length, 0 },
 	{"K", decimal_length,	"Float format: digits after decimal (%f)" },
 	{"width", width,	0 },
-	{"w", width,		"Set effective \"word size\" for integer modes" },
+	{"w", width,		"Set effective word size for integer modes" },
 	{"degrees", use_degrees, "Toggle trig functions: degrees (1) or radians (0)" },
 	{"autoprint", autop,	0 },
 	{"a", autop,		"Toggle autoprinting on/off with 0/1" },
