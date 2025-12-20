@@ -2835,10 +2835,10 @@ open_paren(void)
 	tempty(&out_stack);
 	tempty(&oper_stack);
 
+	trace(("collecting infix line, pushing open (\n"));
 	// push the '(' token that the user typed, but won't be parsed.
 	tpush(&oper_stack, &open_paren_token);
 
-	trace(("collecting infix line\n"));
 
 	// set the source for the 'X' operator to the current top
 	// of the RPN stack, or zero if that stack is empty.
@@ -2846,6 +2846,7 @@ open_paren(void)
 		pre_infix_X = 0;
 
 	while (1) {
+		trace(("    top of infix gather loop\n"));
 		tdump(&oper_stack);
 		tdump(&out_stack);
 
@@ -3005,6 +3006,7 @@ open_paren(void)
 		ptok = *t;
 
 	}
+	trace(("    after infix gather loop\n"));
 	tdump(&oper_stack);
 	tdump(&out_stack);
 
@@ -3020,6 +3022,7 @@ open_paren(void)
 	while ((t = tpop(&oper_stack)) != NULL) {
 		tpush(&out_stack, t);
 	}
+	trace(("... moved\n"));
 
 
 	fflush(stdout);
