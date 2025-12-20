@@ -10,7 +10,7 @@ rca: rca.c
 
 rca-norl: rca.c
 	v="$$(git describe --dirty=+ 2>/dev/null)"; \
-	gcc -g -O -Wall -Wextra -o rca-norl \
+	gcc -g -Wall -Wextra -o rca-norl \
 		-DVERSION=\"$${v}\" \
 		rca.c -lm
 
