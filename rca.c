@@ -3057,10 +3057,10 @@ precedence(void)
 	int negate_prec = 0; // warning suppression
 	static int precedence_generated;
 
-	printf("Precedence for operators in infix expressions, from \n");
-	printf(" top to bottom in order of descending precedence.\n");
-	printf("All operators are left-associative, except for those\n");
-	printf(" in rows 2,3,4 and 5, which associate right to left.\n");
+	printf(" Precedence for operators in infix expressions, from \n");
+	printf("  top to bottom in order of descending precedence.\n");
+	printf(" All operators are left-associative, except for those\n");
+	printf("  in rows 2,3,4 and 5, which associate right to left.\n");
 	if (!precedence_generated) {
 		op = opers;
 		while (op->name) {
@@ -3107,7 +3107,7 @@ precedence(void)
 	i = 1;
 	for (prec = NUM_PRECEDENCE-1; prec >=0; prec--) {
 		if (prec_ops[prec]) {
-			printf("%-2i  %c     %s\n", i,
+			printf(" %-2i  %c     %s\n", i,
 			(i >= 2 && i <= 5) ? 'R':' ',
 			prec_ops[prec]);
 			i++;
@@ -3175,24 +3175,24 @@ showhelp(int show_hidden)
 
 	op = opers;
 	fprintf(fout, "\
-rca -- a rich/RPN scientific and programmer's calculator\n\
- Any arguments on the command line are used as initial calculator input.\n\
- Entering a number pushes it on the stack.\n\
- Operators replace either one or two stack values with their result.\n\
- Most whitespace is optional between numbers and operators, and can consist\n\
-  of spaces, tabs, or newlines.\n\
- Numbers can include commas and $ signs (e.g., '$3,577,455').\n\
- Numbers are represented internally as long double and signed long long.\n\
- Max integer width is the shorter of long long or the long double mantissa.\n\
- Always use 0xNNN/0NNN to enter hex/octal, even in hex or octal mode.\n\
- An infix expression may be started with '('.  The evaluated result\n\
-  goes on the stack.  For example, '(sqrt(sin(30)^2 + cos(30)^2) + 2)' will\n\
-  push the value '3'.  All operators and functions, all unit conversions, and\n\
-  all commands that produce constants (e.g., 'pi', 'recall') can be referenced\n\
-  in infix expressions.  The infix expression must all be entered on one line.\n\
- Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath. \n\
- On exit, rca returns 0 if the top of stack is non-zero, else it returns 1,\n\
- or 2 if stack is empty, and 3 in the case of program error.\n\
+ rca -- a rich/RPN scientific and programmer's calculator\n\
+  Any arguments on the command line are used as initial calculator input.\n\
+  Entering a number pushes it on the stack.\n\
+  Operators replace either one or two stack values with their result.\n\
+  Most whitespace is optional between numbers and operators, and can consist\n\
+   of spaces, tabs, or newlines.\n\
+  Numbers can include commas and $ signs (e.g., '$3,577,455').\n\
+  Numbers are represented internally as long double and signed long long.\n\
+  Max integer width is the shorter of long long or the long double mantissa.\n\
+  Always use 0xNNN/0NNN to enter hex/octal, even in hex or octal mode.\n\
+  An infix expression may be started with '('.  The evaluated result\n\
+   goes on the stack.  For example, '(sqrt(sin(30)^2 + cos(30)^2) + 2)' will\n\
+   push the value '3'.  All operators and functions, all unit conversions, and\n\
+   all commands that produce constants (e.g., 'pi', 'recall') can be referenced\n\
+   in infix expressions.  The infix expression must all be entered on one line.\n\
+  Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
+  On exit, rca returns 0 if the top of stack is non-zero, else it returns 1,\n\
+  or 2 if stack is empty, and 3 in the case of program error.\n\
 \n\
 ");
 	char cbuf[1000];
@@ -3209,7 +3209,7 @@ rca -- a rich/RPN scientific and programmer's calculator\n\
 					strncmp(op->help, "Hidden:", 7) == 0) {
 				/* hidden command */ ;
 			} else if (!op->func) {
-				fprintf(fout, "%s\n", op->name);
+				fprintf(fout, " %s\n", op->name);
 			} else {
 				if (cbuf[0]) { // continuing
 					if (op->func == prevfunc)
@@ -3232,11 +3232,11 @@ rca -- a rich/RPN scientific and programmer's calculator\n\
 		op++;
 	}
 	fprintf(fout, "\n%78s\n", "version " VERSION " built " __DATE__ " " __TIME__);
-	fprintf(fout, "\nTip:  Use \"rca help q | less\" to view this help\n");
+	fprintf(fout, "\n Tip:  Use \"rca help q | less\" to view this help\n");
 
 	if (fout_is_pipe) {
 	    if (pclose(fout) != 0) {
-		printf("Failed to show help.  Unset PAGER to show help directly\n");
+		printf(" Failed to show help.  Unset PAGER to show help directly\n");
 	    }
 	}
 
