@@ -2742,13 +2742,16 @@ fetch_line(void)
 	if (getline(&input_buf, &blen, stdin) < 0)  // EOF
 		exitret();
 
+	if (input_buf[strlen(input_buf) - 1] == '\n')
+		input_buf[strlen(input_buf) - 1] = '\0';
+
 	/* if stdin is a terminal, the command is already on-screen.
 	 * but we also want it mixed with the output if we're
 	 * redirecting from a file or pipe.  (easy to get rid of it
 	 * with something like: "rca < commands | grep '^ '"
 	 */
 	if (!isatty(0))
-		printf("%s", input_buf);
+		printf("%s\n", input_buf);
 
 #endif
 
