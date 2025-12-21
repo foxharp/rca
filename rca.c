@@ -1535,7 +1535,10 @@ print_n(ldouble *np, int format, boolean conv)
 		putbinary(ln);
 		break;
 	case 'U':
-		uln = (unsigned long long)n & mask;
+		// convert in two steps, to avoid possibly undefined
+		// negative double to unsigned conversion
+		ln = (long long)n & mask;
+		uln = (unsigned long long)ln;
 		printf(digitgroups ? " %'llu" : " %llu", uln);
 		break;
 	case 'D':
@@ -1568,7 +1571,8 @@ print_n(ldouble *np, int format, boolean conv)
 	}
 
 	show_int_truncation(changed, old_n);
-	*np = n;
+	if (changed)
+		*np = n;
 
 }
 
