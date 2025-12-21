@@ -2,6 +2,10 @@
 # build both the readline and no-readline versions by default
 all: rca rca-norl rca.1 copyrightcheck html 
 
+# if hitting return on an empty line doesn't cause a newline
+# on the screen, add this to the compile rule.  it's due to a bug
+# in the readline library.
+#    -D READLINE_NO_ECHO_BARE_NL
 rca: rca.c
 	v="$$(git describe --dirty=+ 2>/dev/null)"; \
 	gcc -g -O -Wall -Wextra -o rca \

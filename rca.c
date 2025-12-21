@@ -2732,7 +2732,7 @@ fetch_line(void)
 	if ((input_buf = readline("")) == NULL)  // got EOF
 		exitret();
 
-#if READLINE_NO_ECHO_BARE_NL  // no longer true?
+#if READLINE_NO_ECHO_BARE_NL  // needed in some sub-versions of readline 8.2
 	// readline() doesn't echo bare newlines to tty, so do it here,
 	if (*input_buf == '\0')
 		putchar('\n');
