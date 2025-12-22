@@ -1991,11 +1991,12 @@ width(void)
 		return BADOP;
 
 	bits = n;
-	if (bits > max_int_width) {
+	if (bits == 0) {
+		bits = max_int_width;
+	} else if (bits > max_int_width) {
 		bits = max_int_width;
 		printf(" Width out of range, set to max (%lld)\n", bits);
-	}
-	if (bits < 2) {
+	} else if (bits < 2) {
 		bits = 2;
 		printf(" Width out of range, set to min (%lld)\n", bits);
 	}

@@ -252,7 +252,8 @@ data type, or of the
 .I long double
 mantissa, whichever is smaller.  This results in 64 bits on most PC
 architectures in 2025.  (An exception:  52 bits on Raspberry Pi
-when running a 32 bit OS)
+when running a 32 bit OS)  Requesting a width of 0 will choose
+the maximum width.
 
 Values will be masked to the chosen word width for both
 use and display, whether they are input by the user or result from an
