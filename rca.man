@@ -501,14 +501,25 @@ operations will (as might be expected) discard fractional parts, and
 may discard significant digits, including the sign of the value.
 .P
 .B sum
-will pop and add up previous entries on the
-stack, stopping when the stack is empty, or when a
-stack marker previously set with the
+will pop and add previous entries on the stack, stopping when the
+stack is empty, or when a stack marker previously set with the
 .B mark
 command is reached.
 The mark would be set before entering the data for a subsequent
 .BR sum,
-in order to limit its reach.
+in order to limit its reach. "N
+.BR mark "
+will cause a later
+.B sum
+to include the current top N values,
+plus any more values that have been pushed prior to the sum.
+N cannot be greater than the length of the stack.
+.RB " 0
+.BR mark "
+will cause only subsequent pushes to be summed.
+.RB " -1
+.BR mark "
+will clear the mark.
 .B sum
 is the only operator to consume more than 2 stack elements.
 .RE

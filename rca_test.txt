@@ -339,12 +339,12 @@ clear
 sum
  15
 1 2
-mark
+0 mark
  2
 3 4 5
 sum
  12
-mark
+0 mark
  12
 26 34
 +
@@ -359,6 +359,14 @@ sum
  60
 sum
  90
+1 2 3 4 5 6 7 8 9 3mark sum
+ 24
+2 mark 17 18 19
+sum
+ 84
+
+clear
+ empty stack
 -1 5 *
  -5
 -10 -20 /

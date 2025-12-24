@@ -2112,7 +2112,21 @@ push_e(void)
 opreturn
 mark(void)
 {
-	stack_mark = stack_count;
+	ldouble n;
+	if (!pop(&n))
+		return BADOP;
+
+	if (n > stack_count || n < -1) {
+		if (stack_count == 0)
+			printf(" error: bad mark, max of 0 with empty stack, or, -1 to clear\n");
+		else
+			printf(" error: bad mark, range between 0 and stack length (%d), or -1 to clear\n", stack_count);
+	}
+
+	if (n == -1)
+		stack_mark = 0; // special case:  clear the mark
+	else
+		stack_mark = stack_count - n;
 	return GOODOP;
 }
 
