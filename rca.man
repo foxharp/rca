@@ -246,16 +246,25 @@ few as 2 bits using the
 .B width
 (or
 .BR w )
-command.  The maximum supported width will be either the width of the
+command.  Requesting a width of 0 will choose the maximum width.  The
+maximum supported width will be either the width of the
 .I long long
 data type, or of the
 .I long double
 mantissa, whichever is smaller.  This results in 64 bits on most PC
-architectures in 2025.  (An exception:  52 bits on Raspberry Pi
-when running a 32 bit OS)  Requesting a width of 0 will choose
-the maximum width.
+architectures in 2025.  Two counter-examples:  The Raspberry Pi 3 has
+just 52 bits of long double mantissa, so
+.BR rca 's
+maximum integer width there is limited to 52, at least
+on a 32 bit OS.  The Raspberry Pi 4 supports 128-bit "quad-precision"
+floats with 113 bits of mantissa, so
+has excellent floating point accuracy:  about 33 decimal digits.
+But integers in
+.B rca 
+are still limited to the largest native integer
+size, 64 bits.)
 
-Values will be masked to the chosen word width for both
+Values will be masked to the current word width for both
 use and display, whether they are input by the user or result from an
 operation.  Arithmetic on all values will be signed.  If floating
 operations are used on width-restricted integers, the width
