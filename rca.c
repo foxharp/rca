@@ -646,9 +646,11 @@ rshift(void)
 				push(a);
 				push(b);
 				return BADOP;
+			} else if (b >= sizeof(a) * CHAR_BIT) {
+				push(0);
+			} else {
+				push(i >>= j);
 			}
-
-			push(i >>= j);
 			lastx = b;
 			return GOODOP;
 		}
@@ -677,8 +679,11 @@ lshift(void)
 				push(a);
 				push(b);
 				return BADOP;
+			} else if (b >= sizeof(a) * CHAR_BIT) {
+				push(0);
+			} else {
+				push(i << j);
 			}
-			push(i << j);
 			lastx = b;
 			return GOODOP;
 		}
@@ -770,7 +775,17 @@ setbit(void)
 
 			i = (long long)a;
 			j = (long long)b;
-			push(i | (1LL << j));
+			if (b < 0) {
+				printf(" error: negative bit number not allowed\n");
+				might_errexit();
+				push(a);
+				push(b);
+				return BADOP;
+			}
+			if (b >= sizeof(i) * CHAR_BIT)
+				push(i);
+			else
+				push(i | (1LL << j));
 			lastx = b;
 			return GOODOP;
 		}
@@ -793,7 +808,17 @@ clearbit(void)
 
 			i = (long long)a;
 			j = (long long)b;
-			push(i & ~(1LL << j));
+			if (b < 0) {
+				printf(" error: negative bit number not allowed\n");
+				might_errexit();
+				push(a);
+				push(b);
+				return BADOP;
+			}
+			if (b >= sizeof(i) * CHAR_BIT)
+				push(i);
+			else
+				push(i & ~(1LL << j));
 			lastx = b;
 			return GOODOP;
 		}
