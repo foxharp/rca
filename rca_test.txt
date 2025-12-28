@@ -37,8 +37,16 @@ P
 4 <<
  4,096
 
-foobar
- error: unrecognized input 'foobar'
+.
+ error: unrecognized input '.'
+. mode
+ error: unrecognized input '. mode'
+foobar 12
+ error: unrecognized input 'foobar 12'
+2 ..3
+ error: unrecognized input '..3'
+pop
+ 4,096
 
 H
  0x2     # warning: accuracy lost, was 2.60840734641020676

@@ -2828,7 +2828,7 @@ gettoken(struct token *t)
 	if (!parse_tok(input_ptr, t, &next_input_ptr)) {
 		printf(" error: unrecognized input '%s'\n", input_ptr);
 		might_errexit();
-		input_ptr = next_input_ptr;
+		input_ptr = NULL;  // discard rest of line, if any
 		return 0;
 	}
 
