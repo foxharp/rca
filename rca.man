@@ -153,7 +153,7 @@ command, and integer, using one of
 (binary).
 
 The difference between the various integer modes lies purely in how
-values are displayed by default, but floating point and integer differ
+values are displayed by default, but floating point differs
 in a few additional ways.  Most math is done in long double,
 regardless of mode, but in integer mode all stack values are masked to
 the current word width, and sign extended, if necessary.
@@ -507,7 +507,11 @@ Bitwise operations
 .BR setb )
 convert their operands to integer first, regardless of mode.  These
 operations will (as might be expected) discard fractional parts, and
-may discard significant digits, including the sign of the value.
+may discard significant digits, including the sign of the value.  Bitwise
+operations will not execute, and cause an error, if either operand
+will not fit in a
+.I long
+.IR long .
 .P
 .B sum
 will pop and add previous entries on the stack, stopping when the
@@ -516,8 +520,12 @@ stack is empty, or when a stack marker previously set with the
 command is reached.
 The mark would be set before entering the data for a subsequent
 .BR sum,
-in order to limit its reach. "N
-.BR mark "
+in order to limit its reach.
+.B N mark
+(i.e., a
+.B mark
+command with an argument of
+.BR N )
 will cause a later
 .B sum
 to include the current top N values,
@@ -557,26 +565,27 @@ are stored in
 format.  This is convenient for a calculator
 which will primarily deal with floating point, but can affect
 .BR rca 's
-mixed model.  Many operations (primarily the bitwise operations, but
-also simply working in other bases and word widths) require conversion
-to integer.  The
-.I long long
-type is used in this case; results are
-converted back when finished.  If the conversion from
+mixed model.  Changing
+.BR rca 's
+operating mode from floating point to an integer mode
+requires conversion of all stack values
+to integer.
+If the conversion from
 .I long double
 to
 .I long long
-can't be done without loss, a warning is
-issued.  This may happen while printing the value in an integer base,
-after switching to an integer mode, or while performing a bitwise
-operation.  Execution will proceed after the warning unless
+can't be done without loss, a error message is issued, but the
+conversion has already occurred, and the loss cannot be undone.  If
+simply displaying a float value as integer, without changing modes,
+then the original value is unchanged.  Execution will proceed after
+the warning unless
 .B errorexit
 has been enabled.
 
-Some floating point operations may result in invalid ("nan", i.e., "not a
-number") or "+inf" or "-inf" (i.e., infinity).  When converting to
-integer mode, these values will be preserved, along with their
-semantics:  any computation involving nan will return nan, and
+Some floating point operations give results which are invalid ("nan",
+i.e., "not a number") or "+inf" or "-inf" (i.e., infinity).  When
+converting to integer mode, these values will be preserved, along with
+their semantics:  any computation involving nan will return nan, and
 any conditionals involving nan will return false.
 
 Floating point math by its nature is imprecise.  It's not uncommon for

@@ -632,6 +632,30 @@ bothfinite(ldouble a, ldouble b)
 }
 
 opreturn
+bitwise_operands_too_big(ldouble a, ldouble b)
+{
+	if (a < LLONG_MIN || a > LLONG_MAX ||
+	    b < LLONG_MIN || b > LLONG_MAX) {
+		push(a);
+		push(b);
+		printf(" error: bitwise operand(s) bigger/smaller than LLONG_MAX/MIN\n");
+		return 1;
+	}
+	return 0;
+}
+
+opreturn
+bitwise_operand_too_big(ldouble a)
+{
+	if (a < LLONG_MIN || a > LLONG_MAX) {
+		push(a);
+		printf(" error: bitwise operand bigger/smaller than LLONG_MAX/MIN\n");
+		return 1;
+	}
+	return 0;
+}
+
+opreturn
 rshift(void)
 {
 	ldouble a, b;
@@ -643,6 +667,9 @@ rshift(void)
 
 			if (!bothfinite(a, b))
 				return GOODOP;
+
+			if (bitwise_operands_too_big(a, b))
+				return BADOP;
 
 			i = (unsigned long long)a;
 			j = (long long)b;
@@ -677,6 +704,9 @@ lshift(void)
 			if (!bothfinite(a, b))
 				return GOODOP;
 
+			if (bitwise_operands_too_big(a, b))
+				return BADOP;
+
 			i = (long long)a;
 			j = (long long)b;
 			if (j < 0) {
@@ -710,6 +740,9 @@ bitwise_and(void)
 			if (!bothfinite(a, b))
 				return GOODOP;
 
+			if (bitwise_operands_too_big(a, b))
+				return BADOP;
+
 			i = (long long)a;
 			j = (long long)b;
 			push(i & j);
@@ -732,6 +765,9 @@ bitwise_or(void)
 
 			if (!bothfinite(a, b))
 				return GOODOP;
+
+			if (bitwise_operands_too_big(a, b))
+				return BADOP;
 
 			i = (long long)a;
 			j = (long long)b;
@@ -756,6 +792,9 @@ bitwise_xor(void)
 			if (!bothfinite(a, b))
 				return GOODOP;
 
+			if (bitwise_operands_too_big(a, b))
+				return BADOP;
+
 			i = (long long)a;
 			j = (long long)b;
 			push(i ^ j);
@@ -778,6 +817,9 @@ setbit(void)
 
 			if (!bothfinite(a, b))
 				return GOODOP;
+
+			if (bitwise_operands_too_big(a, b))
+				return BADOP;
 
 			i = (long long)a;
 			j = (long long)b;
@@ -812,6 +854,9 @@ clearbit(void)
 			if (!bothfinite(a, b))
 				return GOODOP;
 
+			if (bitwise_operands_too_big(a, b))
+				return BADOP;
+
 			i = (long long)a;
 			j = (long long)b;
 			if (b < 0) {
@@ -843,6 +888,9 @@ bitwise_not(void)
 			push(a);
 			return GOODOP;
 		}
+
+		if (bitwise_operand_too_big(a))
+			return BADOP;
 
 		push(~(long long)a);
 		lastx = a;
