@@ -193,10 +193,12 @@ struct token {
 #define OP 2
 #define EOL 3
 
-/* 5 major modes: float, decimal, unsigned, hex, octal, binary.
- * all but float are integer modes.
+/* 7 major modes:  float, decimal, unsigned, hex, octal, binary, raw
+ * float.  all but float and raw float are integer modes.  "raw float"
+ * is a hidden mode:  it uses the printf %a format.
  */
-int mode = 'F';			/* 'F', 'D', 'U', 'H', 'O', 'B' */
+int mode = 'F';			/* 'F', 'D', 'U', 'H', 'O', 'B', 'R' */
+boolean floating_mode(int m) { return (m == 'F' || m == 'R'); }
 
 /* if true, exit(4) on error, warning, or access to empty operand stack */
 boolean exit_on_error = FALSE;
@@ -238,6 +240,10 @@ long long int_min;
 
 /* this is used to control floating point error */
 long double epsilon;
+
+/* allow parsing of floating hex format (e.g.  -0x8.0p-63).  enabled
+ * after first use of floating hex output (with "r" or "R") */
+boolean raw_hex_input_ok;
 
 /* suppress snapping and rounding of float values */
 boolean raw_floats;
@@ -346,7 +352,7 @@ push(ldouble n)
 	if (!p)
 		memory_failure();
 
-	if (mode == 'F' || !isfinite(n)) {
+	if (floating_mode(mode) || !isfinite(n)) {
 		p->val = n;
 		trace(("pushed %Lg/0x%llx\n", n, (long long)(p->val)));
 	} else {
@@ -947,7 +953,7 @@ sine(void)
 {
 	ldouble a;
 
-	if (mode != 'F')
+	if (!floating_mode(mode))
 		return trig_no_sense();
 
 	if (pop(&a)) {
@@ -963,7 +969,7 @@ asine(void)
 {
 	ldouble a;
 
-	if (mode != 'F')
+	if (!floating_mode(mode))
 		return trig_no_sense();
 
 	if (pop(&a)) {
@@ -979,7 +985,7 @@ cosine(void)
 {
 	ldouble a;
 
-	if (mode != 'F')
+	if (!floating_mode(mode))
 		return trig_no_sense();
 
 	if (pop(&a)) {
@@ -995,7 +1001,7 @@ acosine(void)
 {
 	ldouble a;
 
-	if (mode != 'F')
+	if (!floating_mode(mode))
 		return trig_no_sense();
 
 	if (pop(&a)) {
@@ -1011,7 +1017,7 @@ tangent(void)
 {
 	ldouble a;
 
-	if (mode != 'F')
+	if (!floating_mode(mode))
 		return trig_no_sense();
 
 	if (pop(&a)) {
@@ -1028,7 +1034,7 @@ atangent(void)
 {
 	ldouble a;
 
-	if (mode != 'F')
+	if (!floating_mode(mode))
 		return trig_no_sense();
 
 	if (pop(&a)) {
@@ -1044,7 +1050,7 @@ atangent2(void)
 {
 	ldouble a,b;
 
-	if (mode != 'F')
+	if (!floating_mode(mode))
 		return trig_no_sense();
 
 	if (pop(&b)) {
@@ -1372,8 +1378,8 @@ putbinary2(int width, long long mask, unsigned long long n)
 void
 putbinary(long long n)
 {
-    	// mode can be float but we can print in binary
-	if (mode == 'F')	// no masking in float mode
+	// mode can be float but we can print in binary
+	if (floating_mode(mode))	// no masking in float mode
 		putbinary2(max_int_width, ~0, (unsigned long long)n);
 	else
 		putbinary2(int_width, int_mask, (unsigned long long)n);
@@ -1435,7 +1441,7 @@ show_int_truncation(boolean changed, ldouble old_n)
 		return;
 	}
 
-	if (mode == 'F')
+	if (floating_mode(mode))
 		printf("     # warning: display format loses accuracy\n");
 	else
 		printf("     # warning: accuracy lost, was %.*Lg\n", max_precision, old_n);
@@ -1456,49 +1462,62 @@ min(int a, int b)
 }
 
 void
-print_floating(ldouble n)
+print_floating(ldouble n, int format)
 {
 	putchar(' ');
-	if (mode == 'F' && float_specifier == 'f') {
-	    char buf[128];
-	    char *p;
-	    int decimals, leadingdigits = 0;
+	if (format == 'R') {
 
-	    /* The goal is to reduce the number of non-significant
-	     * digits shown.  If decimals is set to 6, then 123e12
-	     * would show "123,000,000,000,000.000000" which is
-	     * showing more than max_precision significant digits.  As
-	     * long as some of the excess digits are beyond the
-	     * decimal point, we can trim some from that end.  So the
-	     * code below gives us "123,000,000,000,000.000".  But that
-	     * only works for a while.  If the number gets 1e6 times
-	     * bigger, then we have this: "123,000,000,000,000,000,000",
-	     * and we're back to showing more than we should.  (At that
-	     * point the user should be switching to %g mode.)
-	     */
-	    snprintf(buf, sizeof(buf), format_string, float_digits, n);
+		raw_hex_input_ok = TRUE;
 
-	    for (p = buf; *p && !match_dp(p); p++) {
-		if (isdigit(*p))
-		    leadingdigits++;
-	    }
+		/* NB:  this printing format is accurate and exact,
+		 * but may vary from machine to machine because printf
+		 * may canonicalize the mantissa differently depending
+		 * on hardware or who knows what.  There can be at
+		 * least 4 different combinations of first digit and
+		 * exponent that all represent the same number.  */
+		// 1 digit per 4 bits, and 1 of them is before the decimal
+		printf("%.*La\n", (LDBL_MANT_DIG + 3)/4 - 1, n);
 
-	    // in "0.34", the 0 doesn't count toward significant digits
-	    if (leadingdigits == 1 && *buf == '0')
-		    leadingdigits = 0;
+	} else if (format == 'F' && float_specifier == 'f') {
+		char buf[128];
+		char *p;
+		int decimals, leadingdigits = 0;
 
-	    if (p) { /* found a decimal point */
+		/* The goal is to reduce the number of non-significant
+		 * digits shown.  If decimals is set to 6, then 123e12
+		 * would show "123,000,000,000,000.000000" which is
+		 * showing more than max_precision significant digits.  As
+		 * long as some of the excess digits are beyond the
+		 * decimal point, we can trim some from that end.  So the
+		 * code below gives us "123,000,000,000,000.000".  But that
+		 * only works for a while.  If the number gets 1e6 times
+		 * bigger, then we have this: "123,000,000,000,000,000,000",
+		 * and we're back to showing more than we should.  (At that
+		 * point the user should be switching to %g mode.)
+		 */
+		snprintf(buf, sizeof(buf), format_string, float_digits, n);
 
-		decimals = min(float_digits, max_precision - leadingdigits);
-		if (decimals <= 0) decimals = 0;
+		for (p = buf; *p && !match_dp(p); p++) {
+			if (isdigit(*p))
+				leadingdigits++;
+		}
 
-		snprintf(buf, sizeof(buf), format_string, decimals, n);
-	    }
-	    puts(buf);
+		// in "0.34", the 0 doesn't count toward significant digits
+		if (leadingdigits == 1 && *buf == '0')
+			leadingdigits = 0;
+
+		if (p) { /* found a decimal point */
+
+			decimals = min(float_digits, max_precision - leadingdigits);
+			if (decimals <= 0) decimals = 0;
+
+			snprintf(buf, sizeof(buf), format_string, decimals, n);
+		}
+		puts(buf);
 
 	} else {
-	    printf(format_string, float_digits, n);
-	    putchar('\n');
+		printf(format_string, float_digits, n);
+		putchar('\n');
 	}
 
 }
@@ -1517,8 +1536,8 @@ print_n(ldouble *np, int format, boolean conv)
 
 	old_n = n = *np;
 
-	if (format == 'F' || !isfinite(n)) {
-		print_floating(n);
+	if (floating_mode(format) || !isfinite(n)) {
+		print_floating(n, format);
 		return;
 	}
 
@@ -1568,7 +1587,7 @@ print_n(ldouble *np, int format, boolean conv)
 		break;
 	case 'D':
 		ln = (long long)n;
-		if (mode == 'F' || int_width == LONGLONG_BITS) {
+		if (floating_mode(mode) || int_width == LONGLONG_BITS) {
 			printf(digitgroups ? " %'lld" : " %lld", ln);
 		} else {
 			/* shenanigans to make pos/neg numbers appear
@@ -1652,6 +1671,13 @@ opreturn
 printuns(void)
 {
 	print_top('U');
+	return GOODOP;
+}
+
+opreturn
+printrawhex(void)
+{
+	print_top('R');
 	return GOODOP;
 }
 
@@ -1757,6 +1783,8 @@ mode2name(void)
 		return "hex";
 	case 'B':
 		return "binary";
+	case 'R':
+		return "raw hex float";
 	case 'F':
 	default: // can't happen.  set it to default
 		mode = 'F';
@@ -1781,6 +1809,8 @@ showmode(void)
 			msg = "after the decimal";
 		}
 		pending_printf(" Displaying %u digits %s.\n", float_digits, msg);
+	} else if (mode == 'R') {
+		pending_printf(" Displaying using floating hexadecimal.\n");
 	} else {
 		pending_printf(" Integer math with %d bits.\n", int_width);
 	}
@@ -1799,6 +1829,15 @@ opreturn
 modehex(void)
 {
 	mode = 'H';
+	showmode();
+	printstack(1,stack);
+	return GOODOP;
+}
+
+opreturn
+moderawhex(void)
+{
+	mode = 'R';
 	showmode();
 	printstack(1,stack);
 	return GOODOP;
@@ -1925,8 +1964,8 @@ precision(void)
 		float_digits, float_digits == 1 ? "" : "s");
 
 	if (mode != 'F')
-		pending_printf(" In integer mode, float precision"
-				" is recorded but ignored.\n");
+		pending_printf(" Not in floating decimal mode, float precision"
+				" recorded but ignored.\n");
 
 	return GOODOP;
 }
@@ -1958,7 +1997,7 @@ decimal_length(void)
 			float_digits, float_digits == 1 ? "" : "s");
 
 	if (mode != 'F')
-		pending_printf(" In integer mode, float decimal"
+		pending_printf(" Not in floating decimal mode, decimal"
 				" length is recorded but ignored.\n");
 
 
@@ -2030,8 +2069,8 @@ width(void)
 
 	// info
 	pending_printf(" Integers are now %d bits wide.\n", int_width);
-	if (mode == 'F') {
-		pending_printf(" In float mode, integer width"
+	if (floating_mode(mode)) {
+		pending_printf(" In floating mode, integer width"
 				" is recorded but ignored.\n");
 	} else {
 		mask_stack();
@@ -2508,12 +2547,19 @@ parse_tok(char *p, token *t, char **nextp)
 
 	if (*p == '0' && (*(p + 1) == 'x' || *(p + 1) == 'X')) {
 		// hex
-		long long ln = strtoull(p, nextp, 16);
-
-		if (ln == 0 && p == *nextp)
+		long double dd;
+		if (raw_hex_input_ok) {
+			// will allow floating hex, e.g. 0xc.90fdaa22168c23cp-2
+			dd = strtold(p, nextp);
+		} else {
+			// simple hex integers only
+			dd = strtoull(p, nextp, 16);
+		}
+		if (dd == 0.0 && p == *nextp)
 			goto unknown;
+
+		t->val.val = dd * sign;
 		t->type = NUMERIC;
-		t->val.val = ln * sign;
 		return 1;
 
 	} else if (*p == '0' && (*(p + 1) == 'b' || *(p + 1) == 'B')) {
@@ -3485,6 +3531,7 @@ struct oper opers[] = {
 	{"h", printhex,		0 },
 	{"o", printoct,		0 },
 	{"b", printbin,		"     hex, octal, or binary" },
+	{"r", printrawhex,	"Hidden: Print x as floating hex" },
 	{"state", printstate,	"Hidden: print raw calculator state" },
 	{"tracing", tracetoggle,"Hidden: toggle debug tracing" },
 	{"", 0, 0},
@@ -3495,6 +3542,7 @@ struct oper opers[] = {
 	{"H", modehex,		0 },
 	{"O", modeoct,		0 },
 	{"B", modebin,		"     hex, octal, or binary modes" },
+	{"R", moderawhex,	"Hidden: Switch to floating hex mode" },
 	{"precision", precision, 0 },
 	{"k", precision,	"Float format: number of significant digits (%g)" },
 	{"decimals", decimal_length, 0 },
