@@ -438,7 +438,7 @@ pop
 (4 + 5)
  9
 (4 + * 5)
- error: bad operator sequence, saw oper + and oper *
+ error: bad operator sequence, last saw oper + and oper *
  warning: mismatched/extra parentheses
  5
 (4 + 5 6)

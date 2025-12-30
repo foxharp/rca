@@ -272,9 +272,17 @@ enable_errexit(void)
 }
 
 void
-might_errexit(void)
+error(const char *fmt, ...)
 {
-	if (exit_on_error) exit(4);
+	fflush(stdout);
+
+	va_list ap;
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+
+	if (exit_on_error)
+		exit(4);
 }
 
 long long
@@ -391,8 +399,7 @@ pop(ldouble *f)
 
 	p = stack;
 	if (!p) {
-		printf(" empty stack\n");
-		might_errexit();
+		error(" empty stack\n");
 		return FALSE;
 	}
 	*f = p->val;
@@ -638,7 +645,7 @@ bitwise_operands_too_big(ldouble a, ldouble b)
 	    b < LLONG_MIN || b > LLONG_MAX) {
 		push(a);
 		push(b);
-		printf(" error: bitwise operand(s) bigger/smaller than LLONG_MAX/MIN\n");
+		error(" error: bitwise operand(s) bigger/smaller than LLONG_MAX/MIN\n");
 		return 1;
 	}
 	return 0;
@@ -649,7 +656,7 @@ bitwise_operand_too_big(ldouble a)
 {
 	if (a < LLONG_MIN || a > LLONG_MAX) {
 		push(a);
-		printf(" error: bitwise operand bigger/smaller than LLONG_MAX/MIN\n");
+		error(" error: bitwise operand bigger/smaller than LLONG_MAX/MIN\n");
 		return 1;
 	}
 	return 0;
@@ -674,8 +681,7 @@ rshift(void)
 			i = (unsigned long long)a;
 			j = (long long)b;
 			if (j < 0) {
-				printf(" error: shift by negative not allowed\n");
-				might_errexit();
+				error(" error: shift by negative not allowed\n");
 				push(a);
 				push(b);
 				return BADOP;
@@ -710,8 +716,7 @@ lshift(void)
 			i = (long long)a;
 			j = (long long)b;
 			if (j < 0) {
-				printf(" error: shift by negative not allowed\n");
-				might_errexit();
+				error(" error: shift by negative not allowed\n");
 				push(a);
 				push(b);
 				return BADOP;
@@ -824,8 +829,7 @@ setbit(void)
 			i = (long long)a;
 			j = (long long)b;
 			if (b < 0) {
-				printf(" error: negative bit number not allowed\n");
-				might_errexit();
+				error(" error: negative bit number not allowed\n");
 				push(a);
 				push(b);
 				return BADOP;
@@ -860,8 +864,7 @@ clearbit(void)
 			i = (long long)a;
 			j = (long long)b;
 			if (b < 0) {
-				printf(" error: negative bit number not allowed\n");
-				might_errexit();
+				error(" error: negative bit number not allowed\n");
 				push(a);
 				push(b);
 				return BADOP;
@@ -956,7 +959,7 @@ squarert(void)
 opreturn
 trig_no_sense(void)
 {
-	printf(" trig functions make no sense in integer mode");
+	error(" error: trig functions make no sense in integer mode");
 	return BADOP;
 }
 
@@ -1490,11 +1493,10 @@ show_int_truncation(boolean changed, ldouble old_n)
 	}
 
 	if (floating_mode(mode))
-		printf("     # warning: display format loses accuracy\n");
+		error("     # warning: display format loses accuracy\n");
 	else
-		printf("     # warning: accuracy lost, was %.*Lg\n", max_precision, old_n);
+		error("     # warning: accuracy lost, was %.*Lg\n", max_precision, old_n);
 
-	might_errexit();
 }
 
 int
@@ -1658,7 +1660,7 @@ print_n(ldouble *np, int format, boolean conv)
 		}
 		break;
 	default:
-		printf(" error: default case in print_n()\n");
+		error(" bug: default case in print_n()\n");
 		return;
 	}
 
@@ -2230,9 +2232,9 @@ mark(void)
 
 	if (n > stack_count || n < -1) {
 		if (stack_count == 0)
-			printf(" error: bad mark, max of 0 with empty stack, or, -1 to clear\n");
+			error(" error: bad mark, max of 0 with empty stack, or, -1 to clear\n");
 		else
-			printf(" error: bad mark, range between 0 and stack length (%d), or -1 to clear\n", stack_count);
+			error(" error: bad mark, range between 0 and stack length (%d), or -1 to clear\n", stack_count);
 	}
 
 	if (n == -1)
@@ -2256,8 +2258,7 @@ sum(void)
 	ldouble a, tot = 0;
 
 	if (stack_count <= stack_mark) {
-		printf(" error: nothing to sum\n");
-		might_errexit();
+		error(" error: nothing to sum\n");
 		return BADOP;
 	}
 	while (stack_count > stack_mark) {
@@ -2559,23 +2560,23 @@ size_t stralnum(char *s, char **endptr)
 }
 
 void
-print_token(token *t)
+sprint_token(char *s, int slen, token *t)
 {
 	switch(t->type) {
 	case NUMERIC:
-	    printf("%+Lg", t->val.val);
+	    snprintf(s, slen, "%+Lg", t->val.val);
 	    break;
 	case SYMBOLIC:
-	    printf("%s", t->val.oper->name);
+	    snprintf(s, slen, "%s", t->val.oper->name);
 	    break;
 	case OP:
-	    printf("oper %s", t->val.oper->name);
+	    snprintf(s, slen, "oper %s", t->val.oper->name);
 	    break;
 	case EOL:
-	    printf("EOL");
+	    snprintf(s, slen, "EOL");
 	    break;
 	case UNKNOWN:
-	    printf("unknown");
+	    snprintf(s, slen, "unknown");
 	    break;
 	}
 }
@@ -2661,8 +2662,7 @@ parse_tok(char *p, token *t, char **nextp)
 			}
 			*nextp = p + n;
 		} else {
-			printf(" error: illegal character in input\n");
-			might_errexit();
+			error(" error: illegal character in input\n");
 			t->val.str = p;
 			t->type = UNKNOWN;
 			return 0;
@@ -2920,8 +2920,7 @@ gettoken(struct token *t)
 	fflush(stdin);
 
 	if (!parse_tok(input_ptr, t, &next_input_ptr)) {
-		printf(" error: unrecognized input '%s'\n", input_ptr);
-		might_errexit();
+		error(" error: unrecognized input '%s'\n", input_ptr);
 		input_ptr = NULL;  // discard rest of line, if any
 		return 0;
 	}
@@ -2949,9 +2948,18 @@ close_paren(void)
 {
 	// this has to be a warning -- the command in error is already
 	// finished, so we can't cancel it.
-	printf(" warning: mismatched/extra parentheses\n");
-	might_errexit();
+	error(" warning: mismatched/extra parentheses\n");
 	return BADOP;
+}
+
+void
+expression_error(char *which, token *pt, token *t)
+{
+	char pts[128], ts[128];
+	sprint_token(pts, 128, pt);
+	sprint_token(ts, 128, t);
+	error(" error: bad %s sequence,"
+		" last saw %s and %s\n", which, pts, ts);
 }
 
 /* This implementation of Dijkstra's "shunting yard" algorithm, for
@@ -3012,12 +3020,7 @@ open_paren(void)
 			else
 				trace(("symbolic is %s\n", t->val.oper->name));
 			if (ptok.type == NUMERIC || ptok.type == SYMBOLIC) {
-				printf(" error: bad expression sequence, last saw ");
-				print_token(&ptok);
-				printf(" and ");
-				print_token(t);
-				printf("\n");
-				might_errexit();
+				expression_error("expression", &ptok, t);
 				return BADOP;
 			}
 			tpush(&out_stack, t);
@@ -3038,8 +3041,7 @@ open_paren(void)
 				// Process until matching opening parenthesis
 				while (1) {
 					if (tp == NULL) {
-						printf(" error: missing parentheses?\n");
-						might_errexit();
+						error(" error: missing parentheses?\n");
 						return BADOP;
 					}
 
@@ -3048,9 +3050,8 @@ open_paren(void)
 
 					if (ptok.type == OP &&
 						ptok.val.oper->operands > 0) {
-						printf(" error: missing operand(s) for %s\n",
+						error(" error: missing operand(s) for %s\n",
 							tp->val.oper->name);
-						might_errexit();
 						return BADOP;
 					}
 
@@ -3101,12 +3102,7 @@ open_paren(void)
 				/* two two operand ops in a row? */
 				if (ptok.type == OP &&
 					ptok.val.oper->func != close_paren) {
-					printf(" error: bad operator sequence, saw ");
-					print_token(&ptok);
-					printf(" and ");
-					print_token(t);
-					printf("\n");
-					might_errexit();
+					expression_error("operator", &ptok, t);
 					return BADOP;
 				}
 
@@ -3127,9 +3123,8 @@ open_paren(void)
 				}
 				tpush(&oper_stack, t);
 			} else {
-				printf(" error: '%s' unsuitable in infix expression\n",
+				error(" error: '%s' unsuitable in infix expression\n",
 					t->val.oper->name);
-				might_errexit();
 				return BADOP;
 			}
 			break;
@@ -3137,8 +3132,7 @@ open_paren(void)
 		default:
 		case UNKNOWN:
 		cleanup:
-			printf(" error: unrecognized input '%s'\n", t->val.str);
-			might_errexit();
+			error(" error: unrecognized input '%s'\n", t->val.str);
 			return BADOP;
 		}
 
@@ -3153,8 +3147,7 @@ open_paren(void)
 	tdump(&out_stack);
 
 	if (paren_count) {
-		printf(" error: missing parentheses\n");
-		might_errexit();
+		error(" error: missing parentheses\n");
 		return BADOP;
 	}
 
@@ -3198,10 +3191,10 @@ precedence(void)
 	int negate_prec = 0; // warning suppression
 	static int precedence_generated;
 
-	printf(" Precedence for operators in infix expressions, from \n");
-	printf("  top to bottom in order of descending precedence.\n");
-	printf(" All operators are left-associative, except for those\n");
-	printf("  in rows 2,3,4 and 5, which associate right to left.\n");
+	printf(" Precedence for operators in infix expressions, from \n"
+	       "  top to bottom in order of descending precedence.\n"
+	       " All operators are left-associative, except for those\n"
+	       "  in rows 2,3,4 and 5, which associate right to left.\n");
 	if (!precedence_generated) {
 		op = opers;
 		while (op->name) {
@@ -3216,9 +3209,8 @@ precedence(void)
 			}
 
 			if (op->prec >= NUM_PRECEDENCE) {
-				printf("error: %s precedence too large: %d\n",
+				error("error: %s precedence too large: %d\n",
 					op->name, op->prec);
-				might_errexit();
 			}
 			if (!prec_ops[op->prec]) {
 				prec_ops[op->prec] = (char *)calloc(1, 500);
@@ -3688,8 +3680,7 @@ main(int argc, char *argv[])
 			break;
 		default:
 		case UNKNOWN:
-			printf(" error: unrecognized input '%s'\n", t->val.str);
-			might_errexit();
+			error(" error: unrecognized input '%s'\n", t->val.str);
 			break;
 		}
 

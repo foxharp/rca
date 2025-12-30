@@ -68,17 +68,17 @@ clean:
 tests:  test optest tweaktest
 
 test:
-	egrep -v '^ ' rca_test.txt | ./rca | tee .test | diff -u rca_test.txt -
+	egrep -v '^ ' rca_test.txt | ./rca 2>&1 | tee .test | diff -u rca_test.txt -
 	@ echo test succeeded
 
 # valgrind messes with floating point.  only optests.txt avoids high
 # precision FP, so only it works under valgrind.
 optest:
-	egrep -v '^ ' optests.txt | valgrind -q ./rca | tee .test | diff -u optests.txt -
+	egrep -v '^ ' optests.txt | valgrind -q ./rca 2>&1 | tee .test | diff -u optests.txt -
 	@ echo test succeeded
 
 tweaktest:
-	egrep -v '^ ' tweaktests.txt | ./rca | tee .test | diff -u tweaktests.txt -
+	egrep -v '^ ' tweaktests.txt | ./rca 2>&1 | tee .test | diff -u tweaktests.txt -
 	@ echo test succeeded
 
 .PHONY: html clean all test optest tweaktest htmldiff htmlmv
