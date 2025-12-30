@@ -88,18 +88,18 @@ char *licensetext[] = {
 #include <readline/history.h>
 #endif
 
-/* libraries that I believe support %' for adding commas to %d, %f, etc */
+/* libraries reported to support %' for adding commas to %d, %f, etc */
 #if defined(__GLIBC__) || defined(__APPLE__)
-# define PRINTF_GROUPING 1
+# define PRINTF_SEPARATORS 1
 #else
-# define PRINTF_GROUPING 0
+# define PRINTF_SEPARATORS 0
 #endif
 
 /* these are filled in from the locale, if possible, otherwise
  * they'll default to period, comma, and dollar-sign */
 char *decimal_pt;   // locale decimal_point
 int decimal_pt_len;
-char *group_sep, *group_sep_input;   // locale thousands_sep
+char *thousands_sep, *thousands_sep_input;   // locale thousands_sep
 char *currency ;   // locale currency_symbol
 
 /* who are we? */
@@ -214,7 +214,7 @@ boolean suppress_autoprint = FALSE;
 void pending_printf(const char *fmt, ...);
 
 /* if true, will decorate numbers, like "1,333,444".  */
-boolean digitgroups = PRINTF_GROUPING;
+boolean digitseparators = PRINTF_SEPARATORS;
 
 /* Floating point precision.  This may become either the total
  * displayed precision, or the number of digits after the decimal,
@@ -1375,8 +1375,8 @@ putbinary2(int width, long long mask, unsigned long long n)
 
 	for (i = bytes - 1; i >= 0; i--) {
 		putbinarybyte(mask >> (8 * i), n >> (8 * i));
-		if (digitgroups && i >= 1)	// commas every 8 bits
-			fputs(group_sep, stdout);
+		if (digitseparators && i >= 1)	// commas every 8 bits
+			fputs(thousands_sep, stdout);
 	}
 }
 
@@ -1399,8 +1399,8 @@ puthex(unsigned long long n)
 		return;
 	}
 	puthex((n / 0x10000));
-	if (digitgroups)
-		fputs(group_sep, stdout);
+	if (digitseparators)
+		fputs(thousands_sep, stdout);
 	printf("%04llx", n % 0x10000);
 }
 
@@ -1413,8 +1413,8 @@ putoct(unsigned long long n)
 		return;
 	}
 	putoct(n / 01000);
-	if (digitgroups)
-		fputs(group_sep, stdout);
+	if (digitseparators)
+		fputs(thousands_sep, stdout);
 	printf("%03llo", n % 01000);
 }
 
@@ -1587,12 +1587,12 @@ print_n(ldouble *np, int format, boolean conv)
 		// negative double to unsigned conversion
 		ln = (long long)n & mask;
 		uln = (unsigned long long)ln;
-		printf(digitgroups ? " %'llu" : " %llu", uln);
+		printf(digitseparators ? " %'llu" : " %llu", uln);
 		break;
 	case 'D':
 		ln = (long long)n;
 		if (floating_mode(mode) || int_width == LONGLONG_BITS) {
-			printf(digitgroups ? " %'lld" : " %lld", ln);
+			printf(digitseparators ? " %'lld" : " %lld", ln);
 		} else {
 			/* shenanigans to make pos/neg numbers appear
 			 * properly.  our masked/shortened numbers
@@ -1610,7 +1610,7 @@ print_n(ldouble *np, int format, boolean conv)
 				t = ln & mask;
 				printf(" ");
 			}
-			printf(digitgroups ? "%'lld" : "%lld", t);
+			printf(digitseparators ? "%'lld" : "%lld", t);
 		}
 		break;
 	default:
@@ -1757,8 +1757,8 @@ printstate(void)
 	printf("   detected epsilon is %Lg (%La)\n", epsilon, epsilon);
 	putchar('\n');
 	printf(" Locale elements:\n");
-	printf("  decimal '%s', group separator '%s', currency '%s'\n",
-		decimal_pt ?: "null", group_sep ?: "null", currency ?: "null");
+	printf("  decimal '%s', thousands separator '%s', currency '%s'\n",
+		decimal_pt ?: "null", thousands_sep ?: "null", currency ?: "null");
 
 	suppress_autoprint = TRUE;
 	return GOODOP;
@@ -1899,7 +1899,7 @@ setup_format_string(void)
 	   So there are just four forms to deal with here.
 	 */
 
-	if (digitgroups) {
+	if (digitseparators) {
 		if (float_specifier == 'f')
 			format_string = "%'.*Lf";
 		else
@@ -1913,22 +1913,22 @@ setup_format_string(void)
 }
 
 opreturn
-grouping(void)
+separators(void)
 {
 	ldouble wantsep;
 
 	if (!pop(&wantsep))
 		return BADOP;
 
-	digitgroups = (wantsep != 0);
+	digitseparators = (wantsep != 0);
 
 	// info
-	pending_printf( " Numeric grouping is now %s\n",
-		digitgroups ? "on" : "off");
+	pending_printf( " Numeric separators now %s\n",
+		digitseparators ? "on" : "off");
 	setup_format_string();
-	if (digitgroups && !group_sep[0])
+	if (digitseparators && !thousands_sep[0])
 		pending_printf( " No thousands separator defined in the "
-			"current locale, so no numeric grouping.\n");
+			"current locale, so no numeric separators.\n");
 	return GOODOP;
 }
 
@@ -3051,8 +3051,8 @@ no_comments(char *cp)
 	 * use a space as a separator, but it's a "hard" space,
 	 * represented as unicode.
 	 */
-	if (group_sep_input[0])
-		strremoveall(cp, group_sep_input);
+	if (thousands_sep_input[0])
+		strremoveall(cp, thousands_sep_input);
 
 	/* Same for currency symbols.  They're mostly unicode
 	 * sequences or punctuation (e.g., '$'), which are safe to
@@ -3490,17 +3490,17 @@ locale_init(void)
 	decimal_pt_len = strlen(decimal_pt);
 
 	/* fetch the thousands separator
-	 * group_sep will be used only for output 
-	 * group_sep_input only for input */
-	group_sep_input = group_sep = lc->thousands_sep;
+	 * thousands_sep will be used only for output
+	 * thousands_sep_input only for input */
+	thousands_sep_input = thousands_sep = lc->thousands_sep;
 
 	/* if there's no thousands separator, default the one, that
 	 * will clean up program input to ",", but only if the decimal
 	 * point is ".".  this lets us safely strip commas from input
 	 * even if the locale isn't set up */
-	if (!group_sep_input[0]) {
+	if (!thousands_sep_input[0]) {
 		if (strcmp(decimal_pt, ".") == 0)
-			group_sep_input = ",";
+			thousands_sep_input = ",";
 	}
 
 	/* fetch the currency symbol.  default to '$' */
@@ -3513,7 +3513,7 @@ locale_init(void)
 	} else {
 		/* make sure the currency symbol doesn't conflict with
 		 * any command names, because we're going to simply
-		 * delete the symbol from input lines before parsing. 
+		 * delete the symbol from input lines before parsing.
 		 * A few are known to match, or be substrings of, our
 		 * commands.
 		 */
@@ -3677,9 +3677,9 @@ struct oper opers[] = {
 	{"degrees", use_degrees, "Toggle trig functions: degrees (1) or radians (0)" },
 	{"autoprint", autop,	0 },
 	{"a", autop,		"Toggle autoprinting on/off with 0/1" },
-#if PRINTF_GROUPING
-	{"groups", grouping,	0 },
-	{"g", grouping,		"Toggle numeric separators (i.e., commas) on/off (0/1)" },
+#if PRINTF_SEPARATORS
+	{"separators", separators,	0 },
+	{"s", separators,		"Toggle numeric separators (i.e., commas) on/off (0/1)" },
 #endif
 	{"mode", modeinfo,	"Display current mode parameters" },
 	{"", 0, 0},

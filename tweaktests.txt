@@ -1,7 +1,7 @@
 # Canonicalization test suite — corrected for current operator set
 # Uses only supported names: push, negate, recip, sqrt, sin, cos, tan, ln, log2, log10,
 # abs, frac, int, i2mm, mm2i, ft2m, m2ft, mi2km, km2mi, f2c, c2f, oz2g, g2oz, oz2ml, ml2oz,
-# q2l, l2q, xor, clearb, setb, precision, groups, e, pi
+# q2l, l2q, xor, clearb, setb, precision, separators, e, pi
 # RPN expressions used where convenient.  Infix-only tests are wrapped in ( ... ).
 
 # =============================
@@ -166,8 +166,8 @@ e 5 ln ^ 5 ==
  Will show 18 significant digits.
  0
 
-0 groups
- Numeric grouping is now off
+0 separators
+ Numeric separators now off
  0
 
 9007199254740992 1 +

@@ -284,23 +284,23 @@ operations are used on width-restricted integers, the width
 restriction will be ignored for the operation, but masking will happen
 when storing the result.
 
-.SS Numeric grouping
+.SS Numeric separators
 .B rca
 can add commas (or the locale's "thousands separator") to group the
 numbers it prints.  These separators can be toggled on or off with
 .BR 0 / 1
-.B g
+.B s
 (or
-.BR groups ).
+.BR separators ).
 Separators will never appear in the fractional part of a value.  The
-grouping is strictly cosmetic, based on the printed digits.  No
-bitwise separation (e.g., into bytes) is implied.
+separators are strictly cosmetic, based on the printed digits.  No
+bitwise splitting (e.g., into bytes) is implied.
 
 Numeric grouping will not be functional if the locale doesn't define
 a thousands separator.  Also, numeric grouping may not be functional if
 .B rca
 is built with libraries other than glibc.  (In that case the
-.B groups
+.B separators
 command will be missing entirely.)
 
 On input, the locale's currency symbol and thousands separator will be
@@ -381,10 +381,11 @@ chooses the size of integers, in bits. (Startup: system maximum, likely 64).
 toggles whether degrees are used by the trig functions, instead of
 radians.  (Startup:  enabled)
 .P
-.B commas
+.B separators
 (or
-.BR c )
-toggles whether output will include commas for readability.  (Startup: enabled)
+.BR s )
+toggles whether output will include separators (usually ',', but
+see the LOCALE section) for readability.  (Startup: enabled)
 .P
 .B autoprint
 (or
@@ -673,7 +674,7 @@ into the shell is straightforward:
 #
 # Use RCA_INIT to establish common initial conditions.
 # Previous RCA_INIT appears at end, so will override.
-export RCA_INIT="3 decimals 0 commas 1 errorexit ${RCA_INIT:-}"
+export RCA_INIT="3 decimals 0 separators 1 errorexit ${RCA_INIT:-}"
 
 _rca_run()    # support routine
 {
