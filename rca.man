@@ -402,6 +402,12 @@ be used to display the help text.  (The command must read the text
 from standard input.) Otherwise the text will be output directly to the
 terminal.
 
+The
+.B state
+command will print a verbose summary of
+.BR rca 's
+current state.
+
 .SH OPERATOR PRECEDENCE
 Infix evaluation depends on operator precedence and associativity. 
 The

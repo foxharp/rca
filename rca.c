@@ -1765,28 +1765,27 @@ opreturn
 printstate(void)
 {
 	struct num *s;
-	ldouble x;
 
 	putchar('\n');
-	printf(" mode is %c\n", mode);
-
-	printf(" max_precision is %u\n", max_precision);
-	printf(" float_digits is %d (representing %s), float_specifier is %c\n",
-		float_digits,
-		float_specifier == 'f' ? "decimals" : "precision",
-		float_specifier);
-	printf(" format string for float mode: \"%s\"\n", format_string);
+	printf(" Current mode is %c\n", mode);
+	putchar('\n');
+	printf(" In floating mode:\n");
+	printf("  max precision is %u decimal digits\n", max_precision);
+	printf("  current display mode is \"%d %s\"\n",
+		float_digits, float_specifier == 'f' ? "decimals" : "precision");
+	printf("  format string is \"%s\"\n", format_string);
 	putchar('\n');
 
-	printf(" integer width is %d bits\n", int_width);
-	printf(" int_mask:     0x"); puthex(int_mask);     putchar('\n');
-	printf(" int_sign_bit: 0x"); puthex(int_sign_bit); putchar('\n');
-	printf(" int_max:      0x"); puthex(int_max);	   putchar('\n');
-	printf(" int_min:      0x"); puthex(int_min);	   putchar('\n');
+	printf(" In integer modes:\n");
+	printf("  width is %d bits\n", int_width);
+	printf("  mask:     0x"); puthex(int_mask);	putchar('\n');
+	printf("  sign bit: 0x"); puthex(int_sign_bit);	putchar('\n');
+	printf("  max:      0x"); puthex(int_max);	putchar('\n');
+	printf("  min:      0x"); puthex(int_min);	putchar('\n');
 	putchar('\n');
 
 	s = stack;
-	printf(" top of stack comes first:\n");
+	printf(" Stack, top comes first:\n");
 	if (!s) {
 		printf("%16s\n", "<empty>");
 	} else {
@@ -1798,20 +1797,22 @@ printstate(void)
 			s = s->next;
 		}
 	}
-	printf(" stack_count %d, stack_mark %d\n", stack_count, stack_mark);
+	printf(" stack count %d, stack mark %d\n", stack_count, stack_mark);
+
 	putchar('\n');
-	printf(" native sizes (bits):\n");
-	printf("  long long:\t%lu\n", (unsigned long)(8 * sizeof(long long)));
-	printf("  LLONG_MIN: %llx, LLONG_MAX: %llx\n", LLONG_MIN, LLONG_MAX);
-	printf("  long double:\t%lu\n", (unsigned long)(8 * sizeof(long double)));
-	printf("  LDBL_MANT_DIG: %u\n", LDBL_MANT_DIG);
-	printf("  LDBL_MAX: %.20Lg\n", LDBL_MAX);
-	printf("  LDBL_EPSILON is %Lg (%La)\n", LDBL_EPSILON, LDBL_EPSILON);
-	x = 1.2345678e24L;
-	printf(" calculated:\n");
-	printf("  ULP is %.0Lf\n", nextafterl(x, INFINITY) - x);
-	printf("  detected epsilon is %Lg (%La)\n", epsilon, epsilon);
-	printf("\n decimal_pt is '%s', group_sep is '%s', currency is '%s'\n",
+	printf("\n Build-time sizes:\n");
+	printf("  Native sizes (bits):\n");
+	printf("   sizeof(long long):\t%lu\n", (unsigned long)(8 * sizeof(long long)));
+	printf("   LLONG_MIN: %llx, LLONG_MAX: %llx\n", LLONG_MIN, LLONG_MAX);
+	printf("   sizeof(long double):\t%lu\n", (unsigned long)(8 * sizeof(long double)));
+	printf("   LDBL_MANT_DIG: %u\n", LDBL_MANT_DIG);
+	printf("   LDBL_MAX: %.20Lg\n", LDBL_MAX);
+	printf("   LDBL_EPSILON is %Lg (%La)\n", LDBL_EPSILON, LDBL_EPSILON);
+	printf("  Calculated:\n");
+	printf("   detected epsilon is %Lg (%La)\n", epsilon, epsilon);
+	putchar('\n');
+	printf(" Locale elements:\n");
+	printf("  decimal '%s', group separator '%s', currency '%s'\n",
 		decimal_pt ?: "null", group_sep ?: "null", currency ?: "null");
 
 	suppress_autoprint = TRUE;
@@ -2089,7 +2090,7 @@ setup_width(int bits)
 	} else {
 		int_mask = (1LL << int_width) - 1;
 		int_max = int_mask >> 1;
-		int_min = sign_extend(int_sign_bit);
+		int_min = int_sign_bit;
 	}
 }
 
@@ -3580,7 +3581,7 @@ struct oper opers[] = {
 	{"o", printoct,		0 },
 	{"b", printbin,		"     hex, octal, or binary" },
 	{"r", printrawhex,	"Hidden: Print x as floating hex" },
-	{"state", printstate,	"Hidden: print raw calculator state" },
+	{"state", printstate,	"Show calculator state" },
 	{"tracing", tracetoggle,"Hidden: toggle debug tracing" },
 	{"", 0, 0},
     {"Modes:", 0, 0},
