@@ -593,6 +593,11 @@ i.e., "not a number") or "+inf" or "-inf" (i.e., infinity).  When
 converting to integer mode, these values will be preserved, along with
 their semantics:  any computation involving nan will return nan, and
 any conditionals involving nan will return false.
+.B rca
+doesn't distinguish between mathematical poles (e.g., the value of
+"tan(pi/2)") and overflow conditions (very large finite values that
+could be represented, if only you'd bought a better calculator).  Both
+show as "+/-inf".
 
 Floating point math by its nature is imprecise.  It's not uncommon for
 small rounding errors, and errors introduced by the necessary binary

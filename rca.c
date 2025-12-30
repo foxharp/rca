@@ -992,19 +992,40 @@ use_degrees(void)
 ldouble
 to_degrees(ldouble angle)
 {
-	if (trig_degrees)
-	    return (angle * 180.0L) / pi;
-	else
-	    return angle;
+	return (angle * 180.0L) / pi;
 }
 
 ldouble
 to_radians(ldouble angle)
 {
+	return (angle * pi) / 180.0L;
+}
+
+ldouble
+radians_to_user_angle(ldouble rads)
+{
 	if (trig_degrees)
-	    return (angle * pi) / 180.0L;
+		return to_degrees(rads);
 	else
-	    return angle;
+		return rads;
+}
+
+ldouble
+user_angle_to_radians(ldouble u_angle)
+{
+	if (trig_degrees)
+		return to_radians(u_angle);
+	else
+		return u_angle;
+}
+
+ldouble
+user_angle_to_degrees(ldouble u_angle)
+{
+	if (trig_degrees)
+		return u_angle;
+	else
+		return to_degrees(u_angle);
 }
 
 opreturn
@@ -1016,7 +1037,7 @@ sine(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		result_push(sinl(to_radians(a)));
+		result_push(sinl(user_angle_to_radians(a)));
 		lastx = a;
 		return GOODOP;
 	}
@@ -1032,7 +1053,7 @@ asine(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		result_push(to_degrees(asinl(a)));
+		result_push(radians_to_user_angle(asinl(a)));
 		lastx = a;
 		return GOODOP;
 	}
@@ -1048,7 +1069,7 @@ cosine(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		result_push(cosl(to_radians(a)));
+		result_push(cosl(user_angle_to_radians(a)));
 		lastx = a;
 		return GOODOP;
 	}
@@ -1064,7 +1085,7 @@ acosine(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		result_push(to_degrees(acosl(a)));
+		result_push(radians_to_user_angle(acosl(a)));
 		lastx = a;
 		return GOODOP;
 	}
@@ -1080,11 +1101,15 @@ tangent(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		// FIXME:  tan() goes infinite at +/-90
-		result_push(tanl(to_radians(a)));
+		// tan() goes undefined at +/-90
+		if (fmodl(tweak_float(user_angle_to_degrees(a)) - 90, 180) == 0)
+			result_push(NAN);
+		else
+			result_push(tanl(user_angle_to_radians(a)));
 		lastx = a;
 		return GOODOP;
 	}
+
 	return BADOP;
 }
 
@@ -1097,7 +1122,7 @@ atangent(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		result_push(to_degrees(atanl(a)));
+		result_push(radians_to_user_angle(atanl(a)));
 		lastx = a;
 		return GOODOP;
 	}
@@ -1114,7 +1139,7 @@ atangent2(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			result_push(to_degrees(atan2l(a,b)));
+			result_push(radians_to_user_angle(atan2l(a,b)));
 			lastx = b;
 			return GOODOP;
 		}
