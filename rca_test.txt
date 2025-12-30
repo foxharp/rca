@@ -61,7 +61,6 @@ lastx |
  Integers are now 20 bits wide.
  0x5,5555
 clear
- empty stack
 0xfffff
 0xaaaaa ~ &
  0x5,5555
@@ -76,7 +75,6 @@ chs
 d
  4,113
 clear
- empty stack
 F
  Mode is float.  Displaying 6 digits of total precision.
 3
@@ -162,7 +160,6 @@ d
 200 +
  0x5c
 clear
- empty stack
 64w
  Integers are now 64 bits wide.
 0x8765
@@ -222,7 +219,6 @@ D
 
 # comment test
 clear H  # comment test
- empty stack
  Mode is hex.  Integer math with 32 bits.
 0x7fffffff#ffff
 chs
@@ -274,7 +270,6 @@ exch
 32 <<
  00
 clear
- empty stack
 F
  Mode is float.  Displaying 15 digits of total precision.
 32k
@@ -342,7 +337,6 @@ pi
 
 # test the sum command
 clear
- empty stack
 1 2 3 4 5
 sum
  15
@@ -374,7 +368,6 @@ sum
  84
 
 clear
- empty stack
 -1 5 *
  -5
 -10 -20 /
@@ -569,7 +562,6 @@ atan
  Numeric grouping is now on
  1,016.000
 clear
- empty stack
 H
  Mode is hex.  Integer math with 32 bits.
 16w

@@ -609,15 +609,13 @@ A normal exit with an empty stack causes an exit status of 2.
 Unrecoverable internal errors (e.g., failed memory allocation) cause
 an exit status of 3.
 Errors resulting from user input (parsing errors, empty stack, data
-conversion warnings) are non-fatal unless
+conversion warnings) are non-fatal unless the
 .B errorexit
-has been executed.
+toggle has been set.
 In that case, those warnings and errors will cause
 exit status of 4.  This can be useful when
 .B rca
-is used non-interactively.  Once given,
-.B errorexit
-cannot be rescinded.
+is used non-interactively.
 
 .SH SHELL SUPPORT
 Incorporating
@@ -651,7 +649,7 @@ into the shell is straightforward:
 #
 # Use RCA_INIT to establish common initial conditions.
 # Previous RCA_INIT appears at end, so will override.
-export RCA_INIT="3 decimals 0 commas errorexit ${RCA_INIT:-}"
+export RCA_INIT="3 decimals 0 commas 1 errorexit ${RCA_INIT:-}"
 
 _rca_run()    # support routine
 {

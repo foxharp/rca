@@ -212,7 +212,6 @@
 # Error tests
 # ============================================
 clear
- empty stack
 
 (sin)
  error: missing operand(s) for sin

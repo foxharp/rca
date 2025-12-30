@@ -267,7 +267,15 @@ memory_failure(void)
 opreturn
 enable_errexit(void)
 {
-	exit_on_error = TRUE;
+	ldouble want_errexit;
+	boolean pop(ldouble *);
+
+	if (!pop(&want_errexit))
+		return BADOP;
+
+	exit_on_error = (want_errexit != 0);
+	pending_printf(" errors and warnings will %s cause exit\n",
+		exit_on_error ? "now" : "not");
 	return GOODOP;
 }
 
@@ -1327,9 +1335,9 @@ clear(void)
 {
 	ldouble scrap;
 
-	if (pop(&lastx)) {
-		while (pop(&scrap));
-	}
+	if (peek(&lastx))
+		while(stack) pop(&scrap);
+
 	return GOODOP;
 }
 
@@ -3608,7 +3616,7 @@ struct oper opers[] = {
 	{"quit", quit,		0 },
 	{"q", quit,		0 },
 	{"exit", quit,		"Leave the calculator" },
-	{"errorexit", enable_errexit,	"Enable exit(4) on error or warning" },
+	{"errorexit", enable_errexit,	"Toggle exiting on error and warning" },
 	{"license", license,	"Display the rca copyright and license." },
 	{"#", help,		"Comment. The rest of the line will be ignored." },
 	{NULL, NULL, 0},

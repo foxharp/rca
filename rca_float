@@ -9,7 +9,7 @@
 #
 # Set common initial conditions.  Values previously set will override.
 # 3 decimals , no commas, fail on error.
-export RCA_INIT="3K 0commas errorexit ${RCA_INIT:-}"
+export RCA_INIT="3decimals 0commas 1errorexit ${RCA_INIT:-}"
 
 _rca_run()    # support routine
 {
