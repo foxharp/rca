@@ -492,7 +492,7 @@ tpop(token **tstackp)
 }
 
 void
-tempty(token **tstackp)
+tclear(token **tstackp)
 {
 	token *t, *nt;
 
@@ -3016,8 +3016,8 @@ open_paren(void)
 
 	ptok.type = UNKNOWN;
 
-	tempty(&out_stack);
-	tempty(&oper_stack);
+	tclear(&out_stack);
+	tclear(&oper_stack);
 
 	trace(("collecting infix line, pushing open (\n"));
 	// push the '(' token that the user typed, but won't be parsed.
@@ -3680,8 +3680,7 @@ main(int argc, char *argv[])
 	while (1) {
 
 		// use tokens created by infix processing first */
-		t = tpop(&infix_stack);
-		if (t) {
+		if (tpeek(&infix_stack) && (t = tpop(&infix_stack))) {
 			tok = *t;
 			free(t);
 		} else {
