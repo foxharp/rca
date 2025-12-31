@@ -616,3 +616,101 @@ u
  0x0
 ~
  0x3
+clear
+F 6k
+ Will show 6 significant digits.
+10 10000 ^
+ inf
+10 -10000 ^
+ 0
+1 0 / s1
+ inf
+-1 0 / s2
+ -inf
+-2 log10 s3
+ nan
+#
+# The comments below are taken directly from the powl() man page.
+# The x and y they refer to, i.e. powl(x, y), are expressed in the
+# same order in RPN notation, but rca would normally call them "y x ^"
+#
+# If x is +0 or -0, and y is less than 0 and not an odd
+# integer, a pole error occurs and +HUGE_VAL, +HUGE_VALF, or
+# +HUGE_VALL, is returned.
+0 -2 ^
+ inf
+-0 -2 ^
+ inf
+# If x is +0 (-0), and y is an odd integer greater than 0, the
+# result is +0 (-0).
+0 3 ^
+ 0
+-0 3 ^
+ -0
+# If x is 0, and y greater than 0 and not an odd integer, the
+# result is +0.
+0 2 ^
+ 0
+# If x is -1, and y is positive infinity or negative infinity,
+# the result is 1.0.
+-1 r1 ^
+ 1
+-1 r2 ^
+ 1
+# If x is +1, the result is 1.0 (even if y is a NaN).
+1 r3 ^
+ 1
+# If y is 0, the result is 1.0 (even if x is a NaN).
+r3 0 ^
+ 1
+# If x is a finite value less than 0, and y is a finite
+# noninteger, a domain error occurs, and a NaN is returned.
+-1 .5 ^
+ -nan
+-2 2.5 ^
+ -nan
+# If the absolute value of x is less than 1, and y is negative
+# infinity, the result is positive infinity.
+.3 r2 ^
+ inf
+# If the absolute value of x is greater than 1, and y is negative
+# infinity, the result is +0.
+-2 r2 ^
+ 0
+# If the absolute value of x is less than 1, and y is positive
+# infinity, the result is +0.
+.5 r1 ^
+ 0
+-.4 r1 ^
+ 0
+# If the absolute value of x is greater than 1, and y is positive
+# infinity, the result is positive infinity.
+-3 r1 ^
+ inf
+# If x is negative infinity, and y is an odd integer less than 0,
+# the result is -0.
+r2 -3 ^
+ -0
+# If x is negative infinity, and y less than 0 and not an odd
+# integer, the result is +0.
+r2 -2 **
+ 0
+# If x is negative infinity, and y is an odd integer greater than
+# 0, the result is negative infinity.
+r2 3 ^
+ -inf
+# If x is negative infinity, and y greater than 0 and not an odd
+# integer, the result is positive infinity.
+r2 4 ^
+ inf
+# If x is positive infinity, and y less than 0, the result is +0.
+r1 -1 ^
+ 0
+r1 -.5 ^
+ 0
+# If x is positive infinity, and y greater than 0, the result is
+# positive infinity.
+r1 2 ^
+ inf
+r1 .5 ^
+ inf
