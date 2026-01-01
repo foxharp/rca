@@ -195,7 +195,7 @@ struct token {
 
 /* 7 major modes:  float, decimal, unsigned, hex, octal, binary, raw
  * float.  all but float and raw float are integer modes.  "raw float"
- * is a hidden mode:  it uses the printf %a format.
+ * is really just a debug mode:  it uses the printf %a format.
  */
 int mode = 'F';			/* 'F', 'D', 'U', 'H', 'O', 'B', 'R' */
 boolean floating_mode(int m) { return (m == 'F' || m == 'R'); }
@@ -1786,7 +1786,6 @@ printfloat(void)
 	return GOODOP;
 }
 
-/* debug support -- hidden command */
 opreturn
 printstate(void)
 {
@@ -1845,7 +1844,7 @@ printstate(void)
 	return GOODOP;
 }
 
-/* debug support -- hidden command */
+/* debug support */
 opreturn
 tracetoggle(void)
 {
@@ -3276,10 +3275,8 @@ precedence(void)
 		while (op->name) {
 
 			/* skip anything in the table that doesn't have
-			 * a name, a function, a precedence, or is hidden
-			 */
-			if (!op->name[0] || !op->func || op->prec == 0 ||
-				(op->help && strncmp(op->help, "Hidden:", 7) == 0)) {
+			 * a name, a function, or a precedence */
+			if (!op->name[0] || !op->func || op->prec == 0) {
 				op++;
 				continue;
 			}
@@ -3364,7 +3361,7 @@ license(void)
 }
 
 opreturn
-showhelp(int show_hidden)
+showhelp(void)
 {
 	oper *op;
 
@@ -3414,10 +3411,7 @@ showhelp(int show_hidden)
 		if (!*op->name) {
 			fprintf(fout, "\n");
 		} else {
-			if (op->help && !show_hidden &&
-					strncmp(op->help, "Hidden:", 7) == 0) {
-				/* hidden command */ ;
-			} else if (!op->func) {
+			if (!op->func) {
 				fprintf(fout, " %s\n", op->name);
 			} else {
 				if (cbuf[0]) { // continuing
@@ -3455,13 +3449,7 @@ showhelp(int show_hidden)
 opreturn
 help(void)
 {
-	return showhelp(0);
-}
-
-opreturn
-Help(void)
-{
-	return showhelp(1);
+	return showhelp();
 }
 
 void
