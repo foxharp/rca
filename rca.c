@@ -3393,8 +3393,9 @@ help(void)
 	boolean fout_is_pipe = 0;
 	char *pager = getenv("PAGER");
 
-	if (pager && pager[0] && (fout = popen(pager, "w"))) {
-		printf("Using '%s' from $PAGER to show help text\n", pager);
+	if (pager && pager[0] && isatty(fileno(stdout)) &&
+			(fout = popen(pager, "w"))) {
+		printf("Using '%s' (from $PAGER) to show help text\n", pager);
 		fout_is_pipe = 1;
 	} else {
 		fout = stdout;
@@ -3459,13 +3460,18 @@ help(void)
 		op++;
 	}
 	fprintf(fout, "\n%78s\n", "version " VERSION " built " __DATE__ " " __TIME__);
-	fprintf(fout, "\n Tip:  Use \"rca help q | less\" to view this help\n");
 
-	if (fout_is_pipe) {
-	    if (pclose(fout) != 0) {
-		printf(" Failed to show help.  Unset PAGER to show help directly\n");
-	    }
+	if (!fout_is_pipe) {
+		// tip not needed if a pager's already in use
+		fprintf(fout, "\n Tip:	Use \"rca help q | less\""
+				" to view this help\n");
+		return GOODOP;
 	}
+
+	if (pclose(fout) != 0)
+		printf(" Failed showing help. Unset PAGER to show help directly\n");
+	else
+		printf(" (Help ended)\n");
 
 	return GOODOP;
 }
@@ -3686,7 +3692,7 @@ struct oper opers[] = {
 	{"", 0, 0},
     {"Housekeeping:", 0, 0},
 	{"?", help,		0 },
-	{"help", help,		"Show this list" },
+	{"help", help,		"Show this list (using $PAGER, if set)" },
 	{"precedence", precedence, "List infix operator precedence" },
 	{"quit", quit,		0 },
 	{"q", quit,		0 },
