@@ -211,7 +211,6 @@ boolean suppress_autoprint = FALSE;
 
 /* informative feedback is only printed if the command generating it
  * is followed by a newline */
-char pending_info[1024];
 void pending_printf(const char *fmt, ...);
 
 /* if true, will decorate numbers, like "1,333,444".  */
@@ -256,6 +255,12 @@ ldouble pre_infix_X;
 
 /* for store/recall */
 ldouble offstack[5];
+
+/* where input is coming from currently */
+static char *input_ptr = NULL;
+
+int parse_tok(char *p, token *t, char **nextp);
+void sprint_token(char *s, int slen, token *t);
 
 void
 memory_failure(void)
@@ -423,108 +428,6 @@ pop(ldouble *f)
 	return TRUE;
 }
 
-
-token *out_stack, *oper_stack, *infix_stack;
-
-char *
-stackname(token **tstackp)
-{
-	char *n;
-	if (tstackp == &oper_stack)
-		n = "oper_stack";
-	else if (tstackp == &out_stack)
-		n = "out_stack";
-	else if (tstackp == &infix_stack)
-		n = "infix_stack";
-	else
-		n = "unknown stack";
-	return n;
-}
-
-
-void
-tpush(token **tstackp, token *token)
-{
-	struct token *t;
-
-	/* if we originally malloc'ed the incoming token, just reuse
-	 * it, otherwise malloc and copy.
-	 */
-	if (token->alloced) {
-		t = token;
-	} else {
-		t = (struct token *)calloc(1, sizeof(struct token));
-		if (!t)
-			memory_failure();
-
-		*t = *token;
-		t->alloced = 1;
-	}
-
-	// trace(("pushed token %p to %s stack\n", t,
-	// 	(*tstackp == out_stack) ? "output":"operator"));
-
-	t->next = *tstackp;
-	*tstackp = t;
-}
-
-token *
-tpeek(token **tstackp)
-{
-	return *tstackp;
-}
-
-token *
-tpop(token **tstackp)
-{
-	struct token *rt;
-
-	rt = *tstackp;
-	if (!rt) {
-		trace(("empty tstack\n"));
-		return NULL;
-	}
-
-	*tstackp = (*tstackp)->next;
-	// trace(("popped token %p from %s stack\n", rt, stackname(tstackp)));
-
-	return rt;
-}
-
-void
-tclear(token **tstackp)
-{
-	token *t, *nt;
-
-	t = *tstackp;
-	*tstackp = NULL;
-
-	while (t) {
-		nt = t->next;
-		free(t);
-		t = nt;
-	}
-}
-
-void
-tdump(token **tstackp)
-{
-	if (!tracing) return;
-
-	token *t = *tstackp;
-
-	printf("%s stack: ", stackname(tstackp));
-	while (t) {
-		if (t->type == NUMERIC)
-			printf("%Lf  ", t->val.val);
-		else if (t->type == OP)
-			printf("%s  ", t->val.oper->name);
-		else
-			printf("t->type is %d", t->type);
-		t = t->next;
-	}
-	printf("\n");
-}
 
 opreturn
 add(void)
@@ -1411,6 +1314,23 @@ exchange(void)
 }
 
 
+char pending_info[1024];
+
+void
+pending_clear(void)
+{
+	*pending_info = '\0';
+}
+
+void
+pending_flush(void)
+{
+	if (*pending_info) {
+		printf("%s", pending_info);
+		*pending_info = '\0';
+	}
+}
+
 void
 pending_printf(const char *fmt, ...)
 {
@@ -1844,20 +1764,6 @@ printstate(void)
 	return GOODOP;
 }
 
-/* debug support */
-opreturn
-tracetoggle(void)
-{
-	ldouble wanttracing;
-
-	if (!pop(&wanttracing))
-		return BADOP;
-
-	tracing = (wanttracing != 0);
-	printf(" internal tracing is now %s", tracing ? "on\n":"off\n");
-	return GOODOP;
-}
-
 static char *
 mode2name(void)
 {
@@ -2263,6 +2169,13 @@ push_e(void)
 }
 
 opreturn
+push_pre_infix_x(void)
+{
+	push(pre_infix_X);
+	return GOODOP;
+}
+
+opreturn
 mark(void)
 {
 	ldouble n;
@@ -2280,13 +2193,6 @@ mark(void)
 		stack_mark = 0; // special case:  clear the mark
 	else
 		stack_mark = stack_count - n;
-	return GOODOP;
-}
-
-opreturn
-push_pre_infix_x(void)
-{
-	push(pre_infix_X);
 	return GOODOP;
 }
 
@@ -2536,472 +2442,106 @@ units_rad_deg(void)
 	return BADOP;
 }
 
-opreturn
-autop(void)
-{
-	ldouble wantautop;
-
-	if (!pop(&wantautop))
-		return BADOP;
-
-	autoprint = (wantautop != 0);
-
-	// info
-	pending_printf(" Autoprinting is now %s\n", autoprint ? "on" : "off");
-	return GOODOP;
-}
-
-opreturn
-rawfloat(void)
-{
-	ldouble wantraw;
-
-	if (!pop(&wantraw))
-		return BADOP;
-
-	raw_floats = (wantraw != 0);
-
-	// info
-	pending_printf( " Float snapping/rounding is now %s\n",
-		raw_floats ? "off" : "on");
-	return GOODOP;
-}
-
-void
-exitret(void)
-{
-	ldouble a = 0;
-	if (stack) {  // exit 0 or 1, based on top of stack
-		pop(&a);
-		exit(a == 0);  // flip exit status per unix convention
-	} else {
-		exit(2);  // exit 2 on empty stack
-	}
-
-}
-
-opreturn
-quit(void)
-{
-	if (!suppress_autoprint && autoprint)
-		print_top(mode);
-	exitret();
-	return GOODOP; // not reached
-}
-
-size_t stralnum(char *s, char **endptr)
-{
-	char *ns = s;
-	while (isalnum(*ns) || *ns == '_')
-		ns++;
-	*endptr = ns;
-	return ns - s;
-}
-
-void
-sprint_token(char *s, int slen, token *t)
-{
-	switch(t->type) {
-	case NUMERIC:
-	    snprintf(s, slen, "%+Lg", t->val.val);
-	    break;
-	case SYMBOLIC:
-	    snprintf(s, slen, "%s", t->val.oper->name);
-	    break;
-	case OP:
-	    snprintf(s, slen, "oper %s", t->val.oper->name);
-	    break;
-	case EOL:
-	    snprintf(s, slen, "EOL");
-	    break;
-	case UNKNOWN:
-	    snprintf(s, slen, "unknown");
-	    break;
-	}
-}
-
-int
-parse_tok(char *p, token *t, char **nextp)
-{
-	int sign = 1;
-
-	/* be sure + and - are bound closely to numbers */
-	if (*p == '+' && (match_dp(p + 1) || isdigit(*(p + 1)))) {
-		p++;
-	} else if (*p == '-' && (match_dp(p + 1) || isdigit(*(p + 1)))) {
-		sign = -1;
-		p++;
-	}
-
-	if (*p == '0' && (*(p + 1) == 'x' || *(p + 1) == 'X')) {
-		// hex
-		long double dd;
-		if (raw_hex_input_ok) {
-			// will allow floating hex, e.g. 0xc.90fdaa22168c23cp-2
-			dd = strtold(p, nextp);
-		} else {
-			// simple hex integers only
-			dd = strtoull(p, nextp, 16);
-		}
-		if (dd == 0.0 && p == *nextp)
-			goto unknown;
-
-		t->val.val = dd * sign;
-		t->type = NUMERIC;
-		return 1;
-
-	} else if (*p == '0' && (*(p + 1) == 'b' || *(p + 1) == 'B')) {
-		// binary
-		long long ln = strtoull(p + 2, nextp, 2);
-
-		if (ln == 0 && p == *nextp)
-			goto unknown;
-		t->type = NUMERIC;
-		t->val.val = ln * sign;
-		return 1;
-
-	} else if (*p == '0' && ('0' <= *(p + 1) && *(p + 1) <= '7')) {
-		// octal
-		long long ln = strtoull(p, nextp, 8);
-
-		if (ln == 0 && p == *nextp)
-			goto unknown;
-		t->type = NUMERIC;
-		t->val.val = ln * sign;
-		return 1;
-
-	} else if (isdigit(*p) || match_dp(p)) {
-		// decimal
-		long double dd = strtold(p, nextp);
-
-		if (dd == 0.0 && p == *nextp)
-			goto unknown;
-		t->type = NUMERIC;
-		t->val.val = dd * sign;
-		return 1;
-	} else {
-		int n;
-		if (isalpha(*p)) {
-			n = stralnum(p, nextp);
-		} else if (ispunct(*p)) {
-			/* parser hack:  hard-coded list of
-			 * double punctuation operators */
-			if (    (p[0] == '>' && p[1] == '>') ||      //   >>
-				(p[0] == '<' && p[1] == '<') ||      //   <<
-				(p[0] == '>' && p[1] == '=') ||      //   >=
-				(p[0] == '<' && p[1] == '=') ||      //   <=
-				(p[0] == '=' && p[1] == '=') ||      //   ==
-				(p[0] == '!' && p[1] == '=') ||      //   !=
-				(p[0] == '&' && p[1] == '&') ||      //   &&
-				(p[0] == '|' && p[1] == '|') ||      //   ||
-				(p[0] == '*' && p[1] == '*')) {      //   **
-				n = 2;
-			} else {
-				n = 1;
-			}
-			*nextp = p + n;
-		} else {
-			error(" error: illegal character in input\n");
-			t->val.str = p;
-			t->type = UNKNOWN;
-			return 0;
-		}
-
-		// command
-		oper *op;
-
-		op = opers;
-		while (op->name) {
-			int matchlen;
-
-			if (!op->func) {
-				op++;
-				continue;
-			}
-			matchlen = strlen(op->name);
-			if (n == matchlen && !strncmp(op->name, p, matchlen)) {
-				*nextp = p + matchlen;
-				t->val.oper = op;
-				if (op->operands == -1) // like "pi", "recall"
-					t->type = SYMBOLIC;
-				else
-					t->type = OP;
-				return 1;
-			}
-			op++;
-		}
-		if (!op->name) {
-		unknown:
-			t->val.str = p;
-			t->type = UNKNOWN;
-			return 0;
-		}
-	}
-	return 1;
-}
+token *out_stack, *oper_stack, *infix_stack;
 
 char *
-strremoveall(char *haystack, const char *needle)
+stackname(token **tstackp)
 {
-    size_t len = strlen(needle);
-    if (len > 0) {
-        char *p = haystack;
-
-        while ((p = strstr(p, needle)) != NULL)
-            memmove(p, p + len, strlen(p + len) + 1);
-    }
-    return haystack;
+	char *n;
+	if (tstackp == &oper_stack)
+		n = "oper_stack";
+	else if (tstackp == &out_stack)
+		n = "out_stack";
+	else if (tstackp == &infix_stack)
+		n = "infix_stack";
+	else
+		n = "unknown stack";
+	return n;
 }
 
+
 void
-no_comments(char *cp)
+tpush(token **tstackp, token *token)
 {
-	char *ncp;
+	struct token *t;
 
-	/* Eliminate comments */
-	if ((ncp = strchr(cp, '#')) != NULL)
-		*ncp = '\0';
-
-	/* Eliminate the thousands separator from numbers, like
-	 * "1,345,011".  This removes them from the entire line, would
-	 * be a problem except:  the only simple ascii separators used
-	 * in locales are '.' and ',', which we don't use anywhere
-	 * else.  (Removing '.' is safe, because if the separator is
-	 * '.', then the decimal point isn't.)  All the others are
-	 * unicode sequences, which we don't use either.  So the
-	 * command line won't be harmed by this removal.  Some locales
-	 * use a space as a separator, but it's a "hard" space,
-	 * represented as unicode.
+	/* if we originally malloc'ed the incoming token, just reuse
+	 * it, otherwise malloc and copy.
 	 */
-	if (group_sep_input[0])
-		strremoveall(cp, group_sep_input);
-
-	/* Same for currency symbols.  They're mostly unicode
-	 * sequences or punctuation (e.g., '$'), which are safe to
-	 * remove.  But some are plain ascii.  We checked earlier to
-	 * be sure the currency symbol doesn't match any of our
-	 * commands.
-	 */
-	if (currency && currency[0])
-		strremoveall(cp, currency);
-}
-
-static char *input_ptr = NULL;
-
-void
-flushinput(void)
-{
-	input_ptr = NULL;
-}
-
-static int o_stdout_fd = -1;
-
-void
-suppress_stdout(void)
-{
-	fflush(stdout);
-
-	o_stdout_fd = dup(STDOUT_FILENO);
-
-	int null_fd = open("/dev/null", O_WRONLY);
-	if (null_fd == -1) {	// would be surprising
-		o_stdout_fd = -1;
-		return;
-	}
-
-	dup2(null_fd, STDOUT_FILENO);	// Redirect stdout to /dev/null
-	close(null_fd);		// Close the /dev/null file descriptor
-}
-
-void
-restore_stdout(void)
-{
-	if (o_stdout_fd == -1)
-		return;
-	fflush(stdout);
-	dup2(o_stdout_fd, STDOUT_FILENO);	// Restore original stdout
-	close(o_stdout_fd);
-	o_stdout_fd = -1;
-}
-
-#ifdef USE_READLINE
-char *
-command_generator(const char *prefix, int state)
-{
-	static int len;
-	static struct oper *op;
-
-	/* If this is the first time called, initialize our state. */
-	if (!state) {
-		op = opers - 1;
-		len = strlen(prefix);
-	}
-
-	/* Return the next name in the list that matches our prefix. */
-	while (op++) {
-		if (!op->name)
-			break;
-		if (!op->name[0])
-			continue;
-		if (!op->func)
-			continue;
-		if (strncmp(op->name, prefix, len) != 0)
-			continue;
-		return strdup(op->name);
-	}
-
-	return 0;
-}
-
-/* Attempted completion function. */
-char **
-command_completion(const char* prefix, int start, int end)
-{
-	(void)start;  // suppress "unused" warnings
-	(void)end;
-
-	return rl_completion_matches(prefix, command_generator);
-}
-#endif
-
-/* on return, the global input_ptr is a string containing commands
- * to be executed
- */
-int
-fetch_line(void)
-{
-	static int arg = 1;
-	static char *input_buf;
-	static size_t blen;
-	static boolean tried_rca_init;
-	char *rca_init;
-
-	if (!tried_rca_init) {
-		tried_rca_init = TRUE;
-		rca_init = getenv("RCA_INIT");
-		if (rca_init) {
-			suppress_stdout();
-			input_buf = malloc(strlen(rca_init) + 1);
-			if (!input_buf)
-				memory_failure();
-			strcpy(input_buf, rca_init);
-			input_ptr = input_buf;
-			return 1;
-		}
-	}
-
-	restore_stdout();
-
-	/* if there are args on the command line, they're taken as
-	 * initial commands.  since only numbers can start with '-',
-	 * any other use of a hyphen brings up a usage message.
-	 */
-	if (arg < g_argc) {
-
-		if (g_argv[1][0] == '-' && !(isdigit(g_argv[1][1])))
-			usage();
-
-		blen = 0;
-		for (arg = 1; arg < g_argc; arg++)
-			blen += strlen(g_argv[arg]) + 2;
-
-		if (input_buf) free(input_buf);
-		input_buf = malloc(blen);
-		if (!input_buf)
+	if (token->alloced) {
+		t = token;
+	} else {
+		t = (struct token *)calloc(1, sizeof(struct token));
+		if (!t)
 			memory_failure();
 
-		*input_buf = '\0';
-		for (arg = 1; arg < g_argc; arg++) {
-			strcat(input_buf, g_argv[arg]);
-			strcat(input_buf, " ");
-		}
-
-		no_comments(input_buf);
-
-		input_ptr = input_buf;
-		return 1;
+		*t = *token;
+		t->alloced = 1;
 	}
 
-#ifdef USE_READLINE
-	static char readline_init_done = 0;
+	// trace(("pushed token %p to %s stack\n", t,
+        //      (*tstackp == out_stack) ? "output":"operator"));
 
-	if (!readline_init_done) {
-		rl_readline_name = "rca";
-		rl_basic_word_break_characters = " \t\n";
-		rl_attempted_completion_function = command_completion;
-		using_history();
-		readline_init_done = 1;
-	}
-
-	/* if we used the buffer as input, add it to history.  doing
-	 * this here records any command line input, possibly stored
-	 * in the buffer above, on the first call to fetch_line()
-	 */
-	if (input_buf && *input_buf)
-		add_history(input_buf);
-
-	if ((input_buf = readline("")) == NULL)  // got EOF
-		exitret();
-
-#if READLINE_NO_ECHO_BARE_NL
-	/* a bug in readline() doesn't echo bare newlines to a tty if
-	 * the program has no prompt.  so we do it here.  this is
-	 * needed in some sub-versions of readline 8.2 */
-	if (*input_buf == '\0')
-		putchar('\n');
-#endif
-
-#else // no readline()
-
-	if (getline(&input_buf, &blen, stdin) < 0)  // EOF
-		exitret();
-
-	if (input_buf[strlen(input_buf) - 1] == '\n')
-		input_buf[strlen(input_buf) - 1] = '\0';
-
-	/* if stdin is a terminal, the command is already on-screen.
-	 * but we also want it mixed with the output if we're
-	 * redirecting from a file or pipe.  (easy to get rid of it
-	 * with something like: "rca < commands | grep '^ '"
-	 */
-	if (!isatty(0))
-		printf("%s\n", input_buf);
-#endif
-
-	no_comments(input_buf);
-
-	input_ptr = input_buf;
-
-	return 1;
+	t->next = *tstackp;
+	*tstackp = t;
 }
 
-int
-gettoken(struct token *t)
+token *
+tpeek(token **tstackp)
 {
-	char *next_input_ptr;
-	if (input_ptr == NULL)
-		if (!fetch_line())
-			return 0;
+	return *tstackp;
+}
 
-	while (isspace(*input_ptr))
-		input_ptr++;
+token *
+tpop(token **tstackp)
+{
+	struct token *rt;
 
-	if (*input_ptr == '\0') {	/* out of input */
-		t->type = EOL;
-		input_ptr = NULL;
-		return 1;
+	rt = *tstackp;
+	if (!rt) {
+		trace(("empty tstack\n"));
+		return NULL;
 	}
 
-	fflush(stdin);
+	*tstackp = (*tstackp)->next;
+	// trace(("popped token %p from %s stack\n", rt, stackname(tstackp)));
 
-	if (!parse_tok(input_ptr, t, &next_input_ptr)) {
-		error(" error: unrecognized input '%s'\n", input_ptr);
-		input_ptr = NULL;  // discard rest of line, if any
-		return 0;
+	return rt;
+}
+
+void
+tclear(token **tstackp)
+{
+	token *t, *nt;
+
+	t = *tstackp;
+	*tstackp = NULL;
+
+	while (t) {
+		nt = t->next;
+		free(t);
+		t = nt;
 	}
+}
 
-	input_ptr = next_input_ptr;
-	return 1;
+void
+tdump(token **tstackp)
+{
+	if (!tracing) return;
+
+	token *t = *tstackp;
+
+	printf("%s stack: ", stackname(tstackp));
+	while (t) {
+		if (t->type == NUMERIC)
+			printf("%Lf  ", t->val.val);
+		else if (t->type == OP)
+			printf("%s  ", t->val.oper->name);
+		else
+			printf("t->type is %d", t->type);
+		t = t->next;
+	}
+	printf("\n");
 }
 
 token open_paren_token, chsign_token, plus_token;
@@ -3018,15 +2558,6 @@ create_infix_support_tokens()
 	(void)parse_tok("nop", &plus_token, &outp);
 }
 
-opreturn
-close_paren(void)
-{
-	// this has to be a warning -- the command in error is already
-	// finished, so we can't cancel it.
-	error(" warning: mismatched/extra parentheses\n");
-	return BADOP;
-}
-
 void
 expression_error(char *which, token *pt, token *t)
 {
@@ -3035,6 +2566,15 @@ expression_error(char *which, token *pt, token *t)
 	sprint_token(ts, 128, t);
 	error(" error: bad %s sequence,"
 		" last saw %s and %s\n", which, pts, ts);
+}
+
+opreturn
+close_paren(void)
+{
+	// this has to be a warning -- the command in error is already
+	// finished, so we can't cancel it.
+	error(" warning: mismatched/extra parentheses\n");
+	return BADOP;
 }
 
 /* This implementation of Dijkstra's "shunting yard" algorithm, for
@@ -3256,6 +2796,482 @@ open_paren(void)
 
 
 opreturn
+autop(void)
+{
+	ldouble wantautop;
+
+	if (!pop(&wantautop))
+		return BADOP;
+
+	autoprint = (wantautop != 0);
+
+	// info
+	pending_printf(" Autoprinting is now %s\n", autoprint ? "on" : "off");
+	return GOODOP;
+}
+
+/* debug support */
+opreturn
+tracetoggle(void)
+{
+	ldouble wanttracing;
+
+	if (!pop(&wanttracing))
+		return BADOP;
+
+	tracing = (wanttracing != 0);
+	printf(" internal tracing is now %s", tracing ? "on\n":"off\n");
+	return GOODOP;
+}
+
+opreturn
+rawfloat(void)
+{
+	ldouble wantraw;
+
+	if (!pop(&wantraw))
+		return BADOP;
+
+	raw_floats = (wantraw != 0);
+
+	// info
+	pending_printf( " Float snapping/rounding is now %s\n",
+		raw_floats ? "off" : "on");
+	return GOODOP;
+}
+
+void
+exitret(void)
+{
+	ldouble a = 0;
+	if (stack) {  // exit 0 or 1, based on top of stack
+		pop(&a);
+		exit(a == 0);  // flip exit status per unix convention
+	} else {
+		exit(2);  // exit 2 on empty stack
+	}
+
+}
+
+opreturn
+quit(void)
+{
+	if (!suppress_autoprint && autoprint)
+		print_top(mode);
+	exitret();
+	return GOODOP; // not reached
+}
+
+size_t stralnum(char *s, char **endptr)
+{
+	char *ns = s;
+	while (isalnum(*ns) || *ns == '_')
+		ns++;
+	*endptr = ns;
+	return ns - s;
+}
+
+void
+sprint_token(char *s, int slen, token *t)
+{
+	switch (t->type) {
+	case NUMERIC:
+		snprintf(s, slen, "%+Lg", t->val.val);
+		break;
+	case SYMBOLIC:
+		snprintf(s, slen, "%s", t->val.oper->name);
+		break;
+	case OP:
+		snprintf(s, slen, "oper %s", t->val.oper->name);
+		break;
+	case EOL:
+		snprintf(s, slen, "EOL");
+		break;
+	case UNKNOWN:
+		snprintf(s, slen, "unknown");
+		break;
+	}
+}
+
+int
+parse_tok(char *p, token *t, char **nextp)
+{
+	int sign = 1;
+
+	/* be sure + and - are bound closely to numbers */
+	if (*p == '+' && (match_dp(p + 1) || isdigit(*(p + 1)))) {
+		p++;
+	} else if (*p == '-' && (match_dp(p + 1) || isdigit(*(p + 1)))) {
+		sign = -1;
+		p++;
+	}
+
+	if (*p == '0' && (*(p + 1) == 'x' || *(p + 1) == 'X')) {
+		// hex
+		long double dd;
+		if (raw_hex_input_ok) {
+			// will allow floating hex, e.g. 0xc.90fdaa22168c23cp-2
+			dd = strtold(p, nextp);
+		} else {
+			// simple hex integers only
+			dd = strtoull(p, nextp, 16);
+		}
+		if (dd == 0.0 && p == *nextp)
+			goto unknown;
+
+		t->val.val = dd * sign;
+		t->type = NUMERIC;
+		return 1;
+
+	} else if (*p == '0' && (*(p + 1) == 'b' || *(p + 1) == 'B')) {
+		// binary
+		long long ln = strtoull(p + 2, nextp, 2);
+
+		if (ln == 0 && p == *nextp)
+			goto unknown;
+		t->type = NUMERIC;
+		t->val.val = ln * sign;
+		return 1;
+
+	} else if (*p == '0' && ('0' <= *(p + 1) && *(p + 1) <= '7')) {
+		// octal
+		long long ln = strtoull(p, nextp, 8);
+
+		if (ln == 0 && p == *nextp)
+			goto unknown;
+		t->type = NUMERIC;
+		t->val.val = ln * sign;
+		return 1;
+
+	} else if (isdigit(*p) || match_dp(p)) {
+		// decimal
+		long double dd = strtold(p, nextp);
+
+		if (dd == 0.0 && p == *nextp)
+			goto unknown;
+		t->type = NUMERIC;
+		t->val.val = dd * sign;
+		return 1;
+	} else {
+		int n;
+		if (isalpha(*p)) {
+			n = stralnum(p, nextp);
+		} else if (ispunct(*p)) {
+			/* parser hack:  hard-coded list of
+			 * double punctuation operators */
+			if (    (p[0] == '>' && p[1] == '>') ||      //   >>
+				(p[0] == '<' && p[1] == '<') ||      //   <<
+				(p[0] == '>' && p[1] == '=') ||      //   >=
+				(p[0] == '<' && p[1] == '=') ||      //   <=
+				(p[0] == '=' && p[1] == '=') ||      //   ==
+				(p[0] == '!' && p[1] == '=') ||      //   !=
+				(p[0] == '&' && p[1] == '&') ||      //   &&
+				(p[0] == '|' && p[1] == '|') ||      //   ||
+				(p[0] == '*' && p[1] == '*')) {      //   **
+				n = 2;
+			} else {
+				n = 1;
+			}
+			*nextp = p + n;
+		} else {
+			error(" error: illegal character in input\n");
+			t->val.str = p;
+			t->type = UNKNOWN;
+			return 0;
+		}
+
+		// command
+		oper *op;
+
+		op = opers;
+		while (op->name) {
+			int matchlen;
+
+			if (!op->func) {
+				op++;
+				continue;
+			}
+			matchlen = strlen(op->name);
+			if (n == matchlen && !strncmp(op->name, p, matchlen)) {
+				*nextp = p + matchlen;
+				t->val.oper = op;
+				if (op->operands == -1) // like "pi", "recall"
+					t->type = SYMBOLIC;
+				else
+					t->type = OP;
+				return 1;
+			}
+			op++;
+		}
+		if (!op->name) {
+		unknown:
+			t->val.str = p;
+			t->type = UNKNOWN;
+			return 0;
+		}
+	}
+	return 1;
+}
+
+char *
+strremoveall(char *haystack, const char *needle)
+{
+	size_t len = strlen(needle);
+
+	if (len > 0) {
+		char *p = haystack;
+
+		while ((p = strstr(p, needle)) != NULL)
+			memmove(p, p + len, strlen(p + len) + 1);
+	}
+	return haystack;
+}
+
+void
+no_comments(char *cp)
+{
+	char *ncp;
+
+	/* Eliminate comments */
+	if ((ncp = strchr(cp, '#')) != NULL)
+		*ncp = '\0';
+
+	/* Eliminate the thousands separator from numbers, like
+	 * "1,345,011".  This removes them from the entire line, would
+	 * be a problem except:  the only simple ascii separators used
+	 * in locales are '.' and ',', which we don't use anywhere
+	 * else.  (Removing '.' is safe, because if the separator is
+	 * '.', then the decimal point isn't.)  All the others are
+	 * unicode sequences, which we don't use either.  So the
+	 * command line won't be harmed by this removal.  Some locales
+	 * use a space as a separator, but it's a "hard" space,
+	 * represented as unicode.
+	 */
+	if (group_sep_input[0])
+		strremoveall(cp, group_sep_input);
+
+	/* Same for currency symbols.  They're mostly unicode
+	 * sequences or punctuation (e.g., '$'), which are safe to
+	 * remove.  But some are plain ascii.  We checked earlier to
+	 * be sure the currency symbol doesn't match any of our
+	 * commands.
+	 */
+	if (currency && currency[0])
+		strremoveall(cp, currency);
+}
+
+#ifdef USE_READLINE
+char *
+command_generator(const char *prefix, int state)
+{
+	static int len;
+	static struct oper *op;
+
+	/* If this is the first time called, initialize our state. */
+	if (!state) {
+		op = opers - 1;
+		len = strlen(prefix);
+	}
+
+	/* Return the next name in the list that matches our prefix. */
+	while (op++) {
+		if (!op->name)
+			break;
+		if (!op->name[0])
+			continue;
+		if (!op->func)
+			continue;
+		if (strncmp(op->name, prefix, len) != 0)
+			continue;
+		return strdup(op->name);
+	}
+
+	return 0;
+}
+
+/* Attempted completion function. */
+char **
+command_completion(const char* prefix, int start, int end)
+{
+	(void)start;  // suppress "unused" warnings
+	(void)end;
+
+	return rl_completion_matches(prefix, command_generator);
+}
+#endif
+
+static int o_stdout_fd = -1;
+
+void
+suppress_stdout(void)
+{
+	fflush(stdout);
+
+	o_stdout_fd = dup(STDOUT_FILENO);
+
+	int null_fd = open("/dev/null", O_WRONLY);
+	if (null_fd == -1) {	// would be surprising
+		o_stdout_fd = -1;
+		return;
+	}
+
+	dup2(null_fd, STDOUT_FILENO);	// Redirect stdout to /dev/null
+	close(null_fd);		// Close the /dev/null file descriptor
+}
+
+void
+restore_stdout(void)
+{
+	if (o_stdout_fd == -1)
+		return;
+	fflush(stdout);
+	dup2(o_stdout_fd, STDOUT_FILENO);	// Restore original stdout
+	close(o_stdout_fd);
+	o_stdout_fd = -1;
+}
+
+/* on return, the global input_ptr is a string containing commands
+ * to be executed
+ */
+int
+fetch_line(void)
+{
+	static int arg = 1;
+	static char *input_buf;
+	static size_t blen;
+	static boolean tried_rca_init;
+	char *rca_init;
+
+	if (!tried_rca_init) {
+		tried_rca_init = TRUE;
+		rca_init = getenv("RCA_INIT");
+		if (rca_init) {
+			suppress_stdout();
+			input_buf = malloc(strlen(rca_init) + 1);
+			if (!input_buf)
+				memory_failure();
+			strcpy(input_buf, rca_init);
+			input_ptr = input_buf;
+			return 1;
+		}
+	}
+
+	restore_stdout();
+
+	/* if there are args on the command line, they're taken as
+	 * initial commands.  since only numbers can start with '-',
+	 * any other use of a hyphen brings up a usage message.
+	 */
+	if (arg < g_argc) {
+
+		if (g_argv[1][0] == '-' && !(isdigit(g_argv[1][1])))
+			usage();
+
+		blen = 0;
+		for (arg = 1; arg < g_argc; arg++)
+			blen += strlen(g_argv[arg]) + 2;
+
+		if (input_buf) free(input_buf);
+		input_buf = malloc(blen);
+		if (!input_buf)
+			memory_failure();
+
+		*input_buf = '\0';
+		for (arg = 1; arg < g_argc; arg++) {
+			strcat(input_buf, g_argv[arg]);
+			strcat(input_buf, " ");
+		}
+
+		no_comments(input_buf);
+
+		input_ptr = input_buf;
+		return 1;
+	}
+
+#ifdef USE_READLINE
+	static char readline_init_done = 0;
+
+	if (!readline_init_done) {
+		rl_readline_name = "rca";
+		rl_basic_word_break_characters = " \t\n";
+		rl_attempted_completion_function = command_completion;
+		using_history();
+		readline_init_done = 1;
+	}
+
+	/* if we used the buffer as input, add it to history.  doing
+	 * this here records any command line input, possibly stored
+	 * in the buffer above, on the first call to fetch_line()
+	 */
+	if (input_buf && *input_buf)
+		add_history(input_buf);
+
+	if ((input_buf = readline("")) == NULL)  // got EOF
+		exitret();
+
+#if READLINE_NO_ECHO_BARE_NL
+	/* a bug in readline() doesn't echo bare newlines to a tty if
+	 * the program has no prompt.  so we do it here.  this is
+	 * needed in some sub-versions of readline 8.2 */
+	if (*input_buf == '\0')
+		putchar('\n');
+#endif
+
+#else // no readline()
+
+	if (getline(&input_buf, &blen, stdin) < 0)  // EOF
+		exitret();
+
+	if (input_buf[strlen(input_buf) - 1] == '\n')
+		input_buf[strlen(input_buf) - 1] = '\0';
+
+	/* if stdin is a terminal, the command is already on-screen.
+	 * but we also want it mixed with the output if we're
+	 * redirecting from a file or pipe.  (easy to get rid of it
+	 * with something like: "rca < commands | grep '^ '"
+	 */
+	if (!isatty(0))
+		printf("%s\n", input_buf);
+#endif
+
+	no_comments(input_buf);
+
+	input_ptr = input_buf;
+
+	return 1;
+}
+
+int
+gettoken(struct token *t)
+{
+	char *next_input_ptr;
+	if (input_ptr == NULL)
+		if (!fetch_line())
+			return 0;
+
+	while (isspace(*input_ptr))
+		input_ptr++;
+
+	if (*input_ptr == '\0') {	/* out of input */
+		t->type = EOL;
+		input_ptr = NULL;
+		return 1;
+	}
+
+	fflush(stdin);
+
+	if (!parse_tok(input_ptr, t, &next_input_ptr)) {
+		error(" error: unrecognized input '%s'\n", input_ptr);
+		input_ptr = NULL;  // discard rest of line, if any
+		return 0;
+	}
+
+	input_ptr = next_input_ptr;
+	return 1;
+}
+
+
+opreturn
 precedence(void)
 {
 	oper *op;
@@ -3361,7 +3377,7 @@ license(void)
 }
 
 opreturn
-showhelp(void)
+help(void)
 {
 	oper *op;
 
@@ -3444,12 +3460,6 @@ showhelp(void)
 	}
 
 	return GOODOP;
-}
-
-opreturn
-help(void)
-{
-	return showhelp();
 }
 
 void
@@ -3727,7 +3737,7 @@ main(int argc, char *argv[])
 		t = &tok;
 
 		if (t->type != EOL)
-			*pending_info = '\0';
+			pending_clear();
 
 		switch (t->type) {
 		case NUMERIC:
@@ -3739,9 +3749,7 @@ main(int argc, char *argv[])
 			(void)(t->val.oper->func) ();
 			break;
 		case EOL:
-			if (*pending_info)
-				printf("%s", pending_info);
-			*pending_info = '\0';
+                        pending_flush();
 			if (!suppress_autoprint && autoprint &&
 				(lasttoktype == OP || lasttoktype == SYMBOLIC)) {
 				print_top(mode);
