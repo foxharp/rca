@@ -7,18 +7,21 @@ rca \- a rich/RPN (and more) programmer's calculator
 
 .SH DESCRIPTION
 .B rca
-is a command-line reverse polish notation (RPN) calculator inspired
-(very loosely) by the long line of Hewlett-Packard scientific
-calculators.  Operators include scientific, logical, and bitwise
-operators.  In addition,
+is a command-line reverse polish notation (RPN) calculator loosely
+inspired by the long line of Hewlett-Packard scientific calculators.
+Operators include scientific, logical, and bitwise operations.
 .B rca
-can evaluate traditional infix expressions, greatly expanding its
-usefulness.  As a programmer's calculator, word width can be adjusted
-to emulate the arithmetic of any class of CPU.
+can also evaluate traditional infix (parenthesized) expressions,
+greatly expanding its usefulness.  As a programmer's calculator, word
+width can be adjusted to emulate the arithmetic of any class of CPU.
 .B rca
-is easily incorporated into shell scripts to provide floating point
-support.  Whitespace is usually optional, though some cases
-will create ambiguity.  Any text including and following a
+can also be easily incorporated into shell scripts to provide floating point
+support.
+
+Whitespace in
+.BR rca 's
+input is often optional, though some cases will cause ambiguity.
+Any text following (and including) a
 .B #
 character is ignored as a comment.
 
@@ -32,6 +35,11 @@ is on by default; it can be toggled off with
 (or
 .B 0
 .BR a ).
+
+If
+.B rca
+is built with the readline library, then command line editing, command
+history, and command completion are available.
 
 .SH REVERSE POLISH NOTATION
 Numbers entered by the user are pushed onto a stack.  An operator pops
@@ -65,14 +73,15 @@ etc).  There are also unit conversions available (e.g.,
 .BR f2c ,
 and more).
 A complete list of operators can be obtained with the
-.B ?
-or
 .B help
-commands.  The top two elements on the stack, in HP tradition, are
-sometimes referred to as
+(or
+.BR ? )
+command.  The top two elements on the stack, in HP tradition, are
+sometimes referred to in the documentation as
 .I x
 and
-.IR y .
+.IR y ,
+but not literally within the program itself.
 
 .SH INFIX NOTATION
 .B rca
@@ -119,22 +128,23 @@ can be used in an infix expression to reference the value of
 (the top of stack) when the expression was invoked.  (The top of
 stack will
 .I not
-be popped or replaced.) The five off-stack storage locations settable (only in
-RPN mode) with
+be popped or replaced.) The five off-stack storage locations are only
+settable in RPN mode (using
 .B store
 or
 .B s1
 through
-.B s5
-can also be
-accessed, by referencing
+.BR s5 ),
+but are accessible from infix using
+.B recall
+or
 .B r1
 through
 .BR r5 .
 .P
 If an error occurs during evaluation of an infix expression,
 evaluation will cease, and the stack will be left as it was at the
-point of the error. 
+point of the error.
 .SH OPERATING MODES
 .B rca
 can be configured into two modes of operation:  floating point (the default)
@@ -144,7 +154,7 @@ command, and integer, using one of
 .B D
 (signed decimal),
 .B U
-(unsigned decimal), or
+(unsigned decimal),
 .B H
 (hex),
 .B O
@@ -152,7 +162,7 @@ command, and integer, using one of
 .B B
 (binary).
 
-The difference between the various integer modes lies purely in how
+The difference between the various integer modes lies mainly in how
 values are displayed by default, but floating point differs
 in a few additional ways.  Most math is done in long double,
 regardless of mode, but in integer mode all stack values are masked to
@@ -160,7 +170,10 @@ the current word width, and sign extended, if necessary.
 
 The input base of a number is independent of the mode, and controlled
 entirely by how it is entered:  10, 0xa, 012, 0b1010 and 1e01 are all
-the same value.
+the same value.  The mode does not affect input:  for example, hex
+values must include the "0x" prefix even in
+.B H
+mode.)
 
 .SS Floating point
 In floating point mode (i.e.,
@@ -260,7 +273,7 @@ on a 32 bit OS.  The Raspberry Pi 4 supports 128-bit "quad-precision"
 floats with 113 bits of mantissa, so
 has excellent floating point accuracy:  about 33 decimal digits.
 But integers in
-.B rca 
+.B rca
 are still limited to the largest native integer
 size, 64 bits.)
 
@@ -291,7 +304,7 @@ is built with libraries other than glibc.  (In that case the
 command will be missing entirely.)
 
 On input, the locale's currency symbol and thousands separator will be
-ignored, as a convenience for doing arithmetic on copy/pasted data. 
+ignored, as a convenience for doing arithmetic on copy/pasted data.
 If the locale isn't configured, then for this purpose only these
 symbols will be set to defaults of '$', and ',', respectively.
 
@@ -346,7 +359,7 @@ list may be useful:
 .BR O ,
 and
 .B B
-choose float or integer, and the default output base. (Startup: 
+choose float or integer, and the default output base. (Startup:
 .BR F )
 .P
 .B precision
@@ -380,7 +393,7 @@ toggles printing the top of stack after every newline.  (Startup: enabled)
 This output is suppressed if the most recent action
 explicitly set that value.
 .P
-.B errorexit 
+.B errorexit
 forces
 .B rca
 to exit on any subsequent error.  Normally errors which result from
@@ -409,7 +422,7 @@ command will print a verbose summary of
 current state.
 
 .SH OPERATOR PRECEDENCE
-Infix evaluation depends on operator precedence and associativity. 
+Infix evaluation depends on operator precedence and associativity.
 The
 .B precedence
 command lists the operators by decreasing precedence.  The 'R'
@@ -417,11 +430,11 @@ flag denotes those which are right associative.  All others group
 left to right.  (This list has no meaning for RPN.)
 
  \fR 1      \fB (
- \fR 2   R  \fB atan2 recip sqrt sin cos tan asin acos atan ln log2 log10
+ \fR 2   R  \fB recip sqrt sin cos tan asin acos atan atan2 ln log2 log10
  \fR        \fB   abs frac int i2mm mm2i ft2m m2ft mi2km km2mi f2c c2f
  \fR        \fB   oz2g g2oz oz2ml ml2oz q2l l2q d2r r2d
  \fR 3   R  \fB + - \fR   (unary)
- \fR 4   R  \fB ~ chs negate !
+ \fR 4   R  \fB ~ chs negate nop !
  \fR 5   R  \fB ^ **
  \fR 6      \fB * x / %
  \fR 7      \fB + -
