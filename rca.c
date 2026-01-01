@@ -2819,6 +2819,45 @@ restore_stdout(void)
 	o_stdout_fd = -1;
 }
 
+#ifdef USE_READLINE
+char *
+command_generator(const char *prefix, int state)
+{
+	static int len;
+	static struct oper *op;
+
+	/* If this is the first time called, initialize our state. */
+	if (!state) {
+		op = opers - 1;
+		len = strlen(prefix);
+	}
+
+	/* Return the next name in the list that matches our prefix. */
+	while (op++) {
+		if (!op->name)
+			break;
+		if (!op->name[0])
+			continue;
+		if (!op->func)
+			continue;
+		if (strncmp(op->name, prefix, len) != 0)
+			continue;
+		return strdup(op->name);
+	}
+
+	return 0;
+}
+
+/* Attempted completion function. */
+char **
+command_completion(const char* prefix, int start, int end)
+{
+	(void)start;  // suppress "unused" warnings
+	(void)end;
+
+	return rl_completion_matches(prefix, command_generator);
+}
+#endif
 
 /* on return, the global input_ptr is a string containing commands
  * to be executed
@@ -2877,20 +2916,15 @@ fetch_line(void)
 		input_ptr = input_buf;
 		return 1;
 	}
-#ifdef USE_READLINE
 
+#ifdef USE_READLINE
 	static char readline_init_done = 0;
 
-	if (!readline_init_done) {	// readline initializations
-
+	if (!readline_init_done) {
+		rl_readline_name = "rca";
+		rl_basic_word_break_characters = " \t\n";
+		rl_attempted_completion_function = command_completion;
 		using_history();
-
-		/* prevent readline doing tab filename completion */
-		rl_bind_key_in_map('\t', rl_insert,
-			rl_get_keymap_by_name("emacs"));
-		rl_bind_key_in_map('\t', rl_insert,
-			rl_get_keymap_by_name("vi-insert"));
-
 		readline_init_done = 1;
 	}
 
@@ -2904,13 +2938,16 @@ fetch_line(void)
 	if ((input_buf = readline("")) == NULL)  // got EOF
 		exitret();
 
-#if READLINE_NO_ECHO_BARE_NL  // needed in some sub-versions of readline 8.2
-	// readline() doesn't echo bare newlines to tty, so do it here,
+#if READLINE_NO_ECHO_BARE_NL
+	/* a bug in readline() doesn't echo bare newlines to a tty if
+	 * the program has no prompt.  so we do it here.  this is
+	 * needed in some sub-versions of readline 8.2 */
 	if (*input_buf == '\0')
 		putchar('\n');
 #endif
 
-#else
+#else // no readline()
+
 	if (getline(&input_buf, &blen, stdin) < 0)  // EOF
 		exitret();
 
@@ -2924,7 +2961,6 @@ fetch_line(void)
 	 */
 	if (!isatty(0))
 		printf("%s\n", input_buf);
-
 #endif
 
 	no_comments(input_buf);
