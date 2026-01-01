@@ -40,7 +40,7 @@ char *licensetext[] = {
 
 " RCA License ",
 " ---------- ",
-" Copyright (C) 1993-2025  Paul Fox ",
+" Copyright (C) 1993-2026  Paul Fox ",
 " ",
 " Redistribution and use in source and binary forms, with or without ",
 " modification, are permitted provided that the following conditions ",
