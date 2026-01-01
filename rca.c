@@ -924,8 +924,9 @@ chsign(void)
 }
 
 opreturn
-plus(void)
+nop(void)
 {
+	trace(("call to nop()\n"));
 	return GOODOP;
 }
 
@@ -1848,8 +1849,13 @@ printstate(void)
 opreturn
 tracetoggle(void)
 {
-	tracing = !tracing;
-	printf(" tracing is now %s", tracing ? "on\n":"off\n");
+	ldouble wanttracing;
+
+	if (!pop(&wanttracing))
+		return BADOP;
+
+	tracing = (wanttracing != 0);
+	printf(" internal tracing is now %s", tracing ? "on\n":"off\n");
 	return GOODOP;
 }
 
@@ -3010,7 +3016,7 @@ create_infix_support_tokens()
 	char *outp;
 	(void)parse_tok("(", &open_paren_token, &outp);
 	(void)parse_tok("chs", &chsign_token, &outp);
-	(void)parse_tok("plus", &plus_token, &outp);
+	(void)parse_tok("nop", &plus_token, &outp);
 }
 
 opreturn
@@ -3554,7 +3560,7 @@ struct oper opers[] = {
 	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 24 },
 	{"chs", chsign,		0, 1, 24 },  // precedence unused, see special case in open_paren()
 	{"negate", chsign,	"Change sign of x (2's complement)", 1, 24 },
-	{"plus", plus,		"Hidden: unary plus, needed to parse infix", 1, 24 }, // needed for infix
+	{"nop", nop,		"Does nothing", 1, 24 }, // needed to help support unary plus, for infix
 	{"recip", recip,        0, 1, 26 },
 	{"sqrt", squarert,      "Reciprocal and square root of x", 1, 26 },
 	{"sin", sine,           0, 1, 26 },
@@ -3564,9 +3570,9 @@ struct oper opers[] = {
 	{"acos", acosine,       0, 1, 26 },
 	{"atan", atangent,      "Trig functions", 1, 26 },
 	{"atan2", atangent2,    "Arctan of y/x (2 operands)", 2, 26 },
-	{"ln", log_natural,    	0, 1, 26 },
-	{"log2", log_base2,    	0, 1, 26 },
-	{"log10", log_base10,    	"Natural, base 2, and base 10 logarithms", 1, 26 },
+	{"ln", log_natural,	0, 1, 26 },
+	{"log2", log_base2,	0, 1, 26 },
+	{"log10", log_base10,	"Natural, base 2, and base 10 logarithms", 1, 26 },
 
 	{"abs", absolute,	0, 1, 26 },
 	{"frac", fraction,	0, 1, 26 },
@@ -3610,7 +3616,7 @@ struct oper opers[] = {
 	{"r3", recall3,		0, -1 },
 	{"r4", recall4,		0, -1 },
 	{"r5", recall5,		"Fetch x (from 5 locations)", -1 },
-	{"X", push_pre_infix_x,	"Hidden: push pre-infix value of x", -1 },
+	{"X", push_pre_infix_x,	"Infix-only: access pre-infix value of x", -1 },
 	{"pi", push_pi,		"Push constant pi", -1 },
 	{"e", push_e,		"Push constant e", -1 },
 	{"", 0, 0},
@@ -3641,9 +3647,7 @@ struct oper opers[] = {
 	{"h", printhex,		0 },
 	{"o", printoct,		0 },
 	{"b", printbin,		"     hex, octal, or binary" },
-	{"r", printrawhex,	"Hidden: Print x as floating hex" },
 	{"state", printstate,	"Show calculator state" },
-	{"tracing", tracetoggle,"Hidden: toggle debug tracing" },
 	{"", 0, 0},
     {"Modes:", 0, 0},
 	{"F", modefloat,	0 },
@@ -3652,7 +3656,6 @@ struct oper opers[] = {
 	{"H", modehex,		0 },
 	{"O", modeoct,		0 },
 	{"B", modebin,		"     hex, octal, or binary modes" },
-	{"R", moderawhex,	"Hidden: Switch to floating hex mode" },
 	{"precision", precision, 0 },
 	{"k", precision,	"Float format: number of significant digits (%g)" },
 	{"decimals", decimal_length, 0 },
@@ -3668,13 +3671,17 @@ struct oper opers[] = {
 #endif
 	{"mode", modeinfo,	"Display current mode parameters" },
 	{"", 0, 0},
+    {"Debug support:", 0, 0},
+	{"R", moderawhex,	"Switch to or print as raw floating hex,"},
+	{"r", printrawhex,	"     also enable floating hex input" },
+	{"tracing", tracetoggle,"toggle debug tracing" },
+	{"commands", commands,	"show raw command table" },
+	{"rawfloats", rawfloat,	"toggle snapping and rounding of floats" },
+	{"", 0, 0},
     {"Housekeeping:", 0, 0},
 	{"?", help,		0 },
 	{"help", help,		"Show this list" },
-	{"Help", Help,		"Show this list, including hidden commands" },
 	{"precedence", precedence, "List infix operator precedence" },
-	{"commands", commands,	"Hidden: show raw command table" },
-	{"rawfloats", rawfloat,	"Hidden: set snapping and rounding of floats" },
 	{"quit", quit,		0 },
 	{"q", quit,		0 },
 	{"exit", quit,		"Leave the calculator" },
