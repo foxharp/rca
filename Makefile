@@ -57,7 +57,7 @@ readme:
 	@python3 -m markdown README.md
 
 clean:
-	rm -f rca rca-norl rca.1 .test \
+	rm -f rca rca-norl rca.1 .test readme.html \
 		html/rca-man.html.new html/rca-help.html.new
 
 # test files are simply verbatim output from an rca session.  program
