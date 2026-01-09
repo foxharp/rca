@@ -1920,15 +1920,20 @@ separators(void)
 	if (!pop(&wantsep))
 		return BADOP;
 
+	if (!thousands_sep[0]) {
+		pending_printf(" No thousands separator defined in the "
+			"current locale. so no numeric separators.\n");
+		digitseparators = 0;
+		return GOODOP;
+	}
+
 	digitseparators = (wantsep != 0);
 
-	// info
-	pending_printf( " Numeric separators now %s\n",
-		digitseparators ? "on" : "off");
 	setup_format_string();
-	if (digitseparators && !thousands_sep[0])
-		pending_printf( " No thousands separator defined in the "
-			"current locale, so no numeric separators.\n");
+
+	pending_printf(" Numeric separators now %s\n",
+		digitseparators ? "on" : "off");
+
 	return GOODOP;
 }
 
