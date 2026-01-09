@@ -269,21 +269,6 @@ memory_failure(void)
 	exit(3);
 }
 
-opreturn
-enable_errexit(void)
-{
-	ldouble want_errexit;
-	boolean pop(ldouble *);
-
-	if (!pop(&want_errexit))
-		return BADOP;
-
-	exit_on_error = (want_errexit != 0);
-	pending_printf(" errors and warnings will %s cause exit\n",
-		exit_on_error ? "now" : "not");
-	return GOODOP;
-}
-
 void
 error(const char *fmt, ...)
 {
@@ -307,6 +292,32 @@ sign_extend(ldouble a)
 		return b;
 	else
 		return b | (0 - (b & int_sign_bit));
+}
+
+void
+toggle_warn(int n)
+{
+	if (n == 0 || n == 1)
+		return;
+	error(" warning: toggle commands usually take 0 or 1 as their argument\n");
+}
+
+opreturn
+enable_errexit(void)
+{
+	ldouble want_errexit;
+	boolean pop(ldouble *);
+
+	if (!pop(&want_errexit))
+		return BADOP;
+
+	exit_on_error = (want_errexit != 0);
+
+	toggle_warn(want_errexit);
+
+	pending_printf(" errors and warnings will %s cause exit\n",
+		exit_on_error ? "now" : "not");
+	return GOODOP;
 }
 
 void
@@ -884,6 +895,8 @@ use_degrees(void)
 
 	if (!pop(&wantdegrees))
 		return BADOP;
+
+	toggle_warn(wantdegrees);
 
 	trig_degrees = (wantdegrees != 0);
 
@@ -1920,6 +1933,8 @@ separators(void)
 	if (!pop(&wantsep))
 		return BADOP;
 
+	toggle_warn(wantsep);
+
 	if (!thousands_sep[0]) {
 		pending_printf(" No thousands separator defined in the "
 			"current locale. so no numeric separators.\n");
@@ -2812,6 +2827,8 @@ autop(void)
 	if (!pop(&wantautop))
 		return BADOP;
 
+	toggle_warn(wantautop);
+
 	autoprint = (wantautop != 0);
 
 	// info
@@ -2828,6 +2845,8 @@ tracetoggle(void)
 	if (!pop(&wanttracing))
 		return BADOP;
 
+	toggle_warn(wanttracing);
+
 	tracing = (wanttracing != 0);
 	printf(" internal tracing is now %s", tracing ? "on\n":"off\n");
 	return GOODOP;
@@ -2840,6 +2859,8 @@ rawfloat(void)
 
 	if (!pop(&wantraw))
 		return BADOP;
+
+	toggle_warn(wantraw);
 
 	raw_floats = (wantraw != 0);
 
@@ -3537,7 +3558,7 @@ locale_init(void)
 			op++;
 		}
 	}
-	
+
 }
 
 /* the opers[] table doesn't initialize everything explicitly */
