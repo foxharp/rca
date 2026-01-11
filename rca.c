@@ -2218,23 +2218,43 @@ mark(void)
 }
 
 opreturn
-sum(void)
+sum_worker(boolean do_sum)
 {
 	opreturn r;
-	ldouble a, tot = 0;
+	ldouble a, tot = 0, n = 0;
 
 	if (stack_count <= stack_mark) {
-		error(" error: nothing to sum\n");
+		error(" error: nothing to %s\n", do_sum ? "sum":"avg");
 		return BADOP;
 	}
+
 	while (stack_count > stack_mark) {
 		if ((r = pop(&a)) == BADOP)
 			break;
 		tot += a;
+		n++;
 	}
-	result_push(tot);
+
 	stack_mark = 0;
+
+	if (do_sum)
+		result_push(tot);
+	else
+		result_push(tot/n);
+
 	return r;
+}
+
+opreturn
+sum(void)
+{
+	return sum_worker(1);
+}
+
+opreturn
+avg(void)
+{
+	return sum_worker(0);
 }
 
 opreturn
@@ -3641,6 +3661,7 @@ struct oper opers[] = {
 	{"swap", exchange,	"Exchange x and y" },
 	{"mark", mark,		"Mark stack for later summing" },
 	{"sum", sum,		"Sum stack to \"mark\", or entire stack if no mark" },
+	{"avg", avg,		"Average stack to \"mark\", or entire stack if no mark" },
 	{"", 0, 0},
     {"Constants and storage (no operands):", 0, 0},
 	{"store", store1,	0 },

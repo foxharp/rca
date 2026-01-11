@@ -337,8 +337,11 @@ pi
 
 # test the sum command
 clear
-1 2 3 4 5
-sum
+1 2 3 4 5 sum
+ 15
+0 mark 1 2 3 4 5 avg
+ 3
+pop
  15
 1 2
 0 mark

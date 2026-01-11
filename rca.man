@@ -534,12 +534,17 @@ will not fit in a
 .IR long .
 .P
 .B sum
-will pop and add previous entries on the stack, stopping when the
-stack is empty, or when a stack marker previously set with the
+(or
+.BR avg )
+will pop and add (or add and then average) previous entries on the
+stack, stopping when the stack is empty, or when a stack marker
+previously set with the
 .B mark
 command is reached.
 The mark would be set before entering the data for a subsequent
-.BR sum,
+.B sum
+(or
+.BR avg ),
 in order to limit its reach.
 .B N mark
 (i.e., a
@@ -548,17 +553,21 @@ command with an argument of
 .BR N )
 will cause a later
 .B sum
+(or
+.BR avg )
 to include the current top N values,
 plus any more values that have been pushed prior to the sum.
 N cannot be greater than the length of the stack.
 .RB " 0
 .BR mark "
-will cause only subsequent pushes to be summed.
+will cause only subsequent pushes to be summed/averaged.
 .RB " -1
 .BR mark "
 will clear the mark.
 .B sum
-is the only operator to consume more than 2 stack elements.
+and
+.B avg
+are the only operators to consume more than 2 stack elements.
 .RE
 
 .SH LOCALE
