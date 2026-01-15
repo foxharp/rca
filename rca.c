@@ -244,8 +244,8 @@ long double epsilon;
  * after first use of floating hex output (with "r" or "R") */
 boolean raw_hex_input_ok;
 
-/* suppress snapping and rounding of float values */
-boolean raw_floats;
+/* perform snapping and rounding of float values */
+boolean do_rounding = 1;
 
 /* the most recent top-of-stack */
 ldouble lastx;
@@ -343,7 +343,7 @@ tweak_float(ldouble x)
 
 	ldouble r, abs_x, tolerance, factor;
 
-	if (raw_floats)
+	if (!do_rounding)
 		return x;
 
 	if (x == 0.0L || x == -0.0)
@@ -1732,6 +1732,7 @@ printstate(void)
 	printf("  current display mode is \"%d %s\"\n",
 		float_digits, float_specifier == 'f' ? "decimals" : "precision");
 	printf("  format string is \"%s\"\n", format_string);
+	printf("  snapping/rounding is %s\n", do_rounding ? "on" : "off");
 	putchar('\n');
 
 	printf(" In integer modes:\n");
@@ -2853,20 +2854,20 @@ tracetoggle(void)
 }
 
 opreturn
-rawfloat(void)
+rounding(void)
 {
-	ldouble wantraw;
+	ldouble wantrounding;
 
-	if (!pop(&wantraw))
+	if (!pop(&wantrounding))
 		return BADOP;
 
-	toggle_warn(wantraw);
+	toggle_warn(wantrounding);
 
-	raw_floats = (wantraw != 0);
+	do_rounding = (wantrounding != 0);
 
 	// info
 	pending_printf( " Float snapping/rounding is now %s\n",
-		raw_floats ? "off" : "on");
+		do_rounding ? "on" : "off");
 	return GOODOP;
 }
 
@@ -3714,7 +3715,7 @@ struct oper opers[] = {
 	{"r", printrawhex,	"     also enable floating hex input" },
 	{"tracing", tracetoggle,"toggle debug tracing" },
 	{"commands", commands,	"show raw command table" },
-	{"rawfloats", rawfloat,	"toggle snapping and rounding of floats" },
+	{"rounding", rounding,	"toggle snapping and rounding of floats" },
 	{"", 0, 0},
     {"Housekeeping:", 0, 0},
 	{"?", help,		0 },
