@@ -3656,6 +3656,7 @@ main(int argc, char *argv[])
 	token *t;
 	static int lasttoktype;
 	char *pn;
+	boolean was_infix = 0;
 
 	pn = strrchr(argv[0], '/');
 	progname = pn ? (pn + 1) : argv[0];
@@ -3683,9 +3684,14 @@ main(int argc, char *argv[])
 		if (tpeek(&infix_stack) && (t = tpop(&infix_stack))) {
 			tok = *t;
 			free(t);
+			was_infix = 1;
 		} else {
 			if (!gettoken(&tok))
 				continue;
+			// after an infix is done, set a useful lastx value
+			if (was_infix)
+				lastx = pre_infix_X;
+			was_infix = 0;
 		}
 		t = &tok;
 
