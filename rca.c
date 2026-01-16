@@ -250,9 +250,6 @@ boolean do_rounding = 1;
 /* the most recent top-of-stack */
 ldouble lastx;
 
-/* copy of RPN top-of-stack, for infix use */
-ldouble pre_infix_X;
-
 /* for store/recall */
 ldouble offstack[5];
 
@@ -1303,10 +1300,36 @@ enter(void)
 	return BADOP;
 }
 
+// during an infix evaluation, lastx needs to kept at its pre-infix value.
+boolean lastx_is_frozen = 0;
+ldouble frozen_lastx;
+
+void
+freeze_lastx(void)
+{
+	if (!lastx_is_frozen) {
+		if (!peek(&frozen_lastx))
+			frozen_lastx = 0;
+		lastx_is_frozen = TRUE;
+	}
+}
+
+void
+thaw_lastx(void)
+{
+	if (lastx_is_frozen) {
+		lastx_is_frozen = FALSE;
+		lastx = frozen_lastx;
+	}
+}
+
 opreturn
 repush(void)			// aka "lastx"
 {
-	push(lastx);
+	if (lastx_is_frozen)
+		push(frozen_lastx);
+	else
+		push(lastx);
 	return GOODOP;
 }
 
@@ -2190,13 +2213,6 @@ push_e(void)
 }
 
 opreturn
-push_pre_infix_x(void)
-{
-	push(pre_infix_X);
-	return GOODOP;
-}
-
-opreturn
 mark(void)
 {
 	ldouble n;
@@ -2644,12 +2660,6 @@ open_paren(void)
 	trace(("collecting infix line, pushing open (\n"));
 	// push the '(' token that the user typed, but won't be parsed.
 	tpush(&oper_stack, &open_paren_token);
-
-
-	// set the source for the 'X' operator to the current top
-	// of the RPN stack, or zero if that stack is empty.
-	if (!peek(&pre_infix_X))
-		pre_infix_X = 0;
 
 	while (1) {
 		trace(("    top of infix gather loop\n"));
@@ -3651,7 +3661,7 @@ struct oper opers[] = {
 	{"pop", rolldown,	"Pop (and discard) x" },
 	{"push", enter,		0 },
 	{"dup", enter,		"Push (a duplicate of) x" },
-	{"lastx", repush,	0 },
+	{"lastx", repush,	0, -1 },
 	{"lx", repush,		"Fetch previous value of x", -1 },
 	{"exch", exchange,	0 },
 	{"swap", exchange,	"Exchange x and y" },
@@ -3672,7 +3682,6 @@ struct oper opers[] = {
 	{"r3", recall3,		0, -1 },
 	{"r4", recall4,		0, -1 },
 	{"r5", recall5,		"Fetch x (from 5 locations)", -1 },
-	{"X", push_pre_infix_x,	"Infix-only: access pre-infix value of x", -1 },
 	{"pi", push_pi,		"Push constant pi", -1 },
 	{"e", push_e,		"Push constant e", -1 },
 	{""},
@@ -3755,7 +3764,6 @@ main(int argc, char *argv[])
 	token *t;
 	static int lasttoktype;
 	char *pn;
-	boolean was_infix = 0;
 
 	pn = strrchr(argv[0], '/');
 	progname = pn ? (pn + 1) : argv[0];
@@ -3779,18 +3787,15 @@ main(int argc, char *argv[])
 	 */
 	while (1) {
 
-		// use tokens created by infix processing first */
+		// use up tokens created by infix processing first */
 		if (tpeek(&infix_stack) && (t = tpop(&infix_stack))) {
 			tok = *t;
 			free(t);
-			was_infix = 1;
-		} else {
+			freeze_lastx();
+		} else { // otherwise get tokens from input as usual
 			if (!gettoken(&tok))
 				continue;
-			// after an infix is done, set a useful lastx value
-			if (was_infix)
-				lastx = pre_infix_X;
-			was_infix = 0;
+			thaw_lastx();
 		}
 		t = &tok;
 

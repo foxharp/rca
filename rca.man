@@ -81,7 +81,12 @@ sometimes referred to in the documentation as
 .I x
 and
 .IR y ,
-but not literally within the program itself.
+but not literally within the program itself, with one exception:  the
+.B lastx
+or (
+.BR lx )
+operator returns the value that was at the top of stack just previous to the
+most recently executed operator.
 
 .SH INFIX NOTATION
 .B rca
@@ -121,15 +126,14 @@ will give 8.  The expression
 .B (sin 180 == cos 90)
 has the value 1, i.e. "true".
 .P
-The special symbol
-.B X
-can be used in an infix expression to reference the value of
+The
+.B lastx
+(or
+.BR lx )
+operator can be used in an infix expression.  It returns the value of
 .I x
-(the top of stack) when the expression was invoked.  (The top of
-stack will
-.I not
-be popped or replaced.) The five off-stack storage locations are only
-settable in RPN mode (using
+(the top of stack) prior to the expression being invoked.
+The five off-stack storage locations can only be set in RPN mode (using
 .B store
 or
 .B s1
