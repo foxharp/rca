@@ -533,6 +533,19 @@ y_to_the_x(void)
 	return BADOP;
 }
 
+opreturn
+e_to_the_x(void)
+{
+	ldouble a;
+
+	if (pop(&a)) {
+		result_push(expl(a));
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
 int
 bothfinite(ldouble a, ldouble b)
 {
@@ -3635,6 +3648,7 @@ struct oper opers[] = {
 	{"acos", acosine,	0, 1, 26 },
 	{"atan", atangent,	"Trig functions", 1, 26 },
 	{"atan2", atangent2,	"Arctan of y/x (2 operands)", 2, 26 },
+	{"exp", e_to_the_x,	"Raise e to the x'th power", 1, 26 },
 	{"ln", log_natural,	0, 1, 26 },
 	{"log2", log_base2,	0, 1, 26 },
 	{"log10", log_base10,	"Natural, base 2, and base 10 logarithms", 1, 26 },

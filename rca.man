@@ -434,23 +434,23 @@ command lists the operators by decreasing precedence.  The 'R'
 flag denotes those which are right associative.  All others group
 left to right.  (This list has no meaning for RPN.)
 
- \fR 1      \fB (
- \fR 2   R  \fB recip sqrt sin cos tan asin acos atan atan2 ln log2 log10
- \fR        \fB   abs frac int i2mm mm2i ft2m m2ft mi2km km2mi f2c c2f
- \fR        \fB   oz2g g2oz oz2ml ml2oz q2l l2q d2r r2d
- \fR 3   R  \fB + - \fR   (unary)
- \fR 4   R  \fB ~ chs negate nop !
- \fR 5   R  \fB ^ **
- \fR 6      \fB * x / %
- \fR 7      \fB + -
- \fR 8      \fB >> <<
- \fR 9      \fB & clearb
- \fR 10     \fB xor
- \fR 11     \fB | setb
- \fR 12     \fB < <= > >=
- \fR 13     \fB == !=
- \fR 14     \fB &&
- \fR 15     \fB ||
+ \fR 1    \fB (
+ \fR 2  R \fB sin cos tan asin acos atan atan2 exp ln log2 log10
+ \fR      \fB recip sqrt abs frac int i2mm mm2i ft2m m2ft mi2km km2mi
+ \fR      \fB oz2g g2oz oz2ml ml2oz q2l l2q d2r r2d f2c c2f
+ \fR 3  R \fB + - \fR   (unary)
+ \fR 4  R \fB ~ chs negate nop !
+ \fR 5  R \fB ^ **
+ \fR 6    \fB * x / %
+ \fR 7    \fB + -
+ \fR 8    \fB >> <<
+ \fR 9    \fB & clearb
+ \fR 10   \fB xor
+ \fR 11   \fB | setb
+ \fR 12   \fB < <= > >=
+ \fR 13   \fB == !=
+ \fR 14   \fB &&
+ \fR 15   \fB ||
 
 .SH OPERATOR NOTES
 Most operators behave as they are commonly understood to.  A few need
