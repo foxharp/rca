@@ -1770,7 +1770,7 @@ printstate(void)
 	printf("  Calculated:\n");
 	printf("   detected epsilon is %Lg (%La)\n", epsilon, epsilon);
 	putchar('\n');
-	printf(" Locale elements:\n");
+	printf(" Locale elements (%s):\n", setlocale(LC_NUMERIC, NULL));
 	printf("  decimal '%s', thousands separator '%s', currency '%s'\n",
 		decimal_pt ?: "null", thousands_sep ?: "null", currency ?: "null");
 
@@ -3457,22 +3457,17 @@ help(void)
   Any arguments on the command line are used as initial calculator input.\n\
   Entering a number pushes it on the stack.\n\
   Operators replace either one or two stack values with their result.\n\
-  Most whitespace is optional between numbers and operators, and can consist\n\
-   of spaces, tabs, or newlines.\n\
-  Numbers can include commas and $ signs (e.g., '$3,577,455').\n\
-  Numbers are represented internally as long double and signed long long.\n\
-  Max integer width is the shorter of long long or the long double mantissa.\n\
-  Always use 0xNNN/0NNN to enter hex/octal, even in hex or octal mode.\n\
-  An infix expression may be started with '('.  The evaluated result\n\
-   goes on the stack.  For example, '(sqrt(sin(30)^2 + cos(30)^2) + 2)' will\n\
-   push the value '3'.  All operators and functions, all unit conversions, and\n\
-   all commands that produce constants (e.g., 'pi', 'recall') can be referenced\n\
-   in infix expressions.  The infix expression must all be entered on one line.\n\
+  Most whitespace is optional between numbers and operators.\n\
+  Input can include locale currency%s symbols: %s12%s345%s67\n\
+  Always prefix hex (0x7f) or octal (0177) input, even in hex or octal mode.\n\
+  Infix expressions are entered using (...), as in: (sin(30)^2 + cos(30)^2)\n\
   Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
-  On exit, rca returns 0 if the top of stack is non-zero, else it returns 1,\n\
-  or 2 if stack is empty, and 3 in the case of program error.\n\
+  rca's normal exit value reflects the logical value of the top of stack.\n\
 \n\
-");
+",
+	thousands_sep_input[0] ? " and grouping" : "",
+		currency, thousands_sep_input, decimal_pt);
+
 	char cbuf[1000];
 	opfunc prevfunc;
 
