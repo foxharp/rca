@@ -214,10 +214,11 @@ output (by choosing a
 value), it's easy to start seeing "unclean" bits if the magnitude of
 the number grows beyond the number of significant digits.  The numbers
 are really big at that point:  over 1e19 on a modern system.  Use
-.BR precision 's
-%g in those cases, which will hide insignificant digits.
+.BR precision
+display mode to select "smart" printing, which will hide insignificant
+digits.
 
-Because digital floating point is inexact, values are sometimes
+Because floating point is inherently inexact, values are sometimes
 calculated which are
 .I almost
 correct (like .99999999999... instead of 1), but not quite.
@@ -225,6 +226,8 @@ correct (like .99999999999... instead of 1), but not quite.
 tries to help by "snapping" values that are very close to integers to
 those integers, and by rounding when the precision limits of the
 floating point representation are reached.
+
+See also the DATA TYPES, OVERFLOW, ACCURACY section, below.
 
 .SS Integer
 Integer mode is selected with any of the following commands, which
@@ -636,7 +639,16 @@ attempts to help by adjusting values pushed on the stack.  First,
 values within about 2e-18 (system dependent) of an integer are forced
 to that integer.  Then, values are decimal-rounded to
 .BR rca 's
-maximum precision (again, usually 18 digits).
+maximum precision (again, usually 18 digits).  This rounding/snapping
+behavior can be disabled with the
+.B 0 rounding
+command, but be warned:  simple equalities, like (1.2 * 3 == 3.6) may
+no longer hold true.  Using the
+.B r
+and
+.B R
+commands to print and work in raw floating hex mode (printf's "%a"
+format) can help show what's going on.
 
 .SH EXIT STATUS
 .B rca
