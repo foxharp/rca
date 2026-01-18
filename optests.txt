@@ -218,7 +218,6 @@ clear
 
 (asin 1 2)
  error: bad expression sequence, last saw +1 and +2
- warning: mismatched/extra parentheses
 
 (3 *)
  error: missing operand(s) for *

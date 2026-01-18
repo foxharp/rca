@@ -2636,6 +2636,7 @@ open_paren(void)
 				trace(("symbolic is %s\n", t->val.oper->name));
 			if (ptok.type == NUMERIC || ptok.type == SYMBOLIC) {
 				expression_error("expression", &ptok, t);
+				input_ptr = NULL;  // discard rest of line
 				return BADOP;
 			}
 			tpush(&out_stack, t);
@@ -2718,6 +2719,7 @@ open_paren(void)
 				if (ptok.type == OP &&
 					ptok.val.oper->func != close_paren) {
 					expression_error("operator", &ptok, t);
+					input_ptr = NULL;  // discard rest of line
 					return BADOP;
 				}
 
@@ -2740,6 +2742,7 @@ open_paren(void)
 			} else {
 				error(" error: '%s' unsuitable in infix expression\n",
 					t->val.oper->name);
+				input_ptr = NULL;  // discard rest of line
 				return BADOP;
 			}
 			break;
@@ -2748,6 +2751,7 @@ open_paren(void)
 		case UNKNOWN:
 		cleanup:
 			error(" error: unrecognized input '%s'\n", t->val.str);
+			input_ptr = NULL;  // discard rest of line
 			return BADOP;
 		}
 
@@ -3262,7 +3266,7 @@ gettoken(struct token *t)
 
 	if (!parse_tok(input_ptr, t, &next_input_ptr)) {
 		error(" error: unrecognized input '%s'\n", input_ptr);
-		input_ptr = NULL;  // discard rest of line, if any
+		input_ptr = NULL;  // discard rest of line
 		return 0;
 	}
 
