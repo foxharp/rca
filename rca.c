@@ -3151,7 +3151,8 @@ fetch_line(void)
 		rca_init = getenv("RCA_INIT");
 		if (rca_init) {
 			suppress_stdout();
-			input_buf = malloc(strlen(rca_init) + 1);
+			blen = strlen(rca_init) + 1;
+			input_buf = malloc(blen);
 			if (!input_buf)
 				memory_failure();
 			strcpy(input_buf, rca_init);
@@ -3171,11 +3172,12 @@ fetch_line(void)
 		if (g_argv[1][0] == '-' && !(isdigit(g_argv[1][1])))
 			usage();
 
+		if (input_buf) free(input_buf);
+
 		blen = 0;
 		for (arg = 1; arg < g_argc; arg++)
 			blen += strlen(g_argv[arg]) + 2;
 
-		if (input_buf) free(input_buf);
 		input_buf = malloc(blen);
 		if (!input_buf)
 			memory_failure();
@@ -3209,6 +3211,8 @@ fetch_line(void)
 	 */
 	if (input_buf && *input_buf)
 		add_history(input_buf);
+
+	if (input_buf) free(input_buf);
 
 	if ((input_buf = readline("")) == NULL)  // got EOF
 		exitret();

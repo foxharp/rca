@@ -74,7 +74,7 @@ test:
 # valgrind messes with floating point.  only optests.txt avoids high
 # precision FP, so only it works under valgrind.
 optest:
-	egrep -v '^ ' optests.txt | valgrind -q ./rca 2>&1 | tee .test | diff -u optests.txt -
+	egrep -v '^ ' optests.txt | valgrind -q --leak-check=full ./rca 2>&1 | tee .test | diff -u optests.txt -
 	@ echo test succeeded
 
 tweaktest:
