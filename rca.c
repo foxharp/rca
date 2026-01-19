@@ -1,7 +1,4 @@
 /*
- *  build with:
- *    doit:      gcc -g -o rca -D USE_READLINE rca.c -lm -lreadline
- *    doit-norl: gcc -g -o rca rca.c -lm
  *
  *	This program is a mediocre but practical stack-based floating
  *	point calculator.  It resembles the UNIX 'dc' command in usage,
@@ -11,29 +8,23 @@
  *	calculators have been added as well.
  *		- Paul G. Fox, Wed Dec 29 1993
  *
- *	[Math is done in "long double", as of 2012.]
  *
- *	It's probably still mediocre, but it still works.  Over the years
- *	its gained some unit conversions, the ability to work in integer vs.
- *	float, the ability to display and accept hex and octal, and I added
- *	readline support, for good measure.
- *		- pgf, Tue Feb 13, 2024
+ *    The calculator has progressed since then:  at the least, I
+ *    wouldn't call it mediocre anymore.  I've used it regularly (and
+ *    improved it sporadically) over the decades.  It's like a good
+ *    pocketknife:  always nearby, with handy features that do what I
+ *    need.  Plus, if something's missing, it's usually easy to add.
+ *    See the help and the man page for what it can do.  As for the
+ *    name?  I needed a new, short name, and "rca" seems unused these
+ *    days.  Could do worse for an RPN calculator, but given its age,
+ *    and my programming style, maybe the 'r' should stand for "retro".
+ *             - pgf, January 2026
  *
- *	The big new feature everyone is talking about these days is the
- *	addition of "infix" operations:  a one-line parenthetical expression
- *	using traditional syntax will be evaluated, and its result left on
- *	the stack.  All of the operators available to the RPN can be used,
- *	with the addition of "X", for referencing the current top of stack.
- *	So expressions like ((X << 3) ** 2) will work.  Logical operators
- *	have been added as well:  "(X <= pi * 2)" results in 0 or 1.  (That
- *	could be written "pi 2 * >" in RPN notation.)  In addition, rca will
- *	use the logical value of its last result as its exit value, so
- *	something like 'if rca "($foo <= pi * 2)"; then ...' can be used in
- *	the shell.
- *		- pgf, Thu Apr 3, 2025
  *
- *  documentation:
- *	rca help q | less
+ *  If you don't have the Makefile, build with:
+ *    doit:         gcc -g -o rca -D USE_READLINE rca.c -lm -lreadline
+ *    doit-norl:    gcc -g -o rca rca.c -lm
+ *
  */
 
 char *licensetext[] = {
