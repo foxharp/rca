@@ -2586,6 +2586,19 @@ tclear(token **tstackp)
 }
 
 void
+show_tok(token *t)
+{
+	if (t->type == NUMERIC)
+		trace(("NUM:%Lf  ", t->val.val));
+	else if (t->type == OP)
+		trace(("OP:%s  ", t->val.oper->name));
+	else if (t->type == SYMBOLIC)
+		trace(("SYM:%s  ", t->val.oper->name));
+	else
+		trace(("t->type is %d  ", t->type));
+}
+
+void
 tdump(token **tstackp)
 {
 	if (!tracing) return;
@@ -2594,12 +2607,7 @@ tdump(token **tstackp)
 
 	printf("%s stack: ", stackname(tstackp));
 	while (t) {
-		if (t->type == NUMERIC)
-			printf("%Lf  ", t->val.val);
-		else if (t->type == OP)
-			printf("%s  ", t->val.oper->name);
-		else
-			printf("t->type is %d", t->type);
+		show_tok(t);
 		t = t->next;
 	}
 	printf("\n");
@@ -2681,6 +2689,8 @@ open_paren(void)
 		if (!parse_tok(input_ptr, &tok, &input_ptr)) {
 			goto cleanup;
 		}
+
+		show_tok(t);
 
 		switch (t->type) {
 		case NUMERIC:
@@ -3334,6 +3344,8 @@ gettoken(struct token *t)
 		input_ptr = NULL;  // discard rest of line
 		return 0;
 	}
+
+	show_tok(t);
 
 	input_ptr = next_input_ptr;
 	return 1;
