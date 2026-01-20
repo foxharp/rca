@@ -146,6 +146,9 @@ int stack_count;
 /* for command repeat, like "sum" */
 int stack_mark;
 
+/* for catching infix bugs */
+int infix_stacklevel;
+
 
 /* all user input is either a number or a command operator.
  * this is how operators are looked up, by name
@@ -419,6 +422,11 @@ pop(ldouble *f)
 	trace(("popped  %Lg/0x%llx \n", p->val, (long long)(p->val)));
 	free(p);
 	stack_count--;
+
+	if (stack_count < infix_stacklevel) {
+		error("BUG: stack level dropped by %d during infix\n",
+				infix_stacklevel - stack_count);
+	}
 
 	/* remove a stack mark if we've gone below it */
 	if (stack_count < stack_mark)
@@ -1315,6 +1323,7 @@ freeze_lastx(void)
 		if (!peek(&frozen_lastx))
 			frozen_lastx = 0;
 		lastx_is_frozen = TRUE;
+		infix_stacklevel = stack_count;
 	}
 }
 
@@ -1324,6 +1333,10 @@ thaw_lastx(void)
 	if (lastx_is_frozen) {
 		lastx_is_frozen = FALSE;
 		lastx = frozen_lastx;
+		if (stack_count != infix_stacklevel + 1)
+			error("BUG: stack changed by %d after infix\n",
+				stack_count - infix_stacklevel);
+		infix_stacklevel = -1;
 	}
 }
 
