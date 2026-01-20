@@ -437,10 +437,8 @@ pop
  error: bad expression sequence, last saw +5 and +6
 (4 + (5 + 6
  error: missing parentheses
- 9
 (4 + (5 + 6)) - 7)
  warning: mismatched/extra parentheses
- 7
 (3 setb 2)
  7
 (0xff clearb 3) h

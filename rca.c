@@ -873,6 +873,7 @@ recip(void)
 
 	if (pop(&a)) {
 		result_push(1.0 / a);
+		return GOODOP;
 	}
 	return BADOP;
 }
@@ -884,6 +885,7 @@ squarert(void)
 
 	if (pop(&a)) {
 		result_push(sqrtl(a));
+		return GOODOP;
 	}
 	return BADOP;
 }
@@ -1069,6 +1071,7 @@ atangent2(void)
 			lastx = b;
 			return GOODOP;
 		}
+		push(b);
 	}
 	return BADOP;
 }
@@ -1153,6 +1156,7 @@ logical_and(void)
 			lastx = b;
 			return GOODOP;
 		}
+		push(b);
 	}
 	return BADOP;
 }
@@ -1168,6 +1172,7 @@ logical_or(void)
 			lastx = b;
 			return GOODOP;
 		}
+		push(b);
 	}
 	return BADOP;
 }
@@ -3799,6 +3804,7 @@ main(int argc, char *argv[])
 	token *t;
 	static int lasttoktype;
 	char *pn;
+	opreturn opret = BADOP;
 
 	pn = strrchr(argv[0], '/');
 	progname = pn ? (pn + 1) : argv[0];
@@ -3844,12 +3850,13 @@ main(int argc, char *argv[])
 		case SYMBOLIC:
 		case OP:
 			trace(( "invoking %s\n", t->val.oper->name));
-			(void)(t->val.oper->func) ();
+			opret = (t->val.oper->func) ();
 			break;
 		case EOL:
                         pending_flush();
 			if (!suppress_autoprint && autoprint &&
-				(lasttoktype == OP || lasttoktype == SYMBOLIC)) {
+				(lasttoktype == OP || lasttoktype == SYMBOLIC) &&
+				opret == GOODOP) {
 				print_top(mode);
 			}
 			suppress_autoprint = FALSE;
