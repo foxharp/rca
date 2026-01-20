@@ -65,13 +65,10 @@
 ((cos 0 + 1) == (cos(0)+1))
  1
 
-# these next behaviors are due to ambiguity in parsing unary +.  the
-# same issue would occur with (3-1) is (3 -1), not (3 - 1).  Not sure
-# how to fix it.
 ((abs -3 + 1) == (abs(-3)+1))
- 0
+ 1
 ((abs -3 + 1) == (abs(-3) +1))
- 0
+ 1
 ((abs -3 + 1) == (abs(-3) + 1))
  1
 ((abs -3 + 1) == (abs(-3)+ 1))
@@ -217,7 +214,7 @@ clear
  error: missing operand(s) at sequence "sin )"
 
 (asin 1 2)
- error: bad expression sequence, last saw +1 and +2
+ error: bad expression sequence, at +1 and +2
 
 (3 *)
  error: missing operand(s) at sequence "* )"
