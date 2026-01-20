@@ -2628,13 +2628,19 @@ create_infix_support_tokens()
 }
 
 void
-expression_error(char *which, token *pt, token *t)
+expression_error(token *pt, token *t)
 {
 	char pts[128], ts[128];
 	sprint_token(pts, 128, pt);
 	sprint_token(ts, 128, t);
-	error(" error: bad %s sequence,"
-		" last saw %s and %s\n", which, pts, ts);
+	error(" error: bad expression sequence, at %s and %s\n", pts, ts);
+}
+
+void
+missing_operand_error(token *p, token *t)
+{
+	error(" error: missing operand(s) at sequence \"%s %s\"\n",
+		p->val.oper->name, t->val.oper->name);
 }
 
 opreturn
@@ -2700,7 +2706,7 @@ open_paren(void)
 			else
 				trace(("symbolic is %s\n", t->val.oper->name));
 			if (ptok.type == NUMERIC || ptok.type == SYMBOLIC) {
-				expression_error("expression", &ptok, t);
+				expression_error(&ptok, t);
 				input_ptr = NULL;  // discard rest of line
 				return BADOP;
 			}
@@ -2731,8 +2737,7 @@ open_paren(void)
 
 					if (ptok.type == OP &&
 						ptok.val.oper->operands > 0) {
-						error(" error: missing operand(s) for %s\n",
-							tp->val.oper->name);
+						missing_operand_error(&ptok, t);
 						return BADOP;
 					}
 
@@ -2783,7 +2788,7 @@ open_paren(void)
 				/* two two operand ops in a row? */
 				if (ptok.type == OP &&
 					ptok.val.oper->func != close_paren) {
-					expression_error("operator", &ptok, t);
+					missing_operand_error(&ptok, t);
 					input_ptr = NULL;  // discard rest of line
 					return BADOP;
 				}
