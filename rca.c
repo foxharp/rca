@@ -2755,6 +2755,7 @@ open_paren(void)
 					if (pt->type == OP &&
 						pt->val.oper->operands > 0) {
 						missing_operand_error(pt, t);
+						input_ptr = NULL;  // discard rest of line
 						return BADOP;
 					}
 
@@ -2820,14 +2821,12 @@ open_paren(void)
 				}
 
 				// Handle binary operators
-				while (tp != NULL) {
-					if (tp_op->func == open_paren)
-						break;
-					/* left-associative by default */
-					if (tp_op->prec < t_op->prec)
-						break;
+				while (tp != NULL &&
+					(tp_op->func != open_paren) &&
+					(tp_op->prec >= t_op->prec))
+				{
 					/* a ** b is right-associative */
-					if (tp_op->prec <= t_op->prec &&
+					if (tp_op->prec == t_op->prec &&
 					    tp_op->func == y_to_the_x)
 						break;
 
