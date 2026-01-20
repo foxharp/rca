@@ -214,13 +214,13 @@
 clear
 
 (sin)
- error: missing operand(s) for sin
+ error: missing operand(s) at sequence "sin )"
 
 (asin 1 2)
  error: bad expression sequence, last saw +1 and +2
 
 (3 *)
- error: missing operand(s) for *
+ error: missing operand(s) at sequence "* )"
 
 ((1 + 2)
  error: missing parentheses

@@ -250,7 +250,7 @@ ldouble offstack[5];
 /* where input is coming from currently */
 static char *input_ptr = NULL;
 
-int parse_tok(char *p, token *t, char **nextp);
+int parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn);
 void sprint_token(char *s, int slen, token *t);
 
 void
@@ -2640,9 +2640,9 @@ create_infix_support_tokens()
 	 * specifically for dealing with infix processing.
 	 */
 	char *outp;
-	(void)parse_tok("(", &open_paren_token, &outp);
-	(void)parse_tok("chs", &chsign_token, &outp);
-	(void)parse_tok("nop", &plus_token, &outp);
+	(void)parse_tok("(", &open_paren_token, &outp, 0);
+	(void)parse_tok("chs", &chsign_token, &outp, 0);
+	(void)parse_tok("nop", &plus_token, &outp, 0);
 }
 
 void
@@ -2683,19 +2683,21 @@ close_paren(void)
 opreturn
 open_paren(void)
 {
-	static struct token tok, ptok;
-	token *t, *tp;
-	int operands, precedence;
+	static struct token tok, prevtok;
+	token *t, *pt, *tp;	// pointers to tok, prevtok, and tpeek'ed tok
+#define t_op t->val.oper	// shorthands.  don't use unless type == OP
+#define tp_op tp->val.oper
 	int paren_count = 1;
-
-	ptok.type = UNKNOWN;
 
 	tclear(&out_stack);
 	tclear(&oper_stack);
 
 	trace(("collecting infix line, pushing open (\n"));
-	// push the '(' token that the user typed, but won't be parsed.
+
+	// push the '(' token the user typed, so we can pretend we parsed it.
 	tpush(&oper_stack, &open_paren_token);
+	prevtok = open_paren_token;
+	pt = &prevtok;
 
 	while (1) {
 		trace(("    top of infix gather loop\n"));
@@ -2710,7 +2712,7 @@ open_paren(void)
 
 		t = &tok;
 
-		if (!parse_tok(input_ptr, &tok, &input_ptr)) {
+		if (!parse_tok(input_ptr, &tok, &input_ptr, 0)) {
 			goto cleanup;
 		}
 
@@ -2723,17 +2725,14 @@ open_paren(void)
 				trace(("val is %Lf\n", t->val.val));
 			else
 				trace(("symbolic is %s\n", t->val.oper->name));
-			if (ptok.type == NUMERIC || ptok.type == SYMBOLIC) {
-				expression_error(&ptok, t);
+			if (pt->type == NUMERIC || pt->type == SYMBOLIC) {
+				expression_error(pt, t);
 				input_ptr = NULL;  // discard rest of line
 				return BADOP;
 			}
 			tpush(&out_stack, t);
 			break;
 		case OP:
-			operands = t->val.oper->operands;
-			precedence = t->val.oper->prec;
-
 			trace(("oper is %s\n", t->val.oper->name ));
 
 			tp = tpeek(&oper_stack);
@@ -2750,12 +2749,12 @@ open_paren(void)
 						return BADOP;
 					}
 
-					if (tp->val.oper->func == open_paren)
+					if (tp_op->func == open_paren)
 						break;
 
-					if (ptok.type == OP &&
-						ptok.val.oper->operands > 0) {
-						missing_operand_error(&ptok, t);
+					if (pt->type == OP &&
+						pt->val.oper->operands > 0) {
+						missing_operand_error(pt, t);
 						return BADOP;
 					}
 
@@ -2766,61 +2765,70 @@ open_paren(void)
 				// Pop the opening parenthesis
 				free(tpop(&oper_stack));
 				tp = tpeek(&oper_stack);
-				if (tp && tp->val.oper->operands == 1) {
+				if (tp && tp_op->operands == 1) {
 					tpush(&out_stack, tpop(&oper_stack));
 				}
 				paren_count--;
 
-			} else if (operands == 1) { // one operand, like "~"
+			} else if (t_op->operands == 1) { // one operand, like "~"
 			unary:
 				while (tp != NULL &&
-					(tp->val.oper->func != open_paren) &&
-					(tp->val.oper->prec > precedence))
+					(tp_op->func != open_paren) &&
+					(tp_op->prec > t_op->prec))
 				{
 					tpush(&out_stack, tpop(&oper_stack));
 					tp = tpeek(&oper_stack);
 				}
 				tpush(&oper_stack, t);
 
-			} else if (operands == 2) { // two operands
-				// Special cases:  '-' and '+' are
-				// either binary or unary.  They're
-				// unary if they come first, or follow
-				// another operator.  A closing paren
-				// is not an operator in this case.
-				if (ptok.type == UNKNOWN ||
-						(ptok.type == OP &&
-					ptok.val.oper->func != close_paren)) {
-					if (t->val.oper->func == subtract) {
+			} else if (t_op->operands == 2) { // two operands
+				/*
+				 * + / - are unary if the previous token is
+				 *  an operator (the leading '('
+				 *  counts) but not a ')', and they're
+				 *  followed by something that isn't
+				 *  space or the end of expression.
+				 *  Also don't let them be followed by
+				 *  +/-, to prevent weird multiple +-+
+				 *  sequences.  If that's not all true,
+				 *  they're binary.
+				 * TL;DR: +/- are unary if prev token is a
+				 *   non-')' operator and next char is
+				 *   whitespace, ), +, -, or \0
+				 */
+				if ( (t_op->func == subtract ||
+					    t_op->func == add) &&
+					pt->type == OP &&
+					pt->val.oper->func != close_paren &&
+					!strchr(" \t\r\n)+-", *input_ptr)) {
+					if (t_op->func == subtract) {
+						trace(("change '-' --> chs\n"));
 						t = &chsign_token;
-						precedence = t->val.oper->prec;
-						goto unary;
-					}
-					if (t->val.oper->func == add ) {
+					} else {  // add
+						trace(("change '+' --> nop\n"));
 						t = &plus_token;
-						precedence = t->val.oper->prec;
-						goto unary;
 					}
+					goto unary;
 				}
 
 				/* two two operand ops in a row? */
-				if (ptok.type == OP &&
-					ptok.val.oper->func != close_paren) {
-					missing_operand_error(&ptok, t);
+				if (pt->type == OP &&
+					pt->val.oper->func != close_paren) {
+					missing_operand_error(pt, t);
 					input_ptr = NULL;  // discard rest of line
 					return BADOP;
 				}
 
 				// Handle binary operators
 				while (tp != NULL) {
-					if (tp->val.oper->func == open_paren)
+					if (tp_op->func == open_paren)
 						break;
 					/* left-associative by default */
-					if (tp->val.oper->prec < precedence)
+					if (tp_op->prec < t_op->prec)
 						break;
 					/* a ** b is right-associative */
-					if (tp->val.oper->prec <= precedence &&
-					    tp->val.oper->func == y_to_the_x)
+					if (tp_op->prec <= t_op->prec &&
+					    tp_op->func == y_to_the_x)
 						break;
 
 					tpush(&out_stack, tpop(&oper_stack));
@@ -2829,7 +2837,7 @@ open_paren(void)
 				tpush(&oper_stack, t);
 			} else {
 				error(" error: '%s' unsuitable in infix expression\n",
-					t->val.oper->name);
+					t_op->name);
 				input_ptr = NULL;  // discard rest of line
 				return BADOP;
 			}
@@ -2846,7 +2854,7 @@ open_paren(void)
 		if (paren_count == 0)
 			break;
 
-		ptok = *t;
+		prevtok = *t;
 
 	}
 	trace(("    after infix gather loop\n"));
@@ -2884,6 +2892,9 @@ open_paren(void)
 	tdump(&infix_stack);
 
 	return GOODOP;
+
+#undef t_op
+#undef tp_op
 }
 
 
@@ -2992,16 +3003,29 @@ sprint_token(char *s, int slen, token *t)
 }
 
 int
-parse_tok(char *p, token *t, char **nextp)
+parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 {
 	int sign = 1;
 
-	/* be sure + and - are bound closely to numbers */
-	if (*p == '+' && (match_dp(p + 1) || isdigit(*(p + 1)))) {
-		p++;
-	} else if (*p == '-' && (match_dp(p + 1) || isdigit(*(p + 1)))) {
-		sign = -1;
-		p++;
+	if (parsing_rpn && (*p == '+' || *p == '-')) {
+		/* In RPN, be sure + and - are bound closely to
+		 * numbers.  we want "1 2 -3" to push "1", "2", and
+		 * "-3", not "(1-2)", and "3".  For infix expressions,
+		 * whether to bind the +/- to a number depends on what
+		 * came before.  "(2-3)" should be read as "(2 - 3)",
+		 * not "(2 -3)".  So that's handled in open_paren(),
+		 * where we can track ordering.
+		 */
+		if (*p == '+' && (match_dp(p + 1) || isdigit(*(p + 1)))) {
+			p++;
+		} else if (*p == '-' && (match_dp(p + 1) || isdigit(*(p + 1)))) {
+			sign = -1;
+			p++;
+		} else if (isspace(*(p+1)) || *(p+1) == 0) {
+			goto is_oper;
+		} else {
+			goto unknown;
+		}
 	}
 
 	if (*p == '0' && (*(p + 1) == 'x' || *(p + 1) == 'X')) {
@@ -3052,6 +3076,8 @@ parse_tok(char *p, token *t, char **nextp)
 		return 1;
 	} else {
 		int n;
+
+	    is_oper:
 		if (isalpha(*p)) {
 			n = stralnum(p, nextp);
 		} else if (ispunct(*p)) {
@@ -3362,7 +3388,7 @@ gettoken(struct token *t)
 
 	fflush(stdin);
 
-	if (!parse_tok(input_ptr, t, &next_input_ptr)) {
+	if (!parse_tok(input_ptr, t, &next_input_ptr, 1)) {
 		error(" error: unrecognized input '%s'\n", input_ptr);
 		input_ptr = NULL;  // discard rest of line
 		return 0;
@@ -3662,9 +3688,9 @@ struct oper opers[] = {
 	{""},		// all-null entries cause blank line in output
     {"Numerical operators with one operand:"},
 	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 24 },
-	{"chs", chsign,		0, 1, 24 },  // precedence unused, see special case in open_paren()
-	{"negate", chsign,	"Change sign of x (2's complement)", 1, 24 },
-	{"nop", nop,		"Does nothing", 1, 24 }, // needed to help support unary plus, for infix
+	{"chs", chsign,		0, 1, 26 },  // precedence unused, see special case in open_paren()
+	{"negate", chsign,	"Change sign of x (2's complement)", 1, 26 },
+	{"nop", nop,		"Does nothing", 1, 26 }, // needed to help support unary plus, for infix
 	{"recip", recip,	0, 1, 26 },
 	{"sqrt", squarert,	"Reciprocal and square root of x", 1, 26 },
 	{"sin", sine,		0, 1, 26 },

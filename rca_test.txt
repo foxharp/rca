@@ -384,7 +384,7 @@ clear
 (10 - 2 - 3 )
  5
 (3 - 4 -2)
- error: bad expression sequence, last saw +4 and -2
+ -3
 (6 / 2 * 3 )
  9
 (8 % 3 + 2 )
@@ -432,7 +432,7 @@ pop
 (4 + 5)
  9
 (4 + * 5)
- error: bad operator sequence, last saw oper + and oper *
+ error: missing operand(s) at sequence "+ *"
 (4 + 5 6)
  error: bad expression sequence, last saw +5 and +6
 (4 + (5 + 6
@@ -448,7 +448,7 @@ pop
 ( 3 + 4 x 2 / ( 1 - 5 ) ** 2 ** 3 )
  3.00012207
 ((2+3)*4**2)
- error: bad expression sequence, last saw +2 and +3
+ 80
 ((2 + 3)*4**2)
  80
 ((0x5 & 8) && 1)
