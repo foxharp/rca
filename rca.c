@@ -3408,14 +3408,17 @@ precedence(void)
 	static char *prec_ops[NUM_PRECEDENCE] = {0};
 	int linelen[NUM_PRECEDENCE] = {0};
 	int prec, i;
-	int negate_prec = 0; // warning suppression
+	int unary_prec = 0;
+	int y_to_x_prec = 0;
+	char *prefix;
 	static int precedence_generated;
 
 	printf(" Precedence for operators in infix expressions, from \n"
 	       "  top to bottom in order of descending precedence.\n"
 	       " All operators are left-associative, except for those\n"
-	       "  in rows 2,3,4 and 5, which associate right to left.\n");
+	       "  in rows marked 'R', which associate right to left.\n");
 	if (!precedence_generated) {
+		prefix = "";
 		op = opers;
 		while (op->name) {
 
@@ -3434,32 +3437,37 @@ precedence(void)
 				prec_ops[op->prec] = (char *)calloc(1, 500);
 				if (!prec_ops[op->prec])
 					memory_failure();
-				linelen[op->prec] = 0;
-			}
-			if (strcmp(op->name, "negate") == 0)
-				negate_prec = op->prec;
-			strcat(prec_ops[op->prec], op->name);
-			linelen[op->prec] += strlen(op->name);
-			if (linelen[op->prec] > 60) {
-				strcat(prec_ops[op->prec], "\n            ");
 				linelen[op->prec] = 12;
+			}
+			if (strcmp(op->name, "chs") == 0) {
+				strcat(prec_ops[op->prec], "+ - ");
+				linelen[op->prec] += 4;
+				unary_prec = op->prec;
+			}
+			if (strcmp(op->name, "^") == 0)
+				y_to_x_prec = op->prec;
+			strcat(prec_ops[op->prec], op->name);
+			strcat(prec_ops[op->prec], " ");
+			linelen[op->prec] += strlen(op->name) + 1;
+			if (linelen[op->prec] > 70) {
+				linelen[op->prec] = 12;
+				prefix = "\n            ";
 			} else {
-				strcat(prec_ops[op->prec], " ");
-				linelen[op->prec]++;
+				strcat(prec_ops[op->prec], prefix);
+				prefix = "";
 			}
 			op++;
 		}
 
-		prec_ops[negate_prec + 1] = "+ -    (unary)";
 
+		precedence_generated = 1;
 	}
-	precedence_generated = 1;
 
 	i = 1;
 	for (prec = NUM_PRECEDENCE-1; prec >=0; prec--) {
 		if (prec_ops[prec]) {
 			printf(" %-2i  %c     %s\n", i,
-			(i >= 2 && i <= 5) ? 'R':' ',
+			(prec <= unary_prec && prec >= y_to_x_prec) ? 'R':' ',
 			prec_ops[prec]);
 			i++;
 		}
@@ -3686,10 +3694,10 @@ struct oper opers[] = {
 	{"clearb", clearbit,	"Set and clear bit x in y", 2, 14 },
 	{""},		// all-null entries cause blank line in output
     {"Numerical operators with one operand:"},
-	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 24 },
-	{"chs", chsign,		0, 1, 26 },  // precedence unused, see special case in open_paren()
+	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 26 },
+	{"chs", chsign,		0, 1, 26 },
 	{"negate", chsign,	"Change sign of x (2's complement)", 1, 26 },
-	{"nop", nop,		"Does nothing", 1, 26 }, // needed to help support unary plus, for infix
+	{"nop", nop,		"Does nothing", 1, 26 },
 	{"recip", recip,	0, 1, 26 },
 	{"sqrt", squarert,	"Reciprocal and square root of x", 1, 26 },
 	{"sin", sine,		0, 1, 26 },
@@ -3719,7 +3727,7 @@ struct oper opers[] = {
 	{"<=", is_le,		0, 2, 8 },
 	{">", is_gt,		0, 2, 8 },
 	{">=", is_ge,		"Arithmetic comparisons", 2, 8 },
-	{"!", logical_not,	"Logical NOT of x", 1, 24 },
+	{"!", logical_not,	"Logical NOT of x", 1, 26 },
 	{""},
     {"Stack manipulation:"},
 	{"clear", clear,	"Clear stack" },
