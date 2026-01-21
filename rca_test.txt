@@ -432,7 +432,7 @@ pop
 (4 + 5)
  9
 (4 + * 5)
- error: missing operand(s) at sequence "+ *"
+ error: bad expression sequence, at oper + and oper *
 (4 + 5 6)
  error: bad expression sequence, at +5 and +6
 (4 + (5 + 6
@@ -873,13 +873,13 @@ clear
 (+3)
  3
 (--3)
- error: missing operand(s) at sequence "( -"
+ error: bad expression sequence, at oper ( and oper -
 (+-3)
- error: missing operand(s) at sequence "( +"
+ error: bad expression sequence, at oper ( and oper +
 (-+3)
- error: missing operand(s) at sequence "( -"
+ error: bad expression sequence, at oper ( and oper -
 (++3)
- error: missing operand(s) at sequence "( +"
+ error: bad expression sequence, at oper ( and oper +
 # =========================
 # infix: precedence & grouping
 # =========================
@@ -925,19 +925,19 @@ clear
 # infix: errors
 # =========================
 (2 +)
- error: missing operand(s) at sequence "+ )"
+ error: bad expression sequence, at oper + and oper )
 (+)
- error: missing operand(s) at sequence "( +"
+ error: bad expression sequence, at oper ( and oper +
 (2 3)
  error: bad expression sequence, at +2 and +3
 ((2 + 3)
  error: missing parentheses
 (2 + + 3)
- error: missing operand(s) at sequence "+ +"
+ error: bad expression sequence, at oper + and oper +
 (2 - + 3)
- error: missing operand(s) at sequence "- +"
+ error: bad expression sequence, at oper - and oper +
 (2 - - 3)
- error: missing operand(s) at sequence "- -"
+ error: bad expression sequence, at oper - and oper -
 # =========================
 # rpn: basic operations
 # =========================
@@ -1002,3 +1002,37 @@ clear
  error: unrecognized input '+-2'
 -+2
  error: unrecognized input '-+2'
+
+# =========================
+# expression syntax tests
+# =========================
+( 1  5 )
+ error: bad expression sequence, at +1 and +5
+( 1  chs 5 )
+ error: bad expression sequence, at +1 and oper chs
+( 1  -chs 5 )
+ 6
+( (1)  (5))
+ error: bad expression sequence, at oper ) and oper (
+( (1) + 5)
+ 6
+(() + 5)
+ error: bad expression sequence, at oper ( and oper )
+((0) +5)
+ 5
+(() +5)
+ error: bad expression sequence, at oper ( and oper )
+( (1)  5)
+ error: bad expression sequence, at oper ) and +5
+clear (7 / (pi %5) (1)/ ((2 *2)+3)/ 4))
+ error: bad expression sequence, at oper ) and oper (
+clear (7 / (pi (% (1)/ ((2 *2)+3)/ 4)))
+ error: bad expression sequence, at pi and oper (
+clear (7 / ((2 *2)) 4)
+ error: bad expression sequence, at oper ) and +4
+clear (7 / e (1))
+ error: bad expression sequence, at e and oper (
+clear (7 / e ((5 % pi) - chs 2) 3)
+ error: bad expression sequence, at e and oper (
+clear (exp 5 chs 3)
+ error: bad expression sequence, at +5 and oper chs

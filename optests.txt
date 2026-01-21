@@ -34,7 +34,7 @@
 ((sin -3 * 2) == ((sin -3) * 2))
  1
 
-3 2 ^ sin chs 
+3 2 ^ sin chs
  -0.156434
 
 3 2 ^ sin chs (-sin(3^2)) ==
@@ -140,7 +140,7 @@
 # Function associativity (bug you found)
 # ============================================
 
-2 recip asin 
+2 recip asin
  30
 
 2 recip asin (asin (recip(2))) ==
@@ -211,13 +211,13 @@
 clear
 
 (sin)
- error: missing operand(s) at sequence "sin )"
+ error: bad expression sequence, at oper sin and oper )
 
 (asin 1 2)
  error: bad expression sequence, at +1 and +2
 
 (3 *)
- error: missing operand(s) at sequence "* )"
+ error: bad expression sequence, at oper * and oper )
 
 ((1 + 2)
  error: missing parentheses
