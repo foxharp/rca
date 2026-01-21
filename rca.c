@@ -108,7 +108,7 @@ usage(void)
 /* debugging support, runtime controllable */
 int tracing;
 
-#define trace(a)  do {if (tracing) printf a ;} while(0)
+#define trace(a)  do {if (tracing > 1) printf a ;} while(0)
 
 typedef int boolean;
 
@@ -251,7 +251,6 @@ ldouble offstack[5];
 static char *input_ptr = NULL;
 
 int parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn);
-void sprint_token(char *s, int slen, token *t);
 
 void
 memory_failure(void)
@@ -353,14 +352,18 @@ tweak_float(ldouble x)
 
 	r = roundl(x);
 	if (fabsl(x - r) <= tolerance) {
-		trace(("snap %La (%.20Lg) to %La (%.20Lg)\n", x, x, r, r));
+		if (x != r)
+			trace(("snap %La (%.20Lg)\n"
+				"   to %La (%.20Lg)\n", x, x, r, r));
 		return r;
 	}
 
 	/* round to max_precision digits */
 	factor = powl(10L, max_precision - ceill(log10l(fabsl(x))));
 	r = roundl(x * factor) / factor;
-	trace(("round %La (%.20Lg) to %La (%.20Lg)\n", x, x, r, r));
+	if (x != r)
+		trace(("round %La (%.20Lg)\n"
+			"   to %La (%.20Lg)\n", x, x, r, r));
 
 	return r;
 
@@ -377,10 +380,10 @@ push(ldouble n)
 
 	if (floating_mode(mode) || !isfinite(n)) {
 		p->val = n;
-		trace(("pushed %Lg/0x%llx\n", n, (long long)(p->val)));
+		trace((" pushed %Lg\n", n));
 	} else {
 		p->val = sign_extend((long long)n & int_mask);
-		trace(("pushed masked/extended %lld/0x%llx\n",
+		trace((" pushed masked/extended %lld/0x%llx\n",
 		(long long)(p->val), (long long)(p->val)));
 	}
 
@@ -419,7 +422,7 @@ pop(ldouble *f)
 	}
 	*f = p->val;
 	stack = p->next;
-	trace(("popped  %Lg/0x%llx \n", p->val, (long long)(p->val)));
+	trace((" popped  %Lg\n", p->val)); //, (long long)(p->val)));
 	free(p);
 	stack_count--;
 
@@ -849,7 +852,6 @@ chsign(void)
 opreturn
 nop(void)
 {
-	trace(("call to nop()\n"));
 	return GOODOP;
 }
 
@@ -2521,18 +2523,18 @@ units_rad_deg(void)
 	return BADOP;
 }
 
-token *out_stack, *oper_stack, *infix_stack;
+token *out_stack, *oper_stack, *infix_rpn_queue;
 
 char *
 stackname(token **tstackp)
 {
 	char *n;
 	if (tstackp == &oper_stack)
-		n = "oper_stack";
+		n = "operator stack";
 	else if (tstackp == &out_stack)
-		n = "out_stack";
-	else if (tstackp == &infix_stack)
-		n = "infix_stack";
+		n = "output stack";
+	else if (tstackp == &infix_rpn_queue)
+		n = "rpn output";
 	else
 		n = "unknown stack";
 	return n;
@@ -2558,9 +2560,6 @@ tpush(token **tstackp, token *token)
 		t->alloced = 1;
 	}
 
-	// trace(("pushed token %p to %s stack\n", t,
-        //      (*tstackp == out_stack) ? "output":"operator"));
-
 	t->next = *tstackp;
 	*tstackp = t;
 }
@@ -2578,12 +2577,10 @@ tpop(token **tstackp)
 
 	rt = *tstackp;
 	if (!rt) {
-		trace(("empty tstack\n"));
 		return NULL;
 	}
 
 	*tstackp = (*tstackp)->next;
-	// trace(("popped token %p from %s stack\n", rt, stackname(tstackp)));
 
 	return rt;
 }
@@ -2604,34 +2601,60 @@ tclear(token **tstackp)
 }
 
 void
+sprint_token(char *s, int slen, token *t)
+{
+	switch (t->type) {
+	case NUMERIC:
+		snprintf(s, slen, "'%.*Lg'", max_precision, t->val.val);
+		break;
+	case SYMBOLIC:
+		snprintf(s, slen, "'%s'", t->val.oper->name);
+		break;
+	case OP:
+		snprintf(s, slen, "'%s'", t->val.oper->name);
+		break;
+	case EOL:
+		snprintf(s, slen, "'EOL'");
+		break;
+	case UNKNOWN:
+		snprintf(s, slen, "'unknown (%d)'", t->type);
+		break;
+	}
+}
+
+void
 show_tok(token *t)
 {
-	if (t->type == NUMERIC)
-		trace(("NUM:%Lf  ", t->val.val));
-	else if (t->type == OP)
-		trace(("OP:%s  ", t->val.oper->name));
-	else if (t->type == SYMBOLIC)
-		trace(("SYM:%s  ", t->val.oper->name));
+	static char buf[128];
+
+	sprint_token(buf, sizeof(buf), t);
+	printf(" %s ", buf);
+}
+
+void
+stack_dump(token **tstackp)
+{
+	token *t = *tstackp;
+
+	printf("%s: ", stackname(tstackp));
+	if (!t)
+		printf("<empty>");
 	else
-		trace(("t->type is %d  ", t->type));
+		while (t) {
+			show_tok(t);
+			t = t->next;
+		}
+	printf("\n");
 }
 
 void
 tdump(token **tstackp)
 {
-	if (!tracing) return;
-
-	token *t = *tstackp;
-
-	printf("%s stack: ", stackname(tstackp));
-	while (t) {
-		show_tok(t);
-		t = t->next;
-	}
-	printf("\n");
+	if (tracing > 1)
+		stack_dump(tstackp);
 }
 
-token open_paren_token, chsign_token, plus_token;
+token open_paren_token, chsign_token, nop_token;
 
 void
 create_infix_support_tokens()
@@ -2642,7 +2665,7 @@ create_infix_support_tokens()
 	char *outp;
 	(void)parse_tok("(", &open_paren_token, &outp, 0);
 	(void)parse_tok("chs", &chsign_token, &outp, 0);
-	(void)parse_tok("nop", &plus_token, &outp, 0);
+	(void)parse_tok("nop", &nop_token, &outp, 0);
 }
 
 void
@@ -2680,24 +2703,23 @@ opreturn
 open_paren(void)
 {
 	static struct token tok, prevtok;
-	token *t, *pt, *tp;	// pointers to tok, prevtok, and tpeek'ed tok
+	int paren_count;
+	token *t, *pt, *tp;	// pointers to tok, prevtok, and tpeek'ed token
+
 #define t_op t->val.oper	// shorthands.  don't use unless type == OP
 #define tp_op tp->val.oper
-#define pt_op pt->val.oper
-	int paren_count = 1;
 
 	tclear(&out_stack);
 	tclear(&oper_stack);
 
-	trace(("collecting infix line, pushing open (\n"));
-
-	// push the '(' token the user typed, so we can pretend we parsed it.
+	// push the '(' token the user typed
 	tpush(&oper_stack, &open_paren_token);
+	paren_count = 1;
 	prevtok = open_paren_token;
 	pt = &prevtok;
 
 	while (1) {
-		trace(("    top of infix gather loop\n"));
+		trace(("\n"));
 		tdump(&oper_stack);
 		tdump(&out_stack);
 
@@ -2713,8 +2735,6 @@ open_paren(void)
 			goto cleanup;
 		}
 
-		show_tok(t);
-
 		switch (t->type) {
 		case NUMERIC:
 		case SYMBOLIC:
@@ -2726,8 +2746,6 @@ open_paren(void)
 			tpush(&out_stack, t);
 			break;
 		case OP:
-			trace(("oper is %s\n", t_op->name ));
-
 			tp = tpeek(&oper_stack);
 
 			if (t_op->func == open_paren) {
@@ -2745,8 +2763,8 @@ open_paren(void)
 					input_ptr = NULL;
 					return BADOP;
 				}
-				// Process until matching opening parenthesis
-				while (1) {
+				// Process until matching opening paren
+				while ((tp = tpeek(&oper_stack))) {
 					if (tp == NULL) {
 						error(" error: missing parentheses?\n");
 						return BADOP;
@@ -2756,7 +2774,6 @@ open_paren(void)
 						break;
 
 					tpush(&out_stack, tpop(&oper_stack));
-					tp = tpeek(&oper_stack);
 				}
 
 				// Pop the opening parenthesis
@@ -2802,11 +2819,11 @@ open_paren(void)
 					!prev_tok_was_operand(pt) &&
 					!strchr(" \t\v\r\n)+-", *input_ptr)) {
 					if (t_op->func == subtract) {
-						trace(("change '-' --> chs\n"));
 						t = &chsign_token;
+						trace((" subtract is now chs\n"));
 					} else {  // add
-						trace(("change '+' --> nop\n"));
-						t = &plus_token;
+						t = &nop_token;
+						trace((" add is now nop\n"));
 					}
 					goto unary;
 				}
@@ -2853,39 +2870,26 @@ open_paren(void)
 		prevtok = *t;
 
 	}
-	trace(("    after infix gather loop\n"));
-	tdump(&oper_stack);
-	tdump(&out_stack);
+	trace(("\nfinished reading expression\n"));
 
 	if (paren_count) {
 		error(" error: missing parentheses\n");
 		return BADOP;
 	}
 
-	trace(("final move to out_stack\n"));
-
-	/* move what's on the operator stack to the output stack */
-	while ((t = tpop(&oper_stack)) != NULL) {
-		tpush(&out_stack, t);
-	}
-	trace(("... moved\n"));
-
-
-	fflush(stdout);
-
-	tdump(&oper_stack);
-	tdump(&out_stack);
-
-	/* and with that, the shunting yard is finished.
-	 * unfortunately, the output stack is in the wrong order.  so
-	 * we do one more transfer to reverse it.  gettoken() will
-	 * pull from this copy.
+	/* the shunting yard is finished.  output stack is in the
+	 * wrong order, so one more transfer to reverse it.
+	 * gettoken() will pull from this copy.
 	 */
-	trace(("moving to infix stack\n"));
 	while((t = tpop(&out_stack)) != NULL) {
-		tpush(&infix_stack, t);
+		tpush(&infix_rpn_queue, t);
 	}
-	tdump(&infix_stack);
+
+	if (tracing) {
+		trace(("\nmerged and reversed:\n"));
+		printf("\n");
+		stack_dump(&infix_rpn_queue);
+	}
 
 	return GOODOP;
 
@@ -2920,10 +2924,17 @@ tracetoggle(void)
 	if (!pop(&wanttracing))
 		return BADOP;
 
-	toggle_warn(wanttracing);
+	if (wanttracing == 11) {
+		opreturn commands(void);
+		return commands();
+	}
 
-	tracing = (wanttracing != 0);
-	printf(" internal tracing is now %s", tracing ? "on\n":"off\n");
+	// two levels currently, mostly for infix processing.
+	// 1 is just input and rpn token logging.
+	// 2 is full shunting algoritm logging, and also snapping/rounding
+	tracing = wanttracing;
+
+	printf(" internal tracing is now level %d\n", tracing);
 	return GOODOP;
 }
 
@@ -2976,28 +2987,6 @@ size_t stralnum(char *s, char **endptr)
 	return ns - s;
 }
 
-void
-sprint_token(char *s, int slen, token *t)
-{
-	switch (t->type) {
-	case NUMERIC:
-		snprintf(s, slen, "%+Lg", t->val.val);
-		break;
-	case SYMBOLIC:
-		snprintf(s, slen, "%s", t->val.oper->name);
-		break;
-	case OP:
-		snprintf(s, slen, "oper %s", t->val.oper->name);
-		break;
-	case EOL:
-		snprintf(s, slen, "EOL");
-		break;
-	case UNKNOWN:
-		snprintf(s, slen, "unknown");
-		break;
-	}
-}
-
 int
 parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 {
@@ -3039,7 +3028,6 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 
 		t->val.val = dd * sign;
 		t->type = NUMERIC;
-		return 1;
 
 	} else if (*p == '0' && (*(p + 1) == 'b' || *(p + 1) == 'B')) {
 		// binary
@@ -3049,7 +3037,6 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 			goto unknown;
 		t->type = NUMERIC;
 		t->val.val = ln * sign;
-		return 1;
 
 	} else if (*p == '0' && ('0' <= *(p + 1) && *(p + 1) <= '7')) {
 		// octal
@@ -3059,7 +3046,6 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 			goto unknown;
 		t->type = NUMERIC;
 		t->val.val = ln * sign;
-		return 1;
 
 	} else if (isdigit(*p) || match_dp(p)) {
 		// decimal
@@ -3069,7 +3055,6 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 			goto unknown;
 		t->type = NUMERIC;
 		t->val.val = dd * sign;
-		return 1;
 	} else {
 		int n;
 
@@ -3119,7 +3104,7 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 					t->type = SYMBOLIC;
 				else
 					t->type = OP;
-				return 1;
+				break;
 			}
 			op++;
 		}
@@ -3130,6 +3115,7 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 			return 0;
 		}
 	}
+	if (tracing) show_tok(t);
 	return 1;
 }
 
@@ -3369,9 +3355,10 @@ int
 gettoken(struct token *t)
 {
 	char *next_input_ptr;
-	if (input_ptr == NULL)
+	if (input_ptr == NULL) {
 		if (!fetch_line())
 			return 0;
+	}
 
 	while (isspace(*input_ptr))
 		input_ptr++;
@@ -3382,6 +3369,9 @@ gettoken(struct token *t)
 		return 1;
 	}
 
+	if (tracing)
+		printf("input 'tokens':");
+
 	fflush(stdin);
 
 	if (!parse_tok(input_ptr, t, &next_input_ptr, 1)) {
@@ -3389,8 +3379,6 @@ gettoken(struct token *t)
 		input_ptr = NULL;
 		return 0;
 	}
-
-	show_tok(t);
 
 	input_ptr = next_input_ptr;
 	return 1;
@@ -3811,7 +3799,7 @@ struct oper opers[] = {
 	{"R", moderawhex,	"Switch to raw floating hex mode"},
 	{"rounding", rounding,	"Toggle snapping and rounding of floats" },
 	{"tracing", tracetoggle,"Toggle debug tracing" },
-//	{"commands", commands,	"Dump raw command table" },
+//	{"commands", commands,	"Dump raw command table" }, # use "11 tracing"
 	{""},
     {"Housekeeping:"},
 	{"?", help,		0 },
@@ -3859,7 +3847,7 @@ main(int argc, char *argv[])
 	while (1) {
 
 		// use up tokens created by infix processing first */
-		if (tpeek(&infix_stack) && (t = tpop(&infix_stack))) {
+		if (tpeek(&infix_rpn_queue) && (t = tpop(&infix_rpn_queue))) {
 			tok = *t;
 			free(t);
 			freeze_lastx();
