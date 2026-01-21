@@ -211,13 +211,13 @@
 clear
 
 (sin)
- error: bad expression sequence, at oper sin and oper )
+ error: bad expression sequence, at 'sin' and ')'
 
 (asin 1 2)
- error: bad expression sequence, at +1 and +2
+ error: bad expression sequence, at '1' and '2'
 
 (3 *)
- error: bad expression sequence, at oper * and oper )
+ error: bad expression sequence, at '*' and ')'
 
 ((1 + 2)
  error: missing parentheses

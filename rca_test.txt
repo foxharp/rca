@@ -432,9 +432,9 @@ pop
 (4 + 5)
  9
 (4 + * 5)
- error: bad expression sequence, at oper + and oper *
+ error: bad expression sequence, at '+' and '*'
 (4 + 5 6)
- error: bad expression sequence, at +5 and +6
+ error: bad expression sequence, at '5' and '6'
 (4 + (5 + 6
  error: missing parentheses
 (4 + (5 + 6)) - 7)
@@ -873,13 +873,13 @@ clear
 (+3)
  3
 (--3)
- error: bad expression sequence, at oper ( and oper -
+ error: bad expression sequence, at '(' and '-'
 (+-3)
- error: bad expression sequence, at oper ( and oper +
+ error: bad expression sequence, at '(' and '+'
 (-+3)
- error: bad expression sequence, at oper ( and oper -
+ error: bad expression sequence, at '(' and '-'
 (++3)
- error: bad expression sequence, at oper ( and oper +
+ error: bad expression sequence, at '(' and '+'
 # =========================
 # infix: precedence & grouping
 # =========================
@@ -925,19 +925,19 @@ clear
 # infix: errors
 # =========================
 (2 +)
- error: bad expression sequence, at oper + and oper )
+ error: bad expression sequence, at '+' and ')'
 (+)
- error: bad expression sequence, at oper ( and oper +
+ error: bad expression sequence, at '(' and '+'
 (2 3)
- error: bad expression sequence, at +2 and +3
+ error: bad expression sequence, at '2' and '3'
 ((2 + 3)
  error: missing parentheses
 (2 + + 3)
- error: bad expression sequence, at oper + and oper +
+ error: bad expression sequence, at '+' and '+'
 (2 - + 3)
- error: bad expression sequence, at oper - and oper +
+ error: bad expression sequence, at '-' and '+'
 (2 - - 3)
- error: bad expression sequence, at oper - and oper -
+ error: bad expression sequence, at '-' and '-'
 # =========================
 # rpn: basic operations
 # =========================
@@ -1007,32 +1007,32 @@ clear
 # expression syntax tests
 # =========================
 ( 1  5 )
- error: bad expression sequence, at +1 and +5
+ error: bad expression sequence, at '1' and '5'
 ( 1  chs 5 )
- error: bad expression sequence, at +1 and oper chs
+ error: bad expression sequence, at '1' and 'chs'
 ( 1  -chs 5 )
  6
 ( (1)  (5))
- error: bad expression sequence, at oper ) and oper (
+ error: bad expression sequence, at ')' and '('
 ( (1) + 5)
  6
 (() + 5)
- error: bad expression sequence, at oper ( and oper )
+ error: bad expression sequence, at '(' and ')'
 ((0) +5)
  5
 (() +5)
- error: bad expression sequence, at oper ( and oper )
+ error: bad expression sequence, at '(' and ')'
 ( (1)  5)
- error: bad expression sequence, at oper ) and +5
+ error: bad expression sequence, at ')' and '5'
 clear (7 / (pi %5) (1)/ ((2 *2)+3)/ 4))
- error: bad expression sequence, at oper ) and oper (
+ error: bad expression sequence, at ')' and '('
 clear (7 / (pi (% (1)/ ((2 *2)+3)/ 4)))
- error: bad expression sequence, at pi and oper (
+ error: bad expression sequence, at 'pi' and '('
 clear (7 / ((2 *2)) 4)
- error: bad expression sequence, at oper ) and +4
+ error: bad expression sequence, at ')' and '4'
 clear (7 / e (1))
- error: bad expression sequence, at e and oper (
+ error: bad expression sequence, at 'e' and '('
 clear (7 / e ((5 % pi) - chs 2) 3)
- error: bad expression sequence, at e and oper (
+ error: bad expression sequence, at 'e' and '('
 clear (exp 5 chs 3)
- error: bad expression sequence, at +5 and oper chs
+ error: bad expression sequence, at '5' and 'chs'
