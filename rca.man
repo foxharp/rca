@@ -133,18 +133,18 @@ The
 operator can be used in an infix expression.  It returns the value of
 .I x
 (the top of stack) prior to the expression being invoked.
-The five off-stack storage locations can only be set in RPN mode (using
-.B store
+The five off-stack storage locations can be accessed in RPN using
+.B store/recall
 or
-.B s1
+.B s1/r1
 through
-.BR s5 ),
-but are accessible from infix using
-.B recall
+.BR s5/r5 ).
+From infix expressions, the 'r' names are used both for reading
+and writing, e.g.,
+.B (r1 = 2 * r1)
 or
-.B r1
-through
-.BR r5 .
+.B (r2 = 2 * (r1 = pi ^
+.BR 2)) .
 .P
 If an error occurs during evaluation of an infix expression,
 evaluation will cease, and the stack will be left as it was at the
@@ -334,7 +334,7 @@ disturbing the stack).  The
 through
 .B r5
 operators recall those values, pushing them onto the stack, and can
-also be used in infix expressions to reference those values.
+be used in infix expressions to read or write those locations.
 .RB ( store
 is synonymous with
 .BR s1 ,
