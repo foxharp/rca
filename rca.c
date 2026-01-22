@@ -185,6 +185,15 @@ struct token {
 #define SYMBOLIC 1
 #define OP 2
 #define EOL 3
+#define LVALUE 4
+
+/* values for # of operands field in opers table */
+//  0 denotes a pseudo-op, i.e. it manipulates the calculator itself
+//  1 & 2 are used verbatim as operand counts
+#define Sym	-1	// a named number, like pi, or r1
+#define Lval	-2	// can be assigned, like s1
+
+
 
 /* 7 major modes:  float, decimal, unsigned, hex, octal, binary, raw
  * float.  all but float and raw float are integer modes.  "raw float"
@@ -437,6 +446,12 @@ pop(ldouble *f)
 	return TRUE;
 }
 
+opreturn
+assignment(void)
+{
+	// printf("assignment called\n");
+	return GOODOP;
+}
 
 opreturn
 add(void)
@@ -2603,6 +2618,7 @@ sprint_token(char *s, int slen, token *t)
 		snprintf(s, slen, "'%.*Lg'", max_precision, t->val.val);
 		break;
 	case SYMBOLIC:
+	case LVALUE:
 		snprintf(s, slen, "'%s'", t->val.oper->name);
 		break;
 	case OP:
@@ -2703,6 +2719,7 @@ open_paren(void)
 
 #define t_op t->val.oper	// shorthands.  don't use unless type == OP
 #define tp_op tp->val.oper
+#define pt_op pt->val.oper
 
 	tclear(&out_stack);
 	tclear(&oper_stack);
@@ -2730,7 +2747,22 @@ open_paren(void)
 			goto cleanup;
 		}
 
+		if (pt->type == LVALUE &&
+			!(t->type == OP && t_op->func == assignment)) {
+			expression_error(pt, t);
+			input_ptr = NULL;
+			return BADOP;
+		}
+
 		switch (t->type) {
+		case LVALUE:
+			if (pt->type != OP || pt->val.oper->func != open_paren) {
+				expression_error(pt, t);
+				input_ptr = NULL;
+				return BADOP;
+			}
+			tpush(&oper_stack, t);
+			break;
 		case NUMERIC:
 		case SYMBOLIC:
 			if (prev_tok_was_operand(pt)) {
@@ -2821,6 +2853,16 @@ open_paren(void)
 						trace((" add is now nop\n"));
 					}
 					goto unary;
+				}
+
+				if (t_op->func == assignment) {
+					if (pt->type != LVALUE) {
+						expression_error(pt, t);
+						input_ptr = NULL;
+						return BADOP;
+					}
+					// assignment is a no-op, no token push
+					break;
 				}
 
 				if (!prev_tok_was_operand(pt)) {
@@ -3093,8 +3135,10 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 			if (n == matchlen && !strncmp(op->name, p, matchlen)) {
 				*nextp = p + matchlen;
 				t->val.oper = op;
-				if (op->operands == -1) // like "pi", "recall"
+				if (op->operands == Sym) // like "pi", "recall"
 					t->type = SYMBOLIC;
+				else if (op->operands == Lval)
+					t->type = LVALUE;
 				else
 					t->type = OP;
 				break;
@@ -3649,8 +3693,9 @@ struct oper opers[] = {
 //        +------------------------------- operator names
 //        |    +-------------------------- function pointer
 //        |    |                +--------- help (if 0, shares next cmd's help)
-//        |    |                |  +------ # of operands (0 means none,
-//        |    |                |  |          -1 means none, but okay in infix)
+//        |    |                |  +------ # of operands (0 means none (pseudop),
+//        |    |                |  |        "Sym" -1 means none (named constant)
+//        |    |                |  |        "Lval" -2 means none (can be assigned)
 //        |    |                |  |  +--- operator precedence
 //        |    |                |  |  |         (# of operands and precedence
 //        V    V                V  V  V           used only by infix code)
@@ -3669,6 +3714,7 @@ struct oper opers[] = {
 	{"xor", bitwise_xor,	"Bitwise AND, OR, and XOR of y and x", 2, 12 },
 	{"setb", setbit,	0, 2, 10 },
 	{"clearb", clearbit,	"Set and clear bit x in y", 2, 14 },
+	{"=", assignment,	"Assignment (to storage locations", 2, 1},
 	{""},		// all-null entries cause blank line in output
     {"Numerical operators with one operand:"},
 	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 26 },
@@ -3711,8 +3757,8 @@ struct oper opers[] = {
 	{"pop", rolldown,	"Pop (and discard) x" },
 	{"push", enter,		0 },
 	{"dup", enter,		"Push (a duplicate of) x" },
-	{"lastx", repush,	0, -1 },
-	{"lx", repush,		"Fetch previous value of x", -1 },
+	{"lastx", repush,	0, Sym },
+	{"lx", repush,		"Fetch previous value of x", Sym },
 	{"exch", exchange,	0 },
 	{"swap", exchange,	"Exchange x and y" },
 	{"mark", mark,		"Mark stack for later summing" },
@@ -3720,20 +3766,20 @@ struct oper opers[] = {
 	{"avg", avg,		"Average stack to \"mark\", or entire stack if no mark" },
 	{""},
     {"Constants and storage (no operands):"},
-	{"store", store1,	0 },
-	{"recall", recall1,	"Same as s1 and r1", -1 },
-	{"s1", store1,		0 },
-	{"s2", store2,		0 },
-	{"s3", store3,		0 },
-	{"s4", store4,		0 },
-	{"s5", store5,		"Save x off-stack (to 5 locations)" },
-	{"r1", recall1,		0, -1 },
-	{"r2", recall2,		0, -1 },
-	{"r3", recall3,		0, -1 },
-	{"r4", recall4,		0, -1 },
-	{"r5", recall5,		"Fetch x (from 5 locations)", -1 },
-	{"pi", push_pi,		"Push constant pi", -1 },
-	{"e", push_e,		"Push constant e", -1 },
+	{"store", store1,	0, Lval },
+	{"recall", recall1,	"Same as s1 and r1", Sym },
+	{"s1", store1,		0, Lval },
+	{"s2", store2,		0, Lval },
+	{"s3", store3,		0, Lval },
+	{"s4", store4,		0, Lval },
+	{"s5", store5,		"Save x off-stack (to 5 locations)", Lval },
+	{"r1", recall1,		0, Sym },
+	{"r2", recall2,		0, Sym },
+	{"r3", recall3,		0, Sym },
+	{"r4", recall4,		0, Sym },
+	{"r5", recall5,		"Fetch x (from 5 locations)", Sym },
+	{"pi", push_pi,		"Push constant pi", Sym },
+	{"e", push_e,		"Push constant e", Sym },
 	{""},
     {"Unit conversions (one operand):"},
 	{"i2mm", units_in_mm,	0, 1, 26 },
@@ -3857,6 +3903,7 @@ main(int argc, char *argv[])
 		case NUMERIC:
 			result_push(t->val.val);
 			break;
+		case LVALUE:
 		case SYMBOLIC:
 		case OP:
 			trace(( "invoking %s\n", t->val.oper->name));

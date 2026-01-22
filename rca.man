@@ -437,7 +437,7 @@ command lists the operators by decreasing precedence.  The 'R'
 denotes those which are right associative.  All others group
 left to right.  (This list has no meaning for RPN.)
 
- \fR 1    \fB  (
+ \fR 1    \fB  ( )
  \fR 2  R \fB  ~ + - chs negate nop recip sqrt sin cos tan asin acos
  \fR      \fB   atan atan2 exp ln log2 log10 abs frac int ! i2mm mm2i
  \fR      \fB   ft2m m2ft mi2km km2mi f2c c2f oz2g g2oz oz2ml ml2oz
@@ -453,6 +453,7 @@ left to right.  (This list has no meaning for RPN.)
  \fR 11   \fB  == !=
  \fR 12   \fB  &&
  \fR 13   \fB  ||
+ \fR 14   \fB  =
 
 
 .SH OPERATOR NOTES
