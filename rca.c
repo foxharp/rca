@@ -3063,7 +3063,7 @@ showvars(void)
 	qsort(variables, v - variables, sizeof(*v), comparevars);
 
 	for (v = variables; v->name; v++) {
-		printf("%-20s ", v->name);
+		printf(" %-20s ", v->name);
 		print_n(&v->value, mode, 0);
 	}
 	return GOODOP;

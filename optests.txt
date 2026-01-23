@@ -255,19 +255,19 @@ clear
 3=_w 4=_l * =_area  _l 2 ^ _w 2 ^ + sqrt =_diagonal
  5
 variables
-_area                 12
-_diagonal             5
-_l                    4
-_w                    3
+ _area                 12
+ _diagonal             5
+ _l                    4
+ _w                    3
 (_w2=3) (_l2=4) (_area2=_l2 * _w2) (_diagonal2 = sqrt (_w2^2 + _l2^2))
  5
 vars
-_area                 12
-_area2                12
-_diagonal             5
-_diagonal2            5
-_l                    4
-_l2                   4
-_w                    3
-_w2                   3
+ _area                 12
+ _area2                12
+ _diagonal             5
+ _diagonal2            5
+ _l                    4
+ _l2                   4
+ _w                    3
+ _w2                   3
 
