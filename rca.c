@@ -172,7 +172,7 @@ struct token {
 	union {
 		ldouble val; // NUMERIC: simple value
 		oper *oper; // OP/SYMBOLIC points into opers table
-		char *varname; // DYNVAR: variable's name, malloced
+		char *varname; // VARIABLE: variable's name, malloced
 		char *str;  // UNKNOWN: points to input buffer, for error messages
 	} val;
 	int type;
@@ -186,7 +186,7 @@ struct token {
 #define SYMBOLIC 1
 #define OP 2
 #define EOL 3
-#define DYNVAR 5
+#define VARIABLE 4
 
 /* values for # of operands field in opers table */
 //  0 denotes a pseudo-op, i.e. it manipulates the calculator itself
@@ -252,8 +252,7 @@ boolean do_rounding = 1;
 /* the most recent top-of-stack */
 ldouble lastx;
 
-/* for store/recall */
-ldouble offstack[5];
+/* allow variables to be read/write */
 int variable_write_enable;
 
 /* where input is coming from currently */
@@ -450,10 +449,9 @@ pop(ldouble *f)
 opreturn
 assignment(void)
 {
-	/* This gets decremented with every RPN token executed.  If
-	 * a recall (i.e. any of r1, r2, ...) happens as the very
-	 * next oper, it will do a write to offstack storage instead
-	 * of a read.*/
+	/* This gets decremented with every RPN token executed.  If a
+	 * variable is the very next oper, we'll do a write to it
+	 * instead of a read. */
 	variable_write_enable = 2;
 	return GOODOP;
 }
@@ -2157,87 +2155,26 @@ width(void)
 	return GOODOP;
 }
 
+/* for store/recall */
+ldouble offstack;
+
 opreturn
-store_any(int loc)
+store(void)
 {
 	ldouble a;
 
-	if (pop(&a)) {
-		push(a);
-		offstack[loc - 1] = a;
+	if (peek(&a)) {
+		offstack = a;
 		return GOODOP;
 	}
 	return BADOP;
 }
 
 opreturn
-recall_any(int loc)
+recall(void)
 {
-	if (variable_write_enable)
-		return store_any(loc);
-
-	push(offstack[loc - 1]);
+	push(offstack);
 	return GOODOP;
-}
-
-opreturn
-store1(void)
-{
-	return store_any(1);
-}
-
-opreturn
-store2(void)
-{
-	return store_any(2);
-}
-
-opreturn
-store3(void)
-{
-	return store_any(3);
-}
-
-opreturn
-store4(void)
-{
-	return store_any(4);
-}
-
-opreturn
-store5(void)
-{
-	return store_any(5);
-}
-
-opreturn
-recall1(void)
-{
-	return recall_any(1);
-}
-
-opreturn
-recall2(void)
-{
-	return recall_any(2);
-}
-
-opreturn
-recall3(void)
-{
-	return recall_any(3);
-}
-
-opreturn
-recall4(void)
-{
-	return recall_any(4);
-}
-
-opreturn
-recall5(void)
-{
-	return recall_any(5);
 }
 
 opreturn
@@ -2630,7 +2567,7 @@ sprint_token(char *s, int slen, token *t)
 	case SYMBOLIC:
 		snprintf(s, slen, "'%s'", t->val.oper->name);
 		break;
-	case DYNVAR:
+	case VARIABLE:
 		snprintf(s, slen, "'%s'", t->val.varname);
 		break;
 	case OP:
@@ -2714,7 +2651,7 @@ prev_tok_was_operand(token *pt)
 {
 	return pt->type == NUMERIC ||
 		pt->type == SYMBOLIC ||
-		pt->type == DYNVAR ||
+		pt->type == VARIABLE ||
 		(pt->type == OP && pt->val.oper->func == close_paren);
 }
 
@@ -2763,7 +2700,7 @@ open_paren(void)
 		/* we delayed classifying the previous variable token
 		 * until we could tell if we were assigning or not.
 		 * we do it here. */
-		if (pt->type == DYNVAR) {
+		if (pt->type == VARIABLE) {
 			/* is it "r1 = 3" or "r1 + 3"? */
 			if (t->type == OP && t_op->func == assignment)
 				tpush(&oper_stack, pt);
@@ -2772,7 +2709,7 @@ open_paren(void)
 		}
 
 		switch (t->type) {
-		case DYNVAR:
+		case VARIABLE:
 			if (prev_tok_was_operand(pt)) {
 				expression_error(pt, t);
 				input_ptr = NULL;
@@ -2813,7 +2750,7 @@ open_paren(void)
 						return BADOP;
 					}
 
-					/* might be a DYNVAR */
+					/* might be a VARIABLE */
 					if (tp->type == OP &&
 						tp_op->func == open_paren)
 						break;
@@ -2873,7 +2810,7 @@ open_paren(void)
 				}
 
 				if (t_op->func == assignment) {
-					if (pt->type != DYNVAR) {
+					if (pt->type != VARIABLE) {
 						expression_error(pt, t);
 						input_ptr = NULL;
 						return BADOP;
@@ -3082,7 +3019,6 @@ findvar(char *name)
 int
 dynamic_var(token *t)
 {
-	ldouble a;
 	dynvar *v;
 
 	v = findvar(t->val.varname);
@@ -3093,16 +3029,16 @@ dynamic_var(token *t)
 		return 0;
 	}
 
+	/* if we were preceded by '=', set our value */
 	if (variable_write_enable) {
-		if (!pop(&a))
+		ldouble a;
+		if (!peek(&a))
 			return 0;
-		push(a);
 		v->value = a;
-		return 1;
 	} else {
 		push(v->value);
-		return 1;
 	}
+	return 1;
 }
 
 size_t stralnum(char *s, char **endptr)
@@ -3186,7 +3122,7 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 	} else if (*p == '_' && isalnum(*(p+1))) {
 		// variable
 		n = stralnum(p, nextp);
-		t->type = DYNVAR;
+		t->type = VARIABLE;
 		t->val.varname = strndup(p,n);
 	} else {
 
@@ -3860,20 +3796,11 @@ struct oper opers[] = {
 	{"avg", avg,		"Average stack to \"mark\", or entire stack if no mark" },
 	{""},
     {"Constants and storage (no operands):"},
-	{"store", store1,	0, 0 },
-	{"recall", recall1,	"Same as s1 and r1", Sym },
-	{"s1", store1,		0, 0 },
-	{"s2", store2,		0, 0 },
-	{"s3", store3,		0, 0 },
-	{"s4", store4,		0, 0 },
-	{"s5", store5,		"Save x off-stack (to 5 locations)", 0 },
-	{"r1", recall1,		0, Sym },
-	{"r2", recall2,		0, Sym },
-	{"r3", recall3,		0, Sym },
-	{"r4", recall4,		0, Sym },
-	{"r5", recall5,		"Fetch x (fetch or save, from infix)", Sym },
+	{"sto", store,		0, 0 },
+	{"rcl", recall,		"Save/fetch off-stack storage", Sym },
 	{"pi", push_pi,		"Push constant pi", Sym },
 	{"e", push_e,		"Push constant e", Sym },
+	{"_<name>", nop,	"Read or set a variable" },
 	{""},
     {"Unit conversions (one operand):"},
 	{"i2mm", units_in_mm,	0, 1, 26 },
@@ -3999,7 +3926,7 @@ main(int argc, char *argv[])
 		case NUMERIC:
 			result_push(t->val.val);
 			break;
-		case DYNVAR:
+		case VARIABLE:
 			dynamic_var(t);
 			break;
 		case SYMBOLIC:
@@ -4012,7 +3939,7 @@ main(int argc, char *argv[])
 			if (!suppress_autoprint && autoprint &&
 				(lasttoktype == OP ||
 				 lasttoktype == SYMBOLIC ||
-				 lasttoktype == DYNVAR) &&
+				 lasttoktype == VARIABLE) &&
 				opret == GOODOP) {
 				print_top(mode);
 			}
