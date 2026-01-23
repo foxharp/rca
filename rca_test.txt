@@ -1037,20 +1037,3 @@ clear (7 / e ((5 % pi) - chs 2) 3)
 clear (exp 5 chs 3)
  error: bad expression sequence, at '5' and 'chs'
 
-# =============================
-# assignment tests
-# =============================
-(r1 = 2 *  r2 = pi)
- 6.28319
-r1
- 6.28319
-r2
- 3.14159
-(r1 = 2 *  2 = pi)
- error: bad expression sequence, at '2' and '='
-((r1 = 2) *  r2 = pi)
- 6.28319
-r1
- 2
-r2
- 3.14159

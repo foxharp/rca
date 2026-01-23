@@ -171,7 +171,7 @@ struct oper opers[];
 struct token {
 	union {
 		ldouble val; // NUMERIC: simple value
-		oper *oper; // OP/SYMBOLIC/VARIABLE: points into opers table
+		oper *oper; // OP/SYMBOLIC points into opers table
 		char *varname; // DYNVAR: variable's name, malloced
 		char *str;  // UNKNOWN: points to input buffer, for error messages
 	} val;
@@ -186,14 +186,12 @@ struct token {
 #define SYMBOLIC 1
 #define OP 2
 #define EOL 3
-#define VARIABLE 4
 #define DYNVAR 5
 
 /* values for # of operands field in opers table */
 //  0 denotes a pseudo-op, i.e. it manipulates the calculator itself
 //  1 & 2 are used verbatim as operand counts
 #define Sym	-1	// a named number, like pi, or lastx
-#define Var	-2	// variable storage, like r1
 
 
 
@@ -2630,7 +2628,6 @@ sprint_token(char *s, int slen, token *t)
 		snprintf(s, slen, "'%.*Lg'", max_precision, t->val.val);
 		break;
 	case SYMBOLIC:
-	case VARIABLE:
 		snprintf(s, slen, "'%s'", t->val.oper->name);
 		break;
 	case DYNVAR:
@@ -2717,7 +2714,6 @@ prev_tok_was_operand(token *pt)
 {
 	return pt->type == NUMERIC ||
 		pt->type == SYMBOLIC ||
-		pt->type == VARIABLE ||
 		pt->type == DYNVAR ||
 		(pt->type == OP && pt->val.oper->func == close_paren);
 }
@@ -2767,7 +2763,7 @@ open_paren(void)
 		/* we delayed classifying the previous variable token
 		 * until we could tell if we were assigning or not.
 		 * we do it here. */
-		if (pt->type == VARIABLE || pt->type == DYNVAR) {
+		if (pt->type == DYNVAR) {
 			/* is it "r1 = 3" or "r1 + 3"? */
 			if (t->type == OP && t_op->func == assignment)
 				tpush(&oper_stack, pt);
@@ -2776,7 +2772,6 @@ open_paren(void)
 		}
 
 		switch (t->type) {
-		case VARIABLE:
 		case DYNVAR:
 			if (prev_tok_was_operand(pt)) {
 				expression_error(pt, t);
@@ -2878,8 +2873,7 @@ open_paren(void)
 				}
 
 				if (t_op->func == assignment) {
-					if (pt->type != VARIABLE &&
-					    pt->type != DYNVAR) {
+					if (pt->type != DYNVAR) {
 						expression_error(pt, t);
 						input_ptr = NULL;
 						return BADOP;
@@ -3240,8 +3234,6 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 				t->val.oper = op;
 				if (op->operands == Sym) // like "pi", "recall"
 					t->type = SYMBOLIC;
-				else if (op->operands == Var)
-					t->type = VARIABLE;
 				else
 					t->type = OP;
 				break;
@@ -3798,7 +3790,6 @@ struct oper opers[] = {
 //        |    |                +--------- help (if 0, shares next cmd's help)
 //        |    |                |  +------ # of operands (0 means none (pseudop),
 //        |    |                |  |        "Sym" -1 means none (named constant)
-//        |    |                |  |        "Var" -2 means none (recall, r1=r5)
 //        |    |                |  |  +--- operator precedence
 //        |    |                |  |  |         (# of operands and precedence
 //        V    V                V  V  V           used only by infix code)
@@ -3870,17 +3861,17 @@ struct oper opers[] = {
 	{""},
     {"Constants and storage (no operands):"},
 	{"store", store1,	0, 0 },
-	{"recall", recall1,	"Same as s1 and r1", Var },
+	{"recall", recall1,	"Same as s1 and r1", Sym },
 	{"s1", store1,		0, 0 },
 	{"s2", store2,		0, 0 },
 	{"s3", store3,		0, 0 },
 	{"s4", store4,		0, 0 },
 	{"s5", store5,		"Save x off-stack (to 5 locations)", 0 },
-	{"r1", recall1,		0, Var },
-	{"r2", recall2,		0, Var },
-	{"r3", recall3,		0, Var },
-	{"r4", recall4,		0, Var },
-	{"r5", recall5,		"Fetch x (fetch or save, from infix)", Var },
+	{"r1", recall1,		0, Sym },
+	{"r2", recall2,		0, Sym },
+	{"r3", recall3,		0, Sym },
+	{"r4", recall4,		0, Sym },
+	{"r5", recall5,		"Fetch x (fetch or save, from infix)", Sym },
 	{"pi", push_pi,		"Push constant pi", Sym },
 	{"e", push_e,		"Push constant e", Sym },
 	{""},
@@ -4011,7 +4002,6 @@ main(int argc, char *argv[])
 		case DYNVAR:
 			dynamic_var(t);
 			break;
-		case VARIABLE:
 		case SYMBOLIC:
 		case OP:
 			trace(( "invoking %s\n", t->val.oper->name));
@@ -4022,7 +4012,6 @@ main(int argc, char *argv[])
 			if (!suppress_autoprint && autoprint &&
 				(lasttoktype == OP ||
 				 lasttoktype == SYMBOLIC ||
-				 lasttoktype == VARIABLE ||
 				 lasttoktype == DYNVAR) &&
 				opret == GOODOP) {
 				print_top(mode);
