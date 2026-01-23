@@ -97,9 +97,9 @@ implementation of Dijkstra's "shunting yard" algorithm, and then
 executed as usual.) A single line of input can be a mix of RPN
 notation (unparenthesized) and complete infix expressions
 (parenthesized).  The infix expressions "escape" the RPN model, and
-are evaluated with fairly typical rules of precedence (see
-.B OPERATOR PRECEDENCE
-below).  All input number formats are accepted in infix, just as in RPN.
+are evaluated with fairly typical rules of precedence (see OPERATOR
+PRECEDENCE below).  All input number formats are accepted in infix,
+just as in RPN.
 .P
 All
 .B rca
@@ -111,13 +111,12 @@ the unary operators (i.e.,
 .BR ! x),
 and all of the comparison,
 logical, and bitwise operators.  Infix expressions result in a value pushed
-onto the stack.  For
-example, the expression
-.B (-3 + +5)
-will result in "2" being pushed
-on the stack.  When single operand operators appear in infix expressions, the
-operand will always follow the operator.  With two operand operators,
-one operand will appear on either side of the operator.  So exponentiation
+onto the stack.  For example,
+.B (-3 + 5)
+will push the value 2.
+With single operand operators, the
+operand will always follow the operator.  For two operand operators,
+one operand will be to either side of the operator.  Exponentiation
 would be written as
 .B ( 3 ** 2 )
 (producing 9 as a result) and
@@ -133,10 +132,16 @@ The
 operator can be used in an infix expression.  It returns the value of
 .I x
 (the top of stack) prior to the expression being invoked.
-Variables,named with leading
+Variables, named with leading
 .RB ' _ '
 (underscore), can be referenced for either reading or writing.
 See the SPECIAL VALUES AND VARIABLES section, below.
+.P
+Multiple expressions separated by
+.RB ' ; '
+(semicolon) can be enclosed in a single pair of parentheses.  The
+result of the parenthesized expression is the result of the last such
+sub-expression.
 .P
 If an error occurs during evaluation of an infix expression,
 evaluation will cease, and the stack will be left as it was at the
@@ -342,7 +347,7 @@ set 4 variables, _w, _l, _area, and _diagonal.
 .br
 and
 .br
-.B (_w=3) (_l=4) (_area=_l * _w) (_diagonal = sqrt (_w^2 + _l^2))
+.B (_w=3; _l=4; _area=_l * _w; _diagonal = sqrt (_w^2 + _l^2))
 .P
 Variables can be listed with
 .B variables
@@ -459,6 +464,7 @@ left to right.  (This list has no meaning for RPN.)
  \fR 12   \fB  &&
  \fR 13   \fB  ||
  \fR 14   \fB  =
+ \fR 15   \fB  ;
 
 
 .SH OPERATOR NOTES

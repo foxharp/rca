@@ -2646,6 +2646,26 @@ close_paren(void)
 	return BADOP;
 }
 
+opreturn
+semicolon(void)
+{
+	/* for infix:  similar to the comma operator in C:
+	 *     (y, x) discards y, returns x
+	 * so in RPN (perhaps less useful):
+	 *      y x ;  discards y (i.e., 2nd from top of stack), keeps x
+	 */
+	ldouble a, b;
+	if (pop(&b)) {
+		if (pop(&a)) {
+			push(b);
+			lastx = b;
+			return GOODOP;
+		}
+		push(b);
+	}
+	return BADOP;
+}
+
 boolean
 prev_tok_was_operand(token *pt)
 {
@@ -3748,7 +3768,7 @@ struct oper opers[] = {
 	{"xor", bitwise_xor,	"Bitwise AND, OR, and XOR of y and x", 2, 12 },
 	{"setb", setbit,	0, 2, 10 },
 	{"clearb", clearbit,	"Set and clear bit x in y", 2, 14 },
-	{"=", assignment,	"Assignment (to storage locations", 2, 1},
+	{"=", assignment,	"Assignment (to storage locations", 2, 2 },
 	{""},		// all-null entries cause blank line in output
     {"Numerical operators with one operand:"},
 	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 26 },
@@ -3773,11 +3793,12 @@ struct oper opers[] = {
 	{"frac", fraction,	0, 1, 26 },
 	{"int", integer,	"Absolute value, fractional and integer parts of x", 1, 26 },
 	{"(", open_paren,	0, 0, 28 },
-	{")", close_paren,	"Begin and end \"infix\" expression", 0},
+	{")", close_paren,	"Infix grouping", 0, 28},
+	{";", semicolon,	"Infix separator (in RPN, discards y)", 2, 1 },
 	{""},
     {"Logical operators (mostly two operands):"},
 	{"&&", logical_and,	0, 2, 4 },
-	{"||", logical_or,	"Logical AND and OR", 2, 2 },
+	{"||", logical_or,	"Logical AND and OR", 2, 3 },
 	{"==", is_eq,		0, 2, 6 },
 	{"!=", is_neq,		0, 2, 6 },
 	{"<", is_lt,		0, 2, 8 },

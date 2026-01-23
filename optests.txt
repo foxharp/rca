@@ -270,4 +270,13 @@ vars
  _l2                   4
  _w                    3
  _w2                   3
-
+(;_w2 = 3 )
+ error: bad expression sequence, at '(' and ';'
+(_w2 ; = 3 )
+ error: bad expression sequence, at ';' and '='
+(_w2 = ; 3 )
+ error: bad expression sequence, at '=' and ';'
+(_w2 = sin 30)
+ 0.5
+(_w2 = sin;30)
+ error: bad expression sequence, at 'sin' and ';'
