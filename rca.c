@@ -170,9 +170,10 @@ struct oper opers[];
 /* tokens are typed -- currently numbers, operators, symbolic, and line-ends */
 struct token {
 	union {
-		ldouble val;
-		oper *oper;
-		char *str;
+		ldouble val; // NUMERIC: simple value
+		oper *oper; // OP/SYMBOLIC/VARIABLE: points into opers table
+		char *varname; // DYNVAR: variable's name, malloced
+		char *str;  // UNKNOWN: points to input buffer, for error messages
 	} val;
 	int type;
 	int alloced;
@@ -186,6 +187,7 @@ struct token {
 #define OP 2
 #define EOL 3
 #define VARIABLE 4
+#define DYNVAR 5
 
 /* values for # of operands field in opers table */
 //  0 denotes a pseudo-op, i.e. it manipulates the calculator itself
@@ -254,7 +256,7 @@ ldouble lastx;
 
 /* for store/recall */
 ldouble offstack[5];
-int offstack_writeable;
+int variable_write_enable;
 
 /* where input is coming from currently */
 static char *input_ptr = NULL;
@@ -454,7 +456,7 @@ assignment(void)
 	 * a recall (i.e. any of r1, r2, ...) happens as the very
 	 * next oper, it will do a write to offstack storage instead
 	 * of a read.*/
-	offstack_writeable = 2;
+	variable_write_enable = 2;
 	return GOODOP;
 }
 
@@ -2173,7 +2175,7 @@ store_any(int loc)
 opreturn
 recall_any(int loc)
 {
-	if (offstack_writeable)
+	if (variable_write_enable)
 		return store_any(loc);
 
 	push(offstack[loc - 1]);
@@ -2613,6 +2615,8 @@ tclear(token **tstackp)
 
 	while (t) {
 		nt = t->next;
+		if (t->type == VARIABLE && t->val.varname)
+			free(t->val.varname);
 		free(t);
 		t = nt;
 	}
@@ -2628,6 +2632,9 @@ sprint_token(char *s, int slen, token *t)
 	case SYMBOLIC:
 	case VARIABLE:
 		snprintf(s, slen, "'%s'", t->val.oper->name);
+		break;
+	case DYNVAR:
+		snprintf(s, slen, "'%s'", t->val.varname);
 		break;
 	case OP:
 		snprintf(s, slen, "'%s'", t->val.oper->name);
@@ -2711,6 +2718,7 @@ prev_tok_was_operand(token *pt)
 	return pt->type == NUMERIC ||
 		pt->type == SYMBOLIC ||
 		pt->type == VARIABLE ||
+		pt->type == DYNVAR ||
 		(pt->type == OP && pt->val.oper->func == close_paren);
 }
 
@@ -2756,7 +2764,10 @@ open_paren(void)
 			goto cleanup;
 		}
 
-		if (pt->type == VARIABLE) {
+		/* we delayed classifying the previous variable token
+		 * until we could tell if we were assigning or not.
+		 * we do it here. */
+		if (pt->type == VARIABLE || pt->type == DYNVAR) {
 			/* is it "r1 = 3" or "r1 + 3"? */
 			if (t->type == OP && t_op->func == assignment)
 				tpush(&oper_stack, pt);
@@ -2766,6 +2777,7 @@ open_paren(void)
 
 		switch (t->type) {
 		case VARIABLE:
+		case DYNVAR:
 			if (prev_tok_was_operand(pt)) {
 				expression_error(pt, t);
 				input_ptr = NULL;
@@ -2806,7 +2818,9 @@ open_paren(void)
 						return BADOP;
 					}
 
-					if (tp_op->func == open_paren)
+					/* might be a DYNVAR */
+					if (tp->type == OP &&
+						tp_op->func == open_paren)
 						break;
 
 					tpush(&out_stack, tpop(&oper_stack));
@@ -2864,7 +2878,8 @@ open_paren(void)
 				}
 
 				if (t_op->func == assignment) {
-					if (pt->type != VARIABLE) {
+					if (pt->type != VARIABLE &&
+					    pt->type != DYNVAR) {
 						expression_error(pt, t);
 						input_ptr = NULL;
 						return BADOP;
@@ -3020,6 +3035,82 @@ quit(void)
 	return GOODOP; // not reached
 }
 
+typedef struct {
+    ldouble value;
+    char *name;
+} dynvar;
+
+#define NVAR 50
+dynvar variables[NVAR];
+
+int
+comparevars(const void *a, const void *b)
+{
+	dynvar *va = (dynvar *)a;
+	dynvar *vb = (dynvar *)b;
+
+	return strcmp(va->name, vb->name);
+}
+
+opreturn
+showvars(void)
+{
+	dynvar *v;
+
+	for (v = variables; v->name; v++)
+		/* count the variables */;
+
+	qsort(variables, v - variables, sizeof(*v), comparevars);
+
+	for (v = variables; v->name; v++) {
+		printf("%-20s ", v->name);
+		print_n(&v->value, mode, 0);
+	}
+	return GOODOP;
+}
+
+dynvar *
+findvar(char *name)
+{
+	dynvar *v;
+	for (v = variables; v->name && v < variables + NVAR-1; v++) {
+		if (strcmp(name, v->name) == 0) {
+			return v;
+		}
+	}
+	if (v < variables + NVAR-1) {
+		v->name = strdup(name);
+		return v;
+	}
+	return 0;
+}
+
+int
+dynamic_var(token *t)
+{
+	ldouble a;
+	dynvar *v;
+
+	v = findvar(t->val.varname);
+	free(t->val.varname);
+	t->val.varname = 0;
+	if (!v) {
+		error(" error: out of space for variables\n");
+		return 0;
+	}
+
+	if (variable_write_enable) {
+		if (!pop(&a))
+			return 0;
+		push(a);
+		v->value = a;
+		return 1;
+	} else {
+		push(v->value);
+		return 1;
+	}
+}
+
 size_t stralnum(char *s, char **endptr)
 {
 	char *ns = s;
@@ -3033,6 +3124,7 @@ int
 parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 {
 	int sign = 1;
+	int n;
 
 	if (parsing_rpn && (*p == '+' || *p == '-')) {
 		/* In RPN, be sure + and - are bound closely to
@@ -3097,8 +3189,12 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 			goto unknown;
 		t->type = NUMERIC;
 		t->val.val = dd * sign;
+	} else if (*p == '_' && isalnum(*(p+1))) {
+		// variable
+		n = stralnum(p, nextp);
+		t->type = DYNVAR;
+		t->val.varname = strndup(p,n);
 	} else {
-		int n;
 
 	    is_oper:
 		if (isalpha(*p)) {
@@ -3702,7 +3798,7 @@ struct oper opers[] = {
 //        |    |                +--------- help (if 0, shares next cmd's help)
 //        |    |                |  +------ # of operands (0 means none (pseudop),
 //        |    |                |  |        "Sym" -1 means none (named constant)
-//        |    |                |  |        "Var" -2 means none (FIXME
+//        |    |                |  |        "Var" -2 means none (recall, r1=r5)
 //        |    |                |  |  +--- operator precedence
 //        |    |                |  |  |         (# of operands and precedence
 //        V    V                V  V  V           used only by infix code)
@@ -3850,6 +3946,8 @@ struct oper opers[] = {
 	{"?", help,		0 },
 	{"help", help,		"Show this list (using $PAGER, if set)" },
 	{"precedence", precedence, "List infix operator precedence" },
+	{"vars", showvars, 0},
+	{"variables", showvars, "Show the current list of variables" },
 	{"quit", quit,		0 },
 	{"q", quit,		0 },
 	{"exit", quit,		"Leave the calculator" },
@@ -3892,7 +3990,7 @@ main(int argc, char *argv[])
 	while (1) {
 
 		// use up tokens created by infix processing first */
-		if (tpeek(&infix_rpn_queue) && (t = tpop(&infix_rpn_queue))) {
+		if ((t = tpop(&infix_rpn_queue))) {
 			tok = *t;
 			free(t);
 			freeze_lastx();
@@ -3910,20 +4008,22 @@ main(int argc, char *argv[])
 		case NUMERIC:
 			result_push(t->val.val);
 			break;
+		case DYNVAR:
+			dynamic_var(t);
+			break;
 		case VARIABLE:
 		case SYMBOLIC:
 		case OP:
 			trace(( "invoking %s\n", t->val.oper->name));
 			opret = (t->val.oper->func) ();
-			if (offstack_writeable)
-				offstack_writeable--;
 			break;
 		case EOL:
                         pending_flush();
 			if (!suppress_autoprint && autoprint &&
 				(lasttoktype == OP ||
 				 lasttoktype == SYMBOLIC ||
-				 lasttoktype == VARIABLE) &&
+				 lasttoktype == VARIABLE ||
+				 lasttoktype == DYNVAR) &&
 				opret == GOODOP) {
 				print_top(mode);
 			}
@@ -3934,6 +4034,8 @@ main(int argc, char *argv[])
 			error(" error: unrecognized input '%s'\n", t->val.str);
 			break;
 		}
+		if (variable_write_enable)
+			variable_write_enable--;
 
 		lasttoktype = t->type;
 

@@ -315,34 +315,57 @@ ignored, as a convenience for doing arithmetic on copy/pasted data.
 If the locale isn't configured, then for this purpose only these
 symbols will be set to defaults of '$', and ',', respectively.
 
-.SH SPECIAL VALUES
+.SH SPECIAL VALUES AND VARIABLES
 The
 .B pi
 and
 .B e
 operators push the obvious constants onto the stack.
 
-The
+In the HP tradition, the
 .B s1
 through
 .B s5
 operators copy
 .I x
 to one of 5 off-stack storage locations (without
-disturbing the stack).  The
+disturbing the stack).
 .B r1
 through
 .B r5
-operators recall those values, pushing them onto the stack, and can
-be used in infix expressions to read or write those locations.
-.RB ( store
-is synonymous with
+recall those values, pushing them onto the stack.  They can also
+be used in infix expressions to read or write those locations:
+.B (r1 **
+.B 2)
+or
+.B (r1 =
+.BR 17) .
+The
+.B store
+command is synonymous with
 .BR s1 ,
 and
 .B recall
 with
 .BR r1 .)
 
+Variables have names that start with underscore, like
+.B _myvar
+or
+.BR _a .
+Variables are created dynamically on first reference.  They cannot
+be deleted.  These two sequences are equivalent:
+.br
+.B 3=_w 4=_l * =_area  _l 2 ^ _w 2 ^ + sqrt =_diagonal
+.br
+and
+.br
+.B (_w=3) (_l=4) (_area=_l * _w) (_diagonal = sqrt (_w^2 + _l^2))
+.P
+Variables can be listed with
+.B variables
+or
+.BR vars .
 .SH CONFIGURATION
 .B rca
 doesn't read a configuration file on startup.  Instead,
