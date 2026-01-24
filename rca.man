@@ -67,8 +67,8 @@ and comparators
 .RB ( == ,
 .BR !=,
 .BR <=,
-etc).  There are also unit conversions available (e.g.,
-.BR i2mm ,
+etc).  There are also unit conversions available
+.RB ( i2mm ,
 .BR oz2g ,
 .BR f2c ,
 and more).
@@ -81,16 +81,16 @@ sometimes referred to in the documentation as
 .I x
 and
 .IR y ,
-but not literally within the program itself, with one exception:  the
+but not literally within the program itself with one exception:  the
 .B lastx
-or (
+(or
 .BR lx )
 operator returns the value that was at the top of stack just previous to the
 most recently executed operator.
 
 .SH INFIX NOTATION
 .B rca
-supports infix (i.e., traditional, normal) expressions.  Such
+supports infix (i.e., traditional, "normal") expressions.  Such
 expressions must be fully enclosed in parentheses, and cannot cross to
 a new line.  (Infix expressions are translated to RPN by an
 implementation of Dijkstra's "shunting yard" algorithm, and then
@@ -109,21 +109,20 @@ the unary operators (i.e.,
 .BR + x
 .BR ~ x
 .BR ! x),
-and all of the comparison,
-logical, and bitwise operators.  Infix expressions result in a value pushed
-onto the stack.  For example,
+and all of the comparison, logical, and bitwise operators.  Infix
+expressions result in a value pushed onto the stack:
 .B (-3 + 5)
-will push the value 2.
-With single operand operators, the
+will push the value 2.  With single operand operators, the
 operand will always follow the operator.  For two operand operators,
 one operand will be to either side of the operator.  Exponentiation
 would be written as
-.B ( 3 ** 2 )
-(producing 9 as a result) and
-.B (0 setb 3)
-will give 8.  The expression
+.B ( 3 ** 2
+.BR ) ,
+(giving 9), and bit-setting as
+.B (2 setb 3)
+(giving 10).  The expression
 .B (sin 180 == cos 90)
-has the value 1, i.e. "true".
+yields the value 1, i.e. "true".
 .P
 The
 .B lastx
@@ -131,10 +130,16 @@ The
 .BR lx )
 operator can be used in an infix expression.  It returns the value of
 .I x
-(the top of stack) prior to the expression being invoked.
-Variables, named with leading
+(i.e., the top of stack) prior to the expression being invoked.
+.P
+Variables, named with a leading
 .RB ' _ '
-(underscore), can be referenced for either reading or writing.
+(underscore), like
+.BR _a ,
+.BR _tmp ,
+or
+.BR _my_var .
+can be referenced for either reading or writing.  (Variab
 See the SPECIAL VALUES AND VARIABLES section, below.
 .P
 Multiple expressions separated by
@@ -148,8 +153,8 @@ evaluation will cease, and the stack will be left as it was at the
 point of the error.
 .SH OPERATING MODES
 .B rca
-can be configured into two modes of operation:  floating point (the default)
-using the
+can be configured into two main modes of operation:  floating point
+(the default) using the
 .B F
 command, and integer, using one of
 .B D
@@ -163,7 +168,7 @@ command, and integer, using one of
 .B B
 (binary).
 
-The difference between the various integer modes lies mainly in how
+The difference between the various integer modes lies in how
 values are displayed by default, but floating point differs
 in a few additional ways.  Most math is done in long double,
 regardless of mode, but in integer mode all stack values are masked to
@@ -179,7 +184,7 @@ mode.)
 .SS Floating point
 In floating point mode (i.e.,
 .B F
-mode, all operations use the full size of long double.  Printing can
+mode), all operations use the full size of long double.  Printing can
 be controlled by either the
 .B precision
 .RB ( k )
@@ -208,11 +213,13 @@ value is set based on this limit (18 digits for most modern PC
 architectures), and can't be raised above it.  However, if viewing %f
 output (by choosing a
 .B decimals
+.RB ( K )
 value), it's easy to start seeing "unclean" bits if the magnitude of
 the number grows beyond the number of significant digits.  The numbers
 are really big at that point:  over 1e19 on a modern system.  Use
-.BR precision
-display mode to select "smart" printing, which will hide insignificant
+.B precision
+.RB ( k )
+display to select "smart" printing, which will hide insignificant
 digits.
 
 Because floating point is inherently inexact, values are sometimes
@@ -309,8 +316,8 @@ command will be missing entirely.)
 
 On input, the locale's currency symbol and thousands separator will be
 ignored, as a convenience for doing arithmetic on copy/pasted data.
-If the locale isn't configured, then for this purpose only these
-symbols will be set to defaults of '$', and ',', respectively.
+If the locale isn't configured, then for the purpose of input stripping
+only, these symbols will be set to defaults of '$', and ',', respectively.
 
 .SH SPECIAL VALUES AND VARIABLES
 The
@@ -333,20 +340,31 @@ largely superceded by
 .B rca
 variables.
 
-Variables have names that start with underscore, like
-.B _myvar
-or
-.BR _a .
-Variables are created dynamically on first reference.  They cannot
-be deleted.  To write to a variable in RPN, the "assign to" operator
+Variables are created dynamically (with a value of 0) on first
+reference, either by assigning a value (
+.B _var =
+.BR 42 ),
+or by using it (
+.B _var +
+.BR 17 ).
+Variables' names must start with an underscore character.  Variables cannot
+be deleted.  In RPN, simply naming the variable will push its value to the
+stack.  To write to a variable in RPN, the "assign to" operator
 .RB ( = )
-must prefix the variable name.  These two sequences are equivalent.  Both
-set 4 variables, _w, _l, _area, and _diagonal.
+must be used immediately before naming the variable.  If
+.B =
+is not follwed by a variable name, it's a no-op.  (This is the only
+"stateful" RPN operation.)
+.P
+The following two sequences are equivalent.
+Both set 4 variables: _w, _l, _area, and _diagonal.
 .br
-.B 3 = _w 4=_l * =_area  _l 2 ^ _w 2 ^ + sqrt =_diagonal
+.ti +4n
+.B 3=_w 4=_l * = _area  _l 2 ^ _w 2 ^ + sqrt = _diagonal
 .br
 and
 .br
+.ti +4n
 .B (_w=3; _l=4; _area=_l * _w; _diagonal = sqrt (_w^2 + _l^2))
 .P
 Variables can be listed with
@@ -359,7 +377,7 @@ doesn't read a configuration file on startup.  Instead,
 commands are read from the environment variable
 .BR RCA_INIT ,
 and from any command line arguments.  Initial conditions can be
-established by either of those methods.  Printed output from
+established by either method.  Printed output from
 commands run from $RCA_INIT is suppressed.
 
 The commands that control
@@ -415,7 +433,7 @@ explicitly set that value.
 forces
 .B rca
 to exit on any subsequent error.  Normally errors which result from
-user input are reported, but operation continues.
+user input are reported, but operation continues.  (Startup: disabled)
 .RE
 
 All of the listed commands will print a confirmation message, but to
@@ -430,8 +448,7 @@ or
 gives a complete list of operators/commands.
 If $PAGER is set in the environment, the shell command it names will
 be used to display the help text.  (The command must read the text
-from standard input.) Otherwise the text will be output directly to the
-terminal.
+from standard input.)  Otherwise the text will be sent directly to stdout.
 
 The
 .B state
@@ -530,9 +547,8 @@ take and return angles in degrees by default.
 will switch them to radians, and
 .B 1 degrees
 will switch them back.  Also, the
-.BR deg2rad / rad2deg
+.BR d2r / r2d
 operators convert the angle units directly.
-Trig operations aren't allowed in integer mode, since they'd make no sense.
 .P
 Bitwise operations
 .RB ( ~
@@ -544,10 +560,10 @@ Bitwise operations
 .BR clearb ,
 .B and
 .BR setb )
-convert their operands to integer first, regardless of mode.  These
-operations will (as might be expected) discard fractional parts, and
+convert their operands to integer first, regardless of mode.  As might
+be expected, these operations will discard fractional parts, and
 may discard significant digits, including the sign of the value.  Bitwise
-operations will not execute, and cause an error, if either operand
+operations will not execute, and will cause an error, if either operand
 will not fit in a
 .I long
 .IR long .
@@ -577,11 +593,9 @@ will cause a later
 to include the current top N values,
 plus any more values that have been pushed prior to the sum.
 N cannot be greater than the length of the stack.
-.RB " 0
-.BR mark "
+.B 0 mark
 will cause only subsequent pushes to be summed/averaged.
-.RB " -1
-.BR mark "
+.B -1 mark
 will clear the mark.
 .B sum
 and
@@ -654,8 +668,9 @@ to that integer.  Then, values are decimal-rounded to
 maximum precision (again, usually 18 digits).  This rounding/snapping
 behavior can be disabled with the
 .B 0 rounding
-command, but be warned:  simple equalities, like (1.2 * 3 == 3.6) may
-no longer hold true.  Using the
+command, but be warned:  simple equalities, like
+.B (1.2 * 3 == 3.6)
+may no longer hold true.  Using the
 .B r
 and
 .B R

@@ -1,32 +1,31 @@
 
 # _rca_: a rich/RPN calculator
 
-_rca_ is simple yet versatile.
+_rca_ is simple yet versatile
 
- - it's a reverse polish notation calculator in the HP tradition
+ - It's a reverse polish notation calculator in the HP tradition
 
- - it can seamlessly evaluate infix-style expressions
+ - It seamlessly evaluates infix-style expressions
 
- - it can run in floating point or integer modes
+ - It runs in either floating point or integer mode
 
- - it has the trig and math functions expected in a scientific
-    calculator
+ - It has the trig and math functions of a scientific calculator
 
- - it has the word width selection and bitwise operators expected
-    in a programmer's calculator
+ - It has the word width selection and bitwise operators of a<br>
+   programmer's calculator
 
- - it's trivially incorporated into shell scripts
+ - It supports variables
 
- - it's written in C, and maintained in a single source file
+ - It can be trivially incorporated into shell scripts
 
- - it's _not_ an arbitrary precision calculator like __dc__ or
-   __bc__, it just does the best it can using the C math library
+ - It's written in C, and maintained in a single source file
 
-
+ - _rca_ isn't an an arbitrary precision calculator like __dc__ or __bc__.<br>
+   It's a convenient, non-programmable, desktop calculator, for<br>
+   typical one-off, everyday problems.
 
 The
 [man page](html/rca-man.html)
 and rca's
 [help text](html/rca-help.html)
 have all the details.
-
