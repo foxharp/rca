@@ -2745,12 +2745,6 @@ open_paren(void)
 				}
 				// Process until matching opening paren
 				while ((tp = tpeek(&oper_stack))) {
-					if (tp == NULL) {
-						error(" error: missing parentheses?\n");
-						return BADOP;
-					}
-
-					/* might be a VARIABLE */
 					if (tp->type == OP &&
 						tp_op->func == open_paren)
 						break;
@@ -2773,10 +2767,15 @@ open_paren(void)
 					input_ptr = NULL;
 					return BADOP;
 				}
-				while ((tp = tpeek(&oper_stack)) &&
-					(tp_op->func != open_paren) &&
-					(tp_op->prec > t_op->prec))
-				{
+				while ((tp = tpeek(&oper_stack))) {
+
+					if (tp->type == OP) {
+						if (tp_op->func == open_paren)
+							break;
+						if (tp_op->prec <= t_op->prec)
+							break;
+					}
+
 					tpush(&out_stack, tpop(&oper_stack));
 				}
 				tpush(&oper_stack, t);
@@ -2825,15 +2824,20 @@ open_paren(void)
 					return BADOP;
 				}
 
-				// Handle binary operators
-				while ((tp = tpeek(&oper_stack)) &&
-					(tp_op->func != open_paren) &&
-					(tp_op->prec >= t_op->prec))
-				{
-					/* a ** b is right-associative */
-					if (tp_op->prec == t_op->prec &&
-					    tp_op->func == y_to_the_x)
+				while ((tp = tpeek(&oper_stack))) {
+
+					if (tp->type == OP) {
+					   if (tp_op->func == open_paren)
 						break;
+
+					   if (tp_op->prec < t_op->prec)
+						break;
+
+					   /* a ** b is right-associative */
+					   if (tp_op->prec == t_op->prec &&
+					           tp_op->func == y_to_the_x)
+						break;
+					}
 
 					tpush(&out_stack, tpop(&oper_stack));
 				}
