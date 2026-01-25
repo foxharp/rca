@@ -717,7 +717,7 @@ into the shell is straightforward:
 .CODE
 
 # This shell snippet gives simple access to rca's floating point
-# capability from a POSIX shell.
+# capability from a POSIX shell.  Use it with "source rca_float".
 #
 # After including this code, use lines like this to calculate:
 #       foo=$(fe "$bar * pi")
@@ -731,8 +731,9 @@ export RCA_INIT="3decimals 0separators 1errorexit ${RCA_INIT:-}"
 
 _rca_run()    # support routine
 {
-    local output=$(rca "( $* )" q)
-    local exitcode=$?
+    local output exitcode
+    output=$(rca "$*" q)
+    exitcode=$?
 
     case $exitcode in
     0|1)
@@ -746,13 +747,13 @@ _rca_run()    # support routine
 
 fe()    # Evaluate a floating point expression.
 {
-    _rca_run "$*"
+    _rca_run "( $* )"
     return 0
 }
 
 fc()     # Evaluate a floating point conditional expression.
 {
-    _rca_run "$*" >/dev/null
+    _rca_run "( $* )" >/dev/null
 }
 
 .ENDCODE

@@ -2,15 +2,10 @@
 # This shell snippet gives simple access to rca's floating point
 # capability from a POSIX shell.  Use it with "source rca_float".
 #
-# After including this code, calculate with infix notation lines like this:
+# After including this code, use lines like this to calculate:
 #       foo=$(fe "$bar * pi")
 # or like this for a conditional expression:
 #       if fc "(10 * 3) < $foo"; then ...
-#
-# These helpers are set up for infix notation:  they provide the outer
-# parentheses that rca expects.  Modifying for RPN would be trivial,
-# but for just occasional RPN, simply use "reverse parentheses":
-#       data="1 2 5 10 -4"; average=$(fe " ) $data avg ( ")
 #
 # Use RCA_INIT to set common initial conditions.  Defaults are
 # provided here, but values set externally will override.
@@ -20,7 +15,7 @@ export RCA_INIT="3decimals 0separators 1errorexit ${RCA_INIT:-}"
 _rca_run()    # support routine
 {
     local output exitcode
-    output=$(rca "( $* )" q)
+    output=$(rca "$*" q)
     exitcode=$?
 
     case $exitcode in
@@ -35,12 +30,18 @@ _rca_run()    # support routine
 
 fe()    # Evaluate a floating point expression.
 {
-    _rca_run "$*"
+    _rca_run "( $* )"
     return 0
 }
 
 fc()     # Evaluate a floating point conditional expression.
 {
-    _rca_run "$*" >/dev/null
+    _rca_run "( $* )" >/dev/null
+}
+
+fe_rpn()    # Evaluate an RPN expression.  (Useful for "sum", or "avg".)
+{
+    _rca_run "$*"
+    return 0
 }
 
