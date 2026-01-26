@@ -79,7 +79,7 @@ char *licensetext[] = {
 #include <readline/history.h>
 #endif
 
-/* these libraries reportedly support %' for adding commas to %d, %f, etc */
+/* libraries that reportedly support %' for adding commas to %d, %f, etc */
 #if defined(__GLIBC__) || defined(__APPLE__)
 # define PRINTF_SEPARATORS 1
 #else
@@ -148,37 +148,35 @@ int stack_mark;
 /* for catching infix bugs */
 int infix_stacklevel;
 
-
 /* all user input is either a number or a command operator.
  * this is how operators are looked up, by name
  */
-typedef struct token token;
-typedef struct oper oper;
 typedef opreturn(*opfunc) (void);
 
-struct oper {
+/* operator routines */
+typedef struct oper {
 	char *name;
 	opfunc func;
 	char *help;
 	int operands;	/* used only by infix code */
 	int prec;	/* used only by infix code */
-};
+} oper;
 
 /* operator table */
 struct oper opers[];
 
 /* tokens are typed -- currently numbers, operators, symbolic, and line-ends */
-struct token {
+typedef struct token {
 	union {
-		ldouble val; // NUMERIC: simple value
-		oper *oper; // OP/SYMBOLIC points into opers table
-		char *varname; // VARIABLE: variable's name, malloced
-		char *str;  // UNKNOWN: points to input buffer, for error messages
+		ldouble val;   /* NUMERIC: simple value */
+		oper *oper;    /* OP or SYMBOLIC points into opers table */
+		char *varname; /* VARIABLE: variable's name, malloced */
+		char *str;     /* UNKNOWN: points to input buffer, for errors */
 	} val;
 	int type;
-	int alloced;
-	struct token *next;  /* for stacking tokens when infix processing */
-};
+	int alloced;	    /* should this token be freed or not? */
+	struct token *next; /* for stacking tokens when infix processing */
+} token;
 
 /* values for token type */
 #define UNKNOWN -1
@@ -188,16 +186,16 @@ struct token {
 #define EOL 3
 #define VARIABLE 4
 
-/* values for # of operands field in opers table */
-//  0 denotes a pseudo-op, i.e. it manipulates the calculator itself
-//  1 & 2 are used verbatim as operand counts
-#define Sym	-1	// a named number, like pi, or lastx
+/* values for # of operands field in opers table:
+ *  1 & 2 are used verbatim as operand counts
+ *  0 denotes a pseudo-op, i.e. it manipulates the calculator itself
+ * -1 means a "named number", like pi, or lastx */
+#define Sym	-1
 
 
-
-/* 7 major modes:  float, decimal, unsigned, hex, octal, binary, raw
- * float.  all but float and raw float are integer modes.  "raw float"
- * is really just a debug mode:  it uses the printf %a format.
+/* 7 major modes:  float, decimal, unsigned, hex, octal, binary, and raw
+ * float.  all but float and raw float are integer modes.
+ * (raw float is a debug mode:  it uses the printf %a format)
  */
 int mode = 'F';			/* 'F', 'D', 'U', 'H', 'O', 'B', 'R' */
 boolean floating_mode(int m) { return (m == 'F' || m == 'R'); }
@@ -208,30 +206,28 @@ boolean exit_on_error = FALSE;
 /* if true, print the top of stack after any line that ends with an operator */
 boolean autoprint = TRUE;
 
-/* to temporarily suppress autoprint, e.g., right after printing */
+/* if true, temporarily suppress autoprint, e.g., right after printing */
 boolean suppress_autoprint = FALSE;
 
-/* informative feedback is only printed if the command generating it
- * is followed by a newline */
+/* informative feedback, which is only printed if the command generating
+ * it is followed by a newline */
 void pending_printf(const char *fmt, ...);
 
 /* if true, will decorate numbers, like "1,333,444".  */
 boolean digitseparators = PRINTF_SEPARATORS;
 
-/* Floating point precision.  This may become either the total
- * displayed precision, or the number of digits after the decimal,
- * depending on float_specifier
- */
+/* float_digits may represent either the total displayed precision, or
+ * the number of digits after the decimal, depending on
+ * float_specifier.  it will be capped at max_precision, whose true
+ * value is calculated at startup.  */
 int float_digits = 6;
-int max_precision = 18;  // true value calculated at startup
-int float_specifier = 'g';	/* 'f' or 'g' */
+int max_precision = 18;
+int float_specifier = 'g';  // 'f' or 'g'
 char *format_string;
 
-/* is there a pre-defined name for this? */
 #define LONGLONG_BITS (sizeof(long long) * 8)
 
-/* These all help limit the word size to anything we want.
- */
+/* these all help limit the word size to anything we want.  */
 int max_int_width;
 int int_width;
 long long int_sign_bit;
@@ -242,20 +238,21 @@ long long int_min;
 /* this is used to control floating point error */
 long double epsilon;
 
-/* allow parsing of floating hex format (e.g.  -0x8.0p-63).  enabled
- * after first use of floating hex output (with "r" or "R") */
+/* we don't allow parsing of floating hex input (e.g., -0x8.0p-63) by
+ * default, to avoid confusion.  it's enabled after the first use of
+ * floating hex output (with "r" or "R") */
 boolean raw_hex_input_ok;
 
-/* perform snapping and rounding of float values */
+/* if true, perform snapping and rounding of float values */
 boolean do_rounding = 1;
 
 /* the most recent top-of-stack */
 ldouble lastx;
 
-/* allow variables to be read/write */
+/* state variable used to allow variables to be read/write */
 int variable_write_enable;
 
-/* where input is coming from currently */
+/* where program input is coming from currently */
 static char *input_ptr = NULL;
 
 int parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn);
@@ -279,17 +276,6 @@ error(const char *fmt, ...)
 
 	if (exit_on_error)
 		exit(4);
-}
-
-long long
-sign_extend(ldouble a)
-{
-	long long b = a;
-
-	if (int_width == LONGLONG_BITS)
-		return b;
-	else
-		return b | (0 - (b & int_sign_bit));
 }
 
 void
@@ -377,6 +363,17 @@ tweak_float(ldouble x)
 
 }
 
+long long
+sign_extend(ldouble a)
+{
+	long long b = a;
+
+	if (int_width == LONGLONG_BITS)
+		return b;
+	else
+		return b | (0 - (b & int_sign_bit));
+}
+
 void
 push(ldouble n)
 {
@@ -430,7 +427,7 @@ pop(ldouble *f)
 	}
 	*f = p->val;
 	stack = p->next;
-	trace((" popped  %Lg\n", p->val)); //, (long long)(p->val)));
+	trace((" popped  %Lg\n", p->val));
 	free(p);
 	stack_count--;
 
@@ -450,7 +447,7 @@ opreturn
 assignment(void)
 {
 	/* This gets decremented with every RPN token executed.  If a
-	 * variable is the very next oper, we'll do a write to it
+	 * variable is the very next token, we'll do a write to it
 	 * instead of a read. */
 	variable_write_enable = 2;
 	return GOODOP;
@@ -571,7 +568,6 @@ bothfinite(ldouble a, ldouble b)
 	if (isfinite(a) && isfinite(b))
 		return 1;
 
-	// nan is more insidious than inf, so propagate it if present
 	if (isnan(a)) {
 		push(a);
 		return 0;
@@ -620,7 +616,7 @@ rshift(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			unsigned long long i;  // want logical shift, not arithmetic
+			unsigned long long i;
 			long long j;
 
 			if (!bothfinite(a, b))
@@ -629,6 +625,7 @@ rshift(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
+			// use unsigned for a logical, not arithmetic, shift
 			i = (unsigned long long)a;
 			j = (long long)b;
 			if (j < 0) {
@@ -1459,7 +1456,7 @@ putbinary2(int width, long long mask, unsigned long long n)
 void
 putbinary(long long n)
 {
-	// mode can be float but we can print in binary
+	/* mode may be float but we can still print in binary */
 	if (floating_mode(mode))	// no masking in float mode
 		putbinary2(max_int_width, ~0, (unsigned long long)n);
 	else
@@ -1550,11 +1547,12 @@ print_floating(ldouble n, int format)
 		raw_hex_input_ok = TRUE;
 
 		/* NB:  this printing format is accurate and exact,
-		 * but may vary from machine to machine because printf
-		 * may canonicalize the mantissa differently depending
-		 * on hardware or who knows what.  There can be at
-		 * least 4 different combinations of first digit and
-		 * exponent that all represent the same number.  */
+		 * but there can be at least 4 different combinations
+		 * of first digit and exponent that all represent the
+		 * same number.  so what is printed may vary from
+		 * machine to machine because printf may canonicalize
+		 * the mantissa differently.  */
+
 		// 1 digit per 4 bits, and 1 of them is before the decimal
 		printf("%.*La\n", (LDBL_MANT_DIG + 3)/4 - 1, n);
 
@@ -1624,24 +1622,20 @@ print_n(ldouble *np, int format, boolean conv)
 	/* this is a little messy.  this is the general "print a
 	 * number" routine, but because it's called at the deep end of
 	 * a recursive loop when printing a stack, it also gets
-	 * saddled for converting values on the stack.  the conversion
-	 * needs to happen when switching from float mode to an
-	 * integer mode:  values need to be masked and sign extended
-	 * (if word length is less than native), and we need to do it
-	 * here so we can print a message about the conversion
-	 * alongside the converted value.
-	 */
-
+	 * saddled for doing float to int conversion of values on the
+	 * stack.  the conversion needs to happen when switching from
+	 * float mode to an integer mode:  values need to be masked
+	 * and sign extended (if word length is less than native), and
+	 * we need to do it here so we can print a message about the
+	 * conversion alongside the converted value.  */
 
 	/* check for integer masking, and optionally modify the original.
 	 * we'll do that if we're changing modes, but not if we're just
-	 * printing in another mode's format.
-	 */
+	 * printing in another mode's format.  */
 	changed = check_int_truncation(&n, conv);
 
 	/* mode can be float but we can still print in hex, binary
-	 * format, etc
-	 */
+	 * format, etc */
 	switch (format) {
 	case 'H':
 		ln = (long long)n & mask;
@@ -1659,8 +1653,8 @@ print_n(ldouble *np, int format, boolean conv)
 		putbinary(ln);
 		break;
 	case 'U':
-		// convert in two steps, to avoid possibly undefined
-		// negative double to unsigned conversion
+		/* convert in two steps, to avoid possibly undefined
+		 * negative double to unsigned conversion */
 		ln = (long long)n & mask;
 		uln = (unsigned long long)ln;
 		printf(digitseparators ? " %'llu" : " %llu", uln);
@@ -2086,8 +2080,7 @@ setup_width(int bits)
 {
 	/* we use long double to store our data.  in integer mode,
 	 * this means the FP mantissa, if it's shorter than long long,
-	 * may limit our maximum word width.
-	 */
+	 * may limit our maximum word width.  */
 	if (!bits || !max_int_width) {	/* first call */
 		max_int_width = LONGLONG_BITS;
 		if (max_int_width > LDBL_MANT_DIG)
@@ -2502,8 +2495,7 @@ tpush(token **tstackp, token *token)
 	struct token *t;
 
 	/* if we originally malloc'ed the incoming token, just reuse
-	 * it, otherwise malloc and copy.
-	 */
+	 * it, otherwise malloc and copy.  */
 	if (token->alloced) {
 		t = token;
 	} else {
@@ -2620,8 +2612,7 @@ void
 create_infix_support_tokens()
 {
 	/* we need a couple of token identifiers for later on,
-	 * specifically for dealing with infix processing.
-	 */
+	 * specifically for dealing with infix processing.  */
 	char *outp;
 	(void)parse_tok("(", &open_paren_token, &outp, 0);
 	(void)parse_tok("chs", &chsign_token, &outp, 0);
@@ -2640,8 +2631,8 @@ expression_error(token *pt, token *t)
 opreturn
 close_paren(void)
 {
-	// this has to be a warning -- the command in error is already
-	// finished, so we can't cancel it.
+	/* this has to be a warning -- the command in error is already
+	 * finished, so we can't cancel it. */
 	error(" warning: mismatched/extra parentheses\n");
 	return BADOP;
 }
@@ -2678,8 +2669,7 @@ prev_tok_was_operand(token *pt)
 /* This implementation of Dijkstra's shunting yard algorithm is based
  * on pseudocode from Wikipedia and brilliant.org, on several of the
  * coded examples at rosettacode.org, and on pseudo-code generated by
- * an AI bot.
- */
+ * an AI bot.  */
 opreturn
 open_paren(void)
 {
@@ -2721,7 +2711,7 @@ open_paren(void)
 		 * until we could tell if we were assigning or not.
 		 * we do it here. */
 		if (pt->type == VARIABLE) {
-			/* is it "r1 = 3" or "r1 + 3"? */
+			/* i.e., is it "r1 = 3" or "r1 + 3"? */
 			if (t->type == OP && t_op->func == assignment)
 				tpush(&oper_stack, pt);
 			else
@@ -2735,8 +2725,8 @@ open_paren(void)
 				input_ptr = NULL;
 				return BADOP;
 			}
-			/* we need to know what comes next:  "r1 = 3" is
-			 * very different than "r1 + 3" */
+			/* do nothing now.  we need to know what comes
+			 * next:  "r1 = 3" is very different than "r1 + 3" */
 			break;
 		case NUMERIC:
 		case SYMBOLIC:
@@ -2780,7 +2770,7 @@ open_paren(void)
 				}
 				paren_count--;
 
-			} else if (t_op->operands == 1) { // one operand, like "~"
+			} else if (t_op->operands == 1) { // just one operand
 			unary:
 				if (prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
@@ -2943,8 +2933,8 @@ tracetoggle(void)
 	}
 
 	// two levels currently, mostly for infix processing.
-	// 1 is just input and rpn token logging.
-	// 2 is full shunting algorithm logging, and also snapping/rounding
+	// 1 is just logs input and rpn tokens
+	// 2 is full shunting algorithm logging, plus also snapping/rounding
 	tracing = wanttracing;
 
 	printf(" internal tracing is now level %d\n", tracing);
@@ -2972,12 +2962,12 @@ void
 exitret(void)
 {
 	ldouble a = 0;
-	if (stack) {  // exit 0 or 1, based on top of stack
-		pop(&a);
-		exit(a == 0);  // flip exit status per unix convention
-	} else {
+	if (!stack)
 		exit(2);  // exit 2 on empty stack
-	}
+
+	pop(&a);
+
+	exit(a == 0);  // flip exit status, per unix convention
 
 }
 
@@ -3105,10 +3095,10 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 		// hex
 		long double dd;
 		if (raw_hex_input_ok) {
-			// will allow floating hex, e.g. 0xc.90fdaa22168c23cp-2
+			// will accept floating hex like 0xc.90fdaa22168c23cp-2
 			dd = strtold(p, nextp);
 		} else {
-			// simple hex integers only
+			// accept simple hex integers only
 			dd = strtoull(p, nextp, 16);
 		}
 		if (dd == 0.0 && p == *nextp)
@@ -3155,7 +3145,7 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 			n = stralnum(p, nextp);
 		} else if (ispunct(*p)) {
 			/* parser hack:  hard-coded list of
-			 * double punctuation operators */
+			 * all double-punctuation operators */
 			if (    (p[0] == '>' && p[1] == '>') ||      //   >>
 				(p[0] == '<' && p[1] == '<') ||      //   <<
 				(p[0] == '>' && p[1] == '=') ||      //   >=
@@ -3235,16 +3225,15 @@ no_comments(char *cp)
 		*ncp = '\0';
 
 	/* Eliminate the thousands separator from numbers, like
-	 * "1,345,011".  This removes them from the entire line, would
-	 * be a problem except:  the only simple ascii separators used
-	 * in locales are '.' and ',', which we don't use anywhere
-	 * else.  (Removing '.' is safe, because if the separator is
-	 * '.', then the decimal point isn't.)  All the others are
-	 * unicode sequences, which we don't use either.  So the
-	 * command line won't be harmed by this removal.  Some locales
-	 * use a space as a separator, but it's a "hard" space,
-	 * represented as unicode.
-	 */
+	 * "1,345,011".  This removes them from the entire line, which
+	 * would be a problem except:  the only simple ascii
+	 * separators ever used in locales are '.' and ','.  We don't
+	 * ',' use anywhere else.  Removing '.' is safe, because if
+	 * the separator is '.', then the decimal point isn't.  All
+	 * the other separators are unicode sequences, which we also
+	 * don't use.  So the command line won't be harmed by this
+	 * removal.  Some locales use a space as a separator, but it's
+	 * a "hard" space, represented as unicode.  */
 	if (thousands_sep_input[0])
 		strremoveall(cp, thousands_sep_input);
 
@@ -3252,13 +3241,13 @@ no_comments(char *cp)
 	 * sequences or punctuation (e.g., '$'), which are safe to
 	 * remove.  But some are plain ascii.  We checked earlier to
 	 * be sure the currency symbol doesn't match any of our
-	 * commands.
-	 */
+	 * commands.  */
 	if (currency && currency[0])
 		strremoveall(cp, currency);
 }
 
 #ifdef USE_READLINE
+/* This supports readline command completion */
 char *
 command_generator(const char *prefix, int state)
 {
@@ -3308,7 +3297,7 @@ suppress_stdout(void)
 	o_stdout_fd = dup(STDOUT_FILENO);
 
 	int null_fd = open("/dev/null", O_WRONLY);
-	if (null_fd == -1) {	// would be surprising
+	if (null_fd == -1) {
 		o_stdout_fd = -1;
 		return;
 	}
@@ -3328,9 +3317,8 @@ restore_stdout(void)
 	o_stdout_fd = -1;
 }
 
-/* on return, the global input_ptr is a string containing commands
- * to be executed
- */
+/* on return from fetch_line(), the global input_ptr is a string
+ * containing commands to be executed */
 int
 fetch_line(void)
 {
@@ -3359,7 +3347,7 @@ fetch_line(void)
 
 	/* if there are args on the command line, they're taken as
 	 * initial commands.  since only numbers can start with '-',
-	 * any other use of a hyphen brings up a usage message.
+	 * we let any other use of a hyphen bring up a usage message.
 	 */
 	if (arg < g_argc) {
 
@@ -3401,8 +3389,7 @@ fetch_line(void)
 
 	/* if we used the buffer as input, add it to history.  doing
 	 * this here records any command line input, possibly stored
-	 * in the buffer above, on the first call to fetch_line()
-	 */
+	 * in the buffer above, on the first call to fetch_line() */
 	if (input_buf && *input_buf)
 		add_history(input_buf);
 
@@ -3429,8 +3416,8 @@ fetch_line(void)
 
 	/* if stdin is a terminal, the command is already on-screen.
 	 * but we also want it mixed with the output if we're
-	 * redirecting from a file or pipe.  (easy to get rid of it
-	 * with something like: "rca < commands | grep '^ '"
+	 * redirecting from a file or pipe.  easy to get rid of it
+	 * with something like:   rca < commands | grep '^ '
 	 */
 	if (!isatty(0))
 		printf("%s\n", input_buf);
@@ -3541,12 +3528,9 @@ precedence(void)
 		precedence_generated = 1;
 	}
 
-	/* For some reason, precedence tables are always ordered from
-	 * top to bottom in descending precedence, but the row numbers
-	 * are always in ascending order.  In addition, our internal
-	 * precedence numbers aren't necessarily something to show the
-	 * user, so we glean the list from the opers[] table, above,
-	 * then renumber as we emit it.  */
+	/* Our internal precedence numbers aren't necessarily
+	 * something to show the user.  The rows are renumbered
+	 * "nicely" as we emit rows we gathered above. */
 	i = 1;
 	for (prec = NUM_PRECEDENCE-1; prec >=0; prec--) {
 		if (prec_ops[prec]) {
@@ -3701,10 +3685,11 @@ locale_init(void)
 	 * thousands_sep_input only for input */
 	thousands_sep_input = thousands_sep = lc->thousands_sep;
 
-	/* if there's no thousands separator, default the one, that
-	 * will clean up program input to ",", but only if the decimal
-	 * point is ".".  this lets us safely strip commas from input
-	 * even if the locale isn't set up */
+	/* if there's no thousands separator, default the input
+	 * version (which will be used to clean up program input) to
+	 * ",", but only if the decimal point is ".".  this lets us
+	 * safely strip commas from input even if the locale isn't set
+	 * up */
 	if (!thousands_sep_input[0]) {
 		if (strcmp(decimal_pt, ".") == 0)
 			thousands_sep_input = ",";
@@ -3722,14 +3707,13 @@ locale_init(void)
 		 * any command names, because we're going to simply
 		 * delete the symbol from input lines before parsing.
 		 * A few are known to match, or be substrings of, our
-		 * commands.
-		 */
+		 * commands.  */
 
 		/* first check if it's unicode.  if so, no worries. */
 		if (!isascii(*currency))
 			return;
 
-		/* then search for it in the command list */
+		/* then search for it anywhere in every command */
 		oper *op = opers;
 		while (op->name) {
 			if (strstr(op->name, currency)) {
@@ -3755,11 +3739,11 @@ struct oper opers[] = {
 //        +------------------------------- operator names
 //        |    +-------------------------- function pointer
 //        |    |                +--------- help (if 0, shares next cmd's help)
-//        |    |                |  +------ # of operands (0 means none (pseudop),
-//        |    |                |  |        "Sym" -1 means none (named constant)
+//        |    |                |  +------ # of operands (0 means pseudop),
+//        |    |                |  |        -1 (Sym) means none (a named value)
 //        |    |                |  |  +--- operator precedence
 //        |    |                |  |  |         (# of operands and precedence
-//        V    V                V  V  V           used only by infix code)
+//        V    V                V  V  V           are used only by infix code)
 	{"+", add,		0, 2, 24 },
 	{"-", subtract,		"Add and subtract x and y", 2, 24 },
 	{"*", multiply,		0, 2, 26 },
@@ -3939,12 +3923,12 @@ main(int argc, char *argv[])
 	 */
 	while (1) {
 
-		// use up tokens created by infix processing first */
+		/* use up tokens created by infix processing first */
 		if ((t = tpop(&infix_rpn_queue))) {
 			tok = *t;
 			free(t);
 			freeze_lastx();
-		} else { // otherwise get tokens from input as usual
+		} else { /* otherwise get tokens from input as usual */
 			if (!gettoken(&tok))
 				continue;
 			thaw_lastx();
