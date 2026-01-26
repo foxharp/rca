@@ -65,10 +65,10 @@ clean:
 # before feeding what's left (i.e., the input) to rca, and comparing
 # the result, which should match exactly.
 
-tests:  test optest tweaktest
+tests:  gentest optest tweaktest
 
-test:
-	egrep -v '^ ' rca_test.txt | ./rca 2>&1 | tee .test | diff -u rca_test.txt -
+gentest:
+	egrep -v '^ ' gentests.txt | ./rca 2>&1 | tee .test | diff -u gentests.txt -
 	@ echo test succeeded
 
 # valgrind messes with floating point.  only optests.txt avoids high
