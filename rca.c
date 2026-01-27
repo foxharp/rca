@@ -3550,6 +3550,8 @@ precedence(void)
 	return GOODOP;
 }
 
+/* This is a mostly raw dump of the oper[] table, since the structure
+ * layout in the source is a little hard to read.  */
 opreturn
 commands(void)
 {
@@ -3557,20 +3559,21 @@ commands(void)
 
 	op = opers;
 
-	printf("%10s%10s %s %s\n", "oper alias", "operands", "preced", "help");
-	printf("---- -----  -------- ------ -------\n");
+	printf("%s %s %s %s %s %s\n",
+	       "oper", "alias", "oprnds", "prc", "ass", "help");
+	printf("---- ----- ------ --- --- ---------\n");
 	while (op->name) {
 		if (op->func ) {
+			int name_fmt;
 			if (lastop && lastop->func == op->func )
-				printf("%10s\t%d\t%2d %c\t%s\n",
-					op->name, op->operands, op->prec,
-					op->assoc ? 'R' : ' ',
-					op->help ? op->help : "");
+				name_fmt = 10;
 			else
-				printf("%-10s\t%d\t%2d %c\t%s\n",
+				name_fmt = -10;
+
+			printf("%*s  %2d    %2d  %c   %s\n", name_fmt,
 				op->name, op->operands, op->prec,
-					op->assoc ? 'R' : ' ',
-					op->help ? op->help : "");
+				op->assoc ? 'R' : ' ',
+				op->help ? op->help : "");
 		}
 		lastop = op;
 		op++;
