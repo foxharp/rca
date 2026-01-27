@@ -472,7 +472,7 @@ left to right.  (This list has no meaning for RPN.)
 
  \fR 1    \fB  ( )
  \fR 2  R \fB  ~ + - chs negate nop recip sqrt sin cos tan asin acos
- \fR      \fB   atan atan2 exp ln log2 log10 abs frac int ! i2mm mm2i
+ \fR      \fB   atan atan2 exp ln log2 log10 abs frac ! int i2mm mm2i
  \fR      \fB   ft2m m2ft mi2km km2mi f2c c2f oz2g g2oz oz2ml ml2oz
  \fR      \fB   q2l l2q d2r r2d
  \fR 3  R \fB  ^ **
@@ -489,6 +489,27 @@ left to right.  (This list has no meaning for RPN.)
  \fR 14   \fB  =
  \fR 15   \fB  ;
 
+There's some personal preference in there.
+Like C, Java, JavaScript, and Rust (but unlike Python and bc),
+the
+.\" troff thinks the '!' is end of sentence, and adds an extra space.
+.\" suppress with a "no extra spaces" command.
+.B !\&
+operator (logical NOT) is a high-precedence unary operator and binds very
+strongly.  So
+.B (!_a == _b)
+is the same as
+.B ((!_a) ==
+.BR _b) .
+
+But unlike C, Java, and JavaScript (but like Ruby, Python, Rust, and
+bc), the bitwise operators bind more tightly than comparison operators.
+So
+.B (_a & _b == 5)
+is the same as
+.B ((_a & _b) ==
+.BR 5) .
+Even Dennis Ritchie thought C got that one wrong.
 
 .SH OPERATOR NOTES
 Most operators behave as they are commonly understood to.  A few need
