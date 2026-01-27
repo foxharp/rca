@@ -158,8 +158,11 @@ typedef struct oper {
 	char *name;
 	opfunc func;
 	char *help;
-	int operands;	/* used only by infix code */
-	int prec;	/* used only by infix code */
+	int operands;	/* number of operands: used only by infix code */
+	int prec;	/* precedence: used only by infix code */
+	int assoc;	/* associativity: used only by infix precedence table.
+			 * actual associativity decisions are inherent
+			 * in the infix shunting yard code. */
 } oper;
 
 /* operator table */
@@ -3469,11 +3472,10 @@ precedence(void)
 {
 	oper *op;
 #define NUM_PRECEDENCE 34
-	static char *prec_ops[NUM_PRECEDENCE] = {0};
+	static char assoc[NUM_PRECEDENCE];
+	static char *prec_ops[NUM_PRECEDENCE];
 	int linelen[NUM_PRECEDENCE] = {0};
 	int prec, i;
-	int unary_prec = 0;
-	int y_to_x_prec = 0;
 	char *prefix;
 	static int precedence_generated;
 
@@ -3481,6 +3483,7 @@ precedence(void)
 	       "  top to bottom in order of descending precedence.\n"
 	       " All operators are left-associative, except for those\n"
 	       "  in rows marked 'R', which associate right to left.\n");
+
 	if (!precedence_generated) {
 		prefix = "";
 		op = opers;
@@ -3507,10 +3510,13 @@ precedence(void)
 			if (strcmp(op->name, "chs") == 0) {
 				strcat(prec_ops[op->prec], "+ - ");
 				linelen[op->prec] += 4;
-				unary_prec = op->prec;
 			}
-			if (strcmp(op->name, "^") == 0)
-				y_to_x_prec = op->prec;
+			if (!assoc[op->prec]) {
+				assoc[op->prec] = op->assoc;
+			} else {
+				if (assoc[op->prec] != op->assoc)
+					error(" error: associativity bug, op %s\n", op->name);
+			}
 			strcat(prec_ops[op->prec], op->name);
 			strcat(prec_ops[op->prec], " ");
 			linelen[op->prec] += strlen(op->name) + 1;
@@ -3535,7 +3541,7 @@ precedence(void)
 	for (prec = NUM_PRECEDENCE-1; prec >=0; prec--) {
 		if (prec_ops[prec]) {
 			printf(" %-2i  %c     %s\n", i,
-			(prec <= unary_prec && prec >= y_to_x_prec) ? 'R':' ',
+			assoc[prec] ? 'R' : ' ',
 			prec_ops[prec]);
 			i++;
 		}
@@ -3556,12 +3562,14 @@ commands(void)
 	while (op->name) {
 		if (op->func ) {
 			if (lastop && lastop->func == op->func )
-				printf("%10s\t%d\t%d\t%s\n",
-				op->name, op->operands, op->prec,
+				printf("%10s\t%d\t%2d %c\t%s\n",
+					op->name, op->operands, op->prec,
+					op->assoc ? 'R' : ' ',
 					op->help ? op->help : "");
 			else
-				printf("%-10s\t%d\t%d\t%s\n",
+				printf("%-10s\t%d\t%2d %c\t%s\n",
 				op->name, op->operands, op->prec,
+					op->assoc ? 'R' : ' ',
 					op->help ? op->help : "");
 		}
 		lastop = op;
@@ -3750,8 +3758,8 @@ struct oper opers[] = {
 	{"x", multiply,		"Multiply x and y", 2, 26 },
 	{"/", divide,		0, 2, 26 },
 	{"%", modulo,		"Divide and modulo of y by x", 2, 26 },
-	{"^", y_to_the_x,	0, 2, 28 },
-	{"**", y_to_the_x,	"Raise y to the x'th power", 2, 28 },
+	{"^", y_to_the_x,	0, 2, 28, 'R'},
+	{"**", y_to_the_x,	"Raise y to the x'th power", 2, 28, 'R'},
 	{">>", rshift,		0, 2, 22 },
 	{"<<", lshift,		"Right/left logical shift of y by x bits", 2, 22 },
 	{"&", bitwise_and,	0, 2, 20 },
@@ -3762,27 +3770,27 @@ struct oper opers[] = {
 	{"=", assignment,	"Assignment (to storage locations", 2, 6 },
 	{""},		// all-null entries cause blank line in output
     {"Numerical operators with one operand:"},
-	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 30 },
-	{"chs", chsign,		0, 1, 30 },
-	{"negate", chsign,	"Change sign of x (2's complement)", 1, 30 },
-	{"nop", nop,		"Does nothing", 1, 30 },
-	{"recip", recip,	0, 1, 30 },
-	{"sqrt", squarert,	"Reciprocal and square root of x", 1, 30 },
-	{"sin", sine,		0, 1, 30 },
-	{"cos", cosine,		0, 1, 30 },
-	{"tan", tangent,	"", 1, 30 },
-	{"asin", asine,		0, 1, 30 },
-	{"acos", acosine,	0, 1, 30 },
-	{"atan", atangent,	"Trig functions", 1, 30 },
-	{"atan2", atangent2,	"Arctan of y/x (2 operands)", 2, 30 },
-	{"exp", e_to_the_x,	"Raise e to the x'th power", 1, 30 },
-	{"ln", log_natural,	0, 1, 30 },
-	{"log2", log_base2,	0, 1, 30 },
-	{"log10", log_base10,	"Natural, base 2, and base 10 logarithms", 1, 30 },
+	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 30, 'R' },
+	{"chs", chsign,		0, 1, 30, 'R' },
+	{"negate", chsign,	"Change sign of x (2's complement)", 1, 30, 'R' },
+	{"nop", nop,		"Does nothing", 1, 30, 'R' },
+	{"recip", recip,	0, 1, 30, 'R' },
+	{"sqrt", squarert,	"Reciprocal and square root of x", 1, 30, 'R' },
+	{"sin", sine,		0, 1, 30, 'R' },
+	{"cos", cosine,		0, 1, 30, 'R' },
+	{"tan", tangent,	"", 1, 30, 'R' },
+	{"asin", asine,		0, 1, 30, 'R' },
+	{"acos", acosine,	0, 1, 30, 'R' },
+	{"atan", atangent,	"Trig functions", 1, 30, 'R' },
+	{"atan2", atangent2,	"Arctan of y/x (2 operands)", 2, 30, 'R' },
+	{"exp", e_to_the_x,	"Raise e to the x'th power", 1, 30, 'R' },
+	{"ln", log_natural,	0, 1, 30, 'R' },
+	{"log2", log_base2,	0, 1, 30, 'R' },
+	{"log10", log_base10,	"Natural, base 2, and base 10 logarithms", 1, 30, 'R' },
 
-	{"abs", absolute,	0, 1, 30 },
-	{"frac", fraction,	0, 1, 30 },
-	{"int", integer,	"Absolute value, fractional and integer parts of x", 1, 30 },
+	{"abs", absolute,	0, 1, 30, 'R' },
+	{"frac", fraction,	0, 1, 30, 'R' },
+	{"int", integer,	"Absolute value, fractional and integer parts of x", 1, 30, 'R' },
 	{"(", open_paren,	0, 0, 32 },
 	{")", close_paren,	"Infix grouping", 0, 32 },
 	{";", semicolon,	"Infix separator (in RPN, discards y)", 2, 4 },
@@ -3796,7 +3804,7 @@ struct oper opers[] = {
 	{"<=", is_le,		0, 2, 14 },
 	{">", is_gt,		0, 2, 14 },
 	{">=", is_ge,		"Arithmetic comparisons", 2, 14 },
-	{"!", logical_not,	"Logical NOT of x", 1, 30 },
+	{"!", logical_not,	"Logical NOT of x", 1, 30, 'R'},
 	{""},
     {"Stack manipulation:"},
 	{"clear", clear,	"Clear stack" },
@@ -3819,22 +3827,22 @@ struct oper opers[] = {
 	{"_<name>", nop,	"Read or set a variable" },
 	{""},
     {"Unit conversions (one operand):"},
-	{"i2mm", units_in_mm,	0, 1, 30 },
-	{"mm2i", units_mm_in,	"inches / millimeters", 1, 30 },
-	{"ft2m", units_ft_m,	0, 1, 30 },
-	{"m2ft", units_m_ft,	"feet / meters", 1, 30 },
-	{"mi2km", units_mi_km,	0, 1, 30 },
-	{"km2mi", units_km_mi,	"miles / kilometers", 1, 30 },
-	{"f2c", units_F_C,	0, 1, 30 },
-	{"c2f", units_C_F,	"degrees F/C", 1, 30 },
-	{"oz2g", units_oz_g,	0, 1, 30 },
-	{"g2oz", units_g_oz,	"ounces / grams", 1, 30 },
-	{"oz2ml", units_oz_ml,	0, 1, 30 },
-	{"ml2oz", units_ml_oz,	"ounces / milliliters", 1, 30 },
-	{"q2l", units_qt_l,	0, 1, 30 },
-	{"l2q", units_l_qt,	"quarts / liters", 1, 30 },
-	{"d2r", units_deg_rad,	0, 1, 30 },
-	{"r2d", units_rad_deg,	"degrees / radians", 1, 30 },
+	{"i2mm", units_in_mm,	0, 1, 30, 'R' },
+	{"mm2i", units_mm_in,	"inches / millimeters", 1, 30, 'R' },
+	{"ft2m", units_ft_m,	0, 1, 30, 'R' },
+	{"m2ft", units_m_ft,	"feet / meters", 1, 30, 'R' },
+	{"mi2km", units_mi_km,	0, 1, 30, 'R' },
+	{"km2mi", units_km_mi,	"miles / kilometers", 1, 30, 'R' },
+	{"f2c", units_F_C,	0, 1, 30, 'R' },
+	{"c2f", units_C_F,	"degrees F/C", 1, 30, 'R' },
+	{"oz2g", units_oz_g,	0, 1, 30, 'R' },
+	{"g2oz", units_g_oz,	"ounces / grams", 1, 30, 'R' },
+	{"oz2ml", units_oz_ml,	0, 1, 30, 'R' },
+	{"ml2oz", units_ml_oz,	"ounces / milliliters", 1, 30, 'R' },
+	{"q2l", units_qt_l,	0, 1, 30, 'R' },
+	{"l2q", units_l_qt,	"quarts / liters", 1, 30, 'R' },
+	{"d2r", units_deg_rad,	0, 1, 30, 'R' },
+	{"r2d", units_rad_deg,	"degrees / radians", 1, 30, 'R' },
 	{""},
     {"Display:"},
 	{"P", printall,		"Print whole stack according to mode" },
