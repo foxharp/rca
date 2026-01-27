@@ -280,3 +280,132 @@ vars
  0.5
 (_w2 = sin;30)
  error: bad expression sequence, at 'sin' and ';'
+
+# Bitwise AND vs relational
+(1 & 9 < 3)
+ 1
+((1 & 9) < 3)
+ 1
+(1 & (9 < 3))
+ 0
+
+# Relational must not bind tighter than bitwise OR
+(8 | 2 == 3)
+ 0
+((8 | 2) == 3)
+ 0
+(8 | (2 == 3))
+ 8
+
+# Equality vs bitwise AND
+(2 & 3 == 2)
+ 1
+((2 & 3) == 2)
+ 1
+(2 & (3 == 2))
+ 0
+
+# Bitwise AND must happen before equality
+(3 & 5 == 5)
+ 0
+((3 & 5) == 5)
+ 0
+(3 & (5 == 5))
+ 1
+
+# Relational vs bitwise OR
+(4 | 1 > 3)
+ 1
+((4 | 1) > 3)
+ 1
+(4 | (1 > 3))
+ 4
+
+# Bitwise XOR vs relational
+(2 xor 1 == 3)
+ 1
+((2 xor 1) == 3)
+ 1
+(2 xor (1 == 3))
+ 2
+
+# Relational chaining is left-associative
+(3 > 2 > 1)
+ 0
+((3 > 2) > 1)
+ 0
+(3 > (2 > 1))
+ 1
+
+# Logical NOT should apply after bitwise AND
+(!3 & 4)
+ 0
+((!3) & 4)
+ 0
+(!(3 & 4))
+ 1
+
+# Logical AND vs bitwise AND
+(1 & 2 && 1)
+ 0
+((1 & 2) && 1)
+ 0
+(1 & (2 && 1))
+ 1
+
+# Bitwise AND must bind tighter than logical AND
+(1 && 3 & 2)
+ 1
+(1 && (3 & 2))
+ 1
+((1 && 3) & 2)
+ 0
+
+# Logical OR vs bitwise OR
+(4 | 1 || 0)
+ 1
+((4 | 1) || 0)
+ 1
+(4 | (1 || 0))
+ 5
+
+# Bitwise OR must bind tighter than logical OR
+(0 || 0 | 2)
+ 1
+(0 || (0 | 2))
+ 1
+((0 || 0) | 2)
+ 2
+
+# Relational vs logical AND
+(2 && 2 > 1)
+ 1
+(2 && (2 > 1))
+ 1
+((2 && 2) > 1)
+ 0
+
+# Equality vs logical OR
+(2 == 1 || 1)
+ 1
+((2 == 1) || 1)
+ 1
+(2 == (1 || 1))
+ 0
+
+# Unary NOT vs equality
+(!2 == 1)
+ 0
+((!2) == 1)
+ 0
+(!(2 == 1))
+ 1
+
+# Equality must bind tighter than logical NOT argument
+(!1 > -1)
+ 1
+((!1) > -1)
+ 1
+(!(1 > -1))
+ 0
+
