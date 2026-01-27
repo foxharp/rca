@@ -146,7 +146,13 @@ Multiple expressions separated by
 .RB ' ; '
 (semicolon) can be enclosed in a single pair of parentheses.  The
 result of the parenthesized expression is the result of the last such
-sub-expression.
+sub-expression.  (Like ',' in the C language,
+.RB ' ; '
+is implemented as an operator whose result is its right-hand operand -- the
+left-hand operand is discarded (after evaluation).  So
+.RB ' ; '
+is also available in RPN:  when executed, it discards the second-to-top
+stack element, leaving the top undisturbed.)
 .P
 If an error occurs during evaluation of an infix expression,
 evaluation will cease, and the stack will be left as it was at the
