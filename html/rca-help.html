@@ -8,68 +8,63 @@
 </head>
 <body style="font-size:125%">
 <pre>
-rca -- a rich/RPN scientific and programmer's calculator
- Any arguments on the command line are used as initial calculator input.
- Entering a number pushes it on the stack.
- Operators replace either one or two stack values with their result.
- Most whitespace is optional between numbers and operators, and can consist
-  of spaces, tabs, or newlines.
- Numbers can include commas and $ signs (e.g., '$3,577,455').
- Numbers are represented internally as long double and signed long long.
- Max integer width is the shorter of long long or the long double mantissa.
- Always use 0xNNN/0NNN to enter hex/octal, even in hex or octal mode.
- An infix expression may be started with '('.  The evaluated result
-  goes on the stack.  For example, '(sqrt(sin(30)^2 + cos(30)^2) + 2)' will
-  push the value '3'.  All operators and functions, all unit conversions, and
-  all commands that produce constants (e.g., 'pi', 'recall') can be referenced
-  in infix expressions.  The infix expression must all be entered on one line.
- Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath. 
- On exit, rca returns 0 if the top of stack is non-zero, else it returns 1,
- or 2 if stack is empty, and 3 in the case of program error.
+ rca -- a rich/RPN scientific and programmer's calculator
+  Any arguments on the command line are used as initial calculator input.
+  Entering a number pushes it on the stack.
+  Operators replace either one or two stack values with their result.
+  Most whitespace is optional between numbers and operators.
+  Input can include locale currency and grouping symbols: $12,345.67
+  Always prefix hex (0x7f) or octal (0177) input, even in hex or octal mode.
+  Infix expressions are entered using (...), as in: (sin(30)^2 + cos(30)^2)
+  Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.
+  rca's normal exit value reflects the logical value of the top of stack.
 
-Numerical operators with two operands:
+ Numerical operators with two operands:
                  +, -     Add and subtract x and y
-                 *, x     Two ways to multiply x and y
+              *, or x     Multiply x and y
                  /, %     Divide and modulo of y by x
-                ^, **     Raise y to the x'th power
+             ^, or **     Raise y to the x'th power
                &gt;&gt;, &lt;&lt;     Right/left logical shift of y by x bits
             &amp;, |, xor     Bitwise AND, OR, and XOR of y and x
          setb, clearb     Set and clear bit x in y
+                    =     Assignment (to storage locations
 
-Numerical operators with one operand:
+ Numerical operators with one operand:
                     ~     Bitwise NOT of x (1's complement)
-          chs, negate     Change sign of x (2's complement)
+       chs, or negate     Change sign of x (2's complement)
+                  nop     Does nothing
           recip, sqrt     Reciprocal and square root of x
         sin, cos, tan     
      asin, acos, atan     Trig functions
                 atan2     Arctan of y/x (2 operands)
-              degrees     Toggle trig functions: degrees (1) or radians (0)
+                  exp     Raise e to the x'th power
       ln, log2, log10     Natural, base 2, and base 10 logarithms
        abs, frac, int     Absolute value, fractional and integer parts of x
-                 (, )     Begin and end &quot;infix&quot; expression
+                 (, )     Infix grouping
+                    ;     Infix separator (in RPN, discards y)
 
-Logical operators (two operands, except '!'):
+ Logical operators (mostly two operands):
                &amp;&amp;, ||     Logical AND and OR
  ==, !=, &lt;, &lt;=, &gt;, &gt;=     Arithmetic comparisons
                     !     Logical NOT of x
 
-Stack manipulation:
+ Stack manipulation:
                 clear     Clear stack
                   pop     Pop (and discard) x
-          push, enter     Push (a duplicate of) x
-            lastx, lx     Fetch previous value of x
-           exch, swap     Exchange x and y
+         push, or dup     Push (a duplicate of) x
+         lastx, or lx     Fetch previous value of x
+        exch, or swap     Exchange x and y
                  mark     Mark stack for later summing
                   sum     Sum stack to &quot;mark&quot;, or entire stack if no mark
+                  avg     Average stack to &quot;mark&quot;, or entire stack if no mark
 
-Constants and storage (no operands):
-        store, recall     Same as s1 and r1
-   s1, s2, s3, s4, s5     Save x off-stack (to 5 locations)
-   r1, r2, r3, r4, r5     Fetch x (from 5 locations)
+ Constants and storage (no operands):
+             sto, rcl     Save/fetch off-stack storage
                    pi     Push constant pi
                     e     Push constant e
+              _&lt;name&gt;     Read or set a variable
 
-Unit conversions (one operand):
+ Unit conversions (one operand):
            i2mm, mm2i     inches / millimeters
            ft2m, m2ft     feet / meters
          mi2km, km2mi     miles / kilometers
@@ -77,34 +72,44 @@ Unit conversions (one operand):
            oz2g, g2oz     ounces / grams
          oz2ml, ml2oz     ounces / milliliters
              q2l, l2q     quarts / liters
+             d2r, r2d     degrees / radians
 
-Display:
+ Display:
                     P     Print whole stack according to mode
                     p     Print x according to mode
               f, d, u     Print x as float, decimal, unsigned decimal,
               h, o, b          hex, octal, or binary
+                state     Show calculator state
 
-Modes:
+ Modes:
               F, D, U     Switch to floating point, decimal, unsigned decimal,
               H, O, B          hex, octal, or binary modes
-         precision, k     Float format: number of significant digits (%g)
-          decimals, K     Float format: digits after decimal (%f)
-             width, w     Set effective &quot;word size&quot; for integer modes
-         autoprint, a     Toggle autoprinting on/off with 0/1
-            commas, c     Toggle comma separators on/off with 0/1
+      precision, or k     Float format: number of significant digits (%g)
+       decimals, or K     Float format: digits after decimal (%f)
+          width, or w     Set effective word size for integer modes
+              degrees     Toggle trig functions: degrees (1) or radians (0)
+      autoprint, or a     Toggle autoprinting on/off with 0/1
+     separators, or s     Toggle numeric separators (i.e., commas) on/off (0/1)
                  mode     Display current mode parameters
 
-Housekeeping:
-              ?, help     Show this list
-                 Help     Show this list, including hidden commands
+ Debug support:
+                    r     Print x as raw floating hex
+                    R     Switch to raw floating hex mode
+             rounding     Toggle snapping and rounding of floats
+              tracing     Toggle debug tracing
+
+ Housekeeping:
+           ?, or help     Show this list (using $PAGER, if set)
            precedence     List infix operator precedence
-        quit, q, exit     Leave the calculator
-            errorexit     Enable exit(4) on error or warning
+   vars, or variables     Show the current list of variables
+     quit, q, or exit     Leave the calculator
+            errorexit     Toggle exiting on error and warning
+              license     Display the rca copyright and license.
                     #     Comment. The rest of the line will be ignored.
 
-                                         version v1 built Dec 12 2025 11:13:13
+                                        version v12 built Jan 28 2026 18:01:00
 
-Tip:  Use &quot;rca help q | less&quot; to view this help
+ Tip:	Use &quot;rca help q | less&quot; to view this help
 </pre>
 </body>
 </html>
