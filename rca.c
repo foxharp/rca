@@ -3466,8 +3466,8 @@ precedence(void)
 	static char assoc[NUM_PRECEDENCE];
 	static char *prec_ops[NUM_PRECEDENCE];
 	int linelen[NUM_PRECEDENCE] = {0};
+	char *prefix[NUM_PRECEDENCE] = {0};
 	int prec, i;
-	char *prefix;
 	static int precedence_generated;
 
 	printf(" Precedence for operators in infix expressions, from \n"
@@ -3476,7 +3476,7 @@ precedence(void)
 	       "  in rows marked 'R', which associate right to left.\n");
 
 	if (!precedence_generated) {
-		prefix = "";
+		// prefix = "";
 		op = opers;
 		while (op->name) {
 
@@ -3496,6 +3496,7 @@ precedence(void)
 				prec_ops[op->prec] = (char *)calloc(1, 500);
 				if (!prec_ops[op->prec])
 					memory_failure();
+				prefix[op->prec] = "";
 				linelen[op->prec] = 12;
 			}
 			if (strcmp(op->name, "chs") == 0) {
@@ -3513,10 +3514,10 @@ precedence(void)
 			linelen[op->prec] += strlen(op->name) + 1;
 			if (linelen[op->prec] > 70) {
 				linelen[op->prec] = 12;
-				prefix = "\n            ";
+				prefix[op->prec] = "\n               ";
 			} else {
-				strcat(prec_ops[op->prec], prefix);
-				prefix = "";
+				strcat(prec_ops[op->prec], prefix[op->prec]);
+				prefix[op->prec] = "";
 			}
 			op++;
 		}
