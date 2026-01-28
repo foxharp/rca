@@ -25,9 +25,9 @@ _rca_ is simple yet versatile
    typical one-off, everyday problems.
 
 The
-[man page](html/rca-man.html)
+[man page](https://foxharp.github.io/rca/rca-man.html)
 and rca's
-[help text](html/rca-help.html)
+[help text](https://foxharp.github.io/rca/rca-help.html)
 have all the details.
 
 The license is BSD-2-Clause, and can be found in the source or viewed
