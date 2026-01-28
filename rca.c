@@ -3776,7 +3776,7 @@ struct oper opers[] = {
 	{"asin", asine,		0, 1, 30, 'R' },
 	{"acos", acosine,	0, 1, 30, 'R' },
 	{"atan", atangent,	"Trig functions", 1, 30, 'R' },
-	{"atan2", atangent2,	"Arctan of y/x (2 operands)", 2, 30, 'R' },
+	{"atan2", atangent2,	"Arctan of y/x (2 operands)", 2, 27 },
 	{"exp", e_to_the_x,	"Raise e to the x'th power", 1, 30, 'R' },
 	{"ln", log_natural,	0, 1, 30, 'R' },
 	{"log2", log_base2,	0, 1, 30, 'R' },
