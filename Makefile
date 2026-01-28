@@ -68,17 +68,23 @@ clean:
 tests:  gentest optest tweaktest
 
 gentest:
-	egrep -v '^ ' gentests.txt | ./rca 2>&1 | tee .test | diff -u gentests.txt -
+	egrep -v '^ ' tests/gentests.txt | \
+		./rca 2>&1 | \
+		tee .test | diff -u tests/gentests.txt -
 	@ echo test succeeded
 
 # valgrind messes with floating point.  only optests.txt avoids high
 # precision FP, so only it works under valgrind.
 optest:
-	egrep -v '^ ' optests.txt | valgrind -q --leak-check=full ./rca 2>&1 | tee .test | diff -u optests.txt -
+	egrep -v '^ ' tests/optests.txt | \
+		valgrind -q --leak-check=full ./rca 2>&1 | \
+		tee .test | diff -u tests/optests.txt -
 	@ echo test succeeded
 
 tweaktest:
-	egrep -v '^ ' tweaktests.txt | ./rca 2>&1 | tee .test | diff -u tweaktests.txt -
+	egrep -v '^ ' tests/tweaktests.txt | \
+		./rca 2>&1 | \
+		tee .test | diff -u tests/tweaktests.txt -
 	@ echo test succeeded
 
 .PHONY: html clean all test optest tweaktest htmldiff htmlmv
