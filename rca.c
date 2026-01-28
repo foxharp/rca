@@ -3457,32 +3457,44 @@ gettoken(struct token *t)
 	return 1;
 }
 
+/* useful for resetting width from debugger, to generate the
+ * (narrower) man page copy of the precedence table. */
+int precedence_width = 70;
 
 opreturn
 precedence(void)
 {
 	oper *op;
 #define NUM_PRECEDENCE 34
+	static int pass = 0;
 	static char assoc[NUM_PRECEDENCE];
 	static char *prec_ops[NUM_PRECEDENCE];
 	int linelen[NUM_PRECEDENCE] = {0};
 	char *prefix[NUM_PRECEDENCE] = {0};
 	int prec, i;
-	static int precedence_generated;
 
 	printf(" Precedence for operators in infix expressions, from \n"
 	       "  top to bottom in order of descending precedence.\n"
 	       " All operators are left-associative, except for those\n"
 	       "  in rows marked 'R', which associate right to left.\n");
 
-	if (!precedence_generated) {
-		// prefix = "";
+	/* do single char commands first, then the rest, then never
+	 * regenerate the table again.  */
+	for ( ; pass < 2; pass++) {
+
 		op = opers;
 		while (op->name) {
 
 			/* skip anything in the table that doesn't have
 			 * a name, a function, or a precedence */
 			if (!op->name[0] || !op->func || op->prec == 0) {
+				op++;
+				continue;
+			}
+
+			/* only do one character names in the first pass,
+			 * and multi-char names in the second */
+			if ((pass == 0) ^ (op->name[1] == 0)) {
 				op++;
 				continue;
 			}
@@ -3512,7 +3524,7 @@ precedence(void)
 			strcat(prec_ops[op->prec], op->name);
 			strcat(prec_ops[op->prec], " ");
 			linelen[op->prec] += strlen(op->name) + 1;
-			if (linelen[op->prec] > 70) {
+			if (linelen[op->prec] > precedence_width) {
 				linelen[op->prec] = 12;
 				prefix[op->prec] = "\n               ";
 			} else {
@@ -3521,9 +3533,6 @@ precedence(void)
 			}
 			op++;
 		}
-
-
-		precedence_generated = 1;
 	}
 
 	/* Our internal precedence numbers aren't necessarily
