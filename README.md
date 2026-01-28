@@ -29,3 +29,6 @@ The
 and rca's
 [help text](html/rca-help.html)
 have all the details.
+
+The license is BSD-2-Clause, and can be found in the source or viewed
+with _rca_'s "license" command.

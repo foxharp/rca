@@ -28,9 +28,9 @@
  */
 
 char *licensetext[] = {
-
-" RCA License ",
-" ---------- ",
+"",
+" RCA License                  (SPDX-License-Identifier: BSD-2-Clause) ",
+" ------------ ",
 " Copyright (C) 1993-2026  Paul Fox ",
 " ",
 " Redistribution and use in source and binary forms, with or without ",
@@ -41,7 +41,7 @@ char *licensetext[] = {
 " 2. Redistributions in binary form must reproduce the above copyright ",
 "    notice in the documentation and/or other materials provided with ",
 "    the distribution. ",
-" ",
+"",
 " This software is provided by the author ``as is'' and any ",
 " express or implied warranties, including, but not limited to, the ",
 " implied warranties of merchantability and fitness for a particular ",
@@ -53,7 +53,7 @@ char *licensetext[] = {
 " whether in contract, strict liability, or tort (including negligence ",
 " or otherwise) arising in any way out of the use of this software, even ",
 " if advised of the possibility of such damage. ",
-
+"",
   0 };
 
 
