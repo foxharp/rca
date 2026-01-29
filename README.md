@@ -30,5 +30,7 @@ and rca's
 [help text](https://foxharp.github.io/rca/rca-help.html)
 have all the details.
 
+_rca_ is hosted at [github](https://github.com/foxharp/rca).
+
 The license can be found in the source or viewed with _rca_'s<br>
 "license" command.  (It's BSD-2-Clause.)
