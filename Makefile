@@ -28,36 +28,36 @@ copyrightcheck:
 	grep -q "Copyright.*$$year" LICENSE && \
 	grep -q "Copyright.*$$year" rca.c
 
-html: html/index.html html/rca-man.html html/rca-help.html
+html: docs/index.html docs/rca-man.html docs/rca-help.html
 
-html/index.html: FORCE
-	python3 -m markdown README.md >html/index.html.new
+docs/index.html: FORCE
+	python3 -m markdown README.md >docs/index.html.new
 
-html/rca-man.html: FORCE
+docs/rca-man.html: FORCE
 	MAN_KEEP_FORMATTING=1 MANWIDTH=75 \
 	    man --no-justification --no-hyphenation --local-file rca.1 | \
 	     aha -w -t "rca(1) man page" --style 'font-size:125%' | \
 	      sed -e 's/text-decoration: *underline;/font-style:italic;/g' \
-		> html/rca-man.html.new
+		> docs/rca-man.html.new
 
-html/rca-help.html: FORCE
+docs/rca-help.html: FORCE
 	PAGER= ./rca help q | \
 	    aha -t "rca calculator help text" --style 'font-size:125%' \
-		> html/rca-help.html.new
+		> docs/rca-help.html.new
 
 htmldiff:
-	-diff -u html/index.html html/index.html.new
-	-diff -u html/rca-man.html html/rca-man.html.new
-	-diff -u html/rca-help.html html/rca-help.html.new
+	-diff -u docs/index.html docs/index.html.new
+	-diff -u docs/rca-man.html docs/rca-man.html.new
+	-diff -u docs/rca-help.html docs/rca-help.html.new
 
 htmlmv:
-	mv html/index.html.new html/index.html
-	mv html/rca-man.html.new html/rca-man.html
-	mv html/rca-help.html.new html/rca-help.html
+	mv docs/index.html.new docs/index.html
+	mv docs/rca-man.html.new docs/rca-man.html
+	mv docs/rca-help.html.new docs/rca-help.html
 
 clean:
-	rm -f rca rca-norl rca.1 .test readme.html \
-		html/rca-man.html.new html/rca-help.html.new
+	rm -f rca rca-norl rca.1 .test docs/index.html.new \
+		docs/rca-man.html.new docs/rca-help.html.new
 
 # test files are simply verbatim output from an rca session.  program
 # output is always indented by one space, so we remove those lines
@@ -86,6 +86,6 @@ tweaktest:
 		tee .test | diff -u tests/tweaktests.txt -
 	@ echo test succeeded
 
-.PHONY: html clean all test optest tweaktest htmldiff htmlmv
+.PHONY: clean all test optest tweaktest html htmldiff htmlmv
 
 FORCE:
