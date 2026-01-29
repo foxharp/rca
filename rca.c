@@ -2475,6 +2475,23 @@ units_rad_deg(void)
 	return BADOP;
 }
 
+
+opreturn
+units_mpg_l100km(void)
+{
+	/* the same formula converts back and
+	 * forth between mpg and liters/100km */
+	ldouble a;
+
+	if (pop(&a)) {
+		a = 235.214583 / a;
+		result_push(a);
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
 token *out_stack, *oper_stack, *infix_rpn_queue;
 
 char *
@@ -3849,13 +3866,14 @@ struct oper opers[] = {
 	{"f2c", units_F_C,	0, 1, 30, 'R' },
 	{"c2f", units_C_F,	"degrees F/C", 1, 30, 'R' },
 	{"oz2g", units_oz_g,	0, 1, 30, 'R' },
-	{"g2oz", units_g_oz,	"ounces / grams", 1, 30, 'R' },
+	{"g2oz", units_g_oz,	"US ounces / grams", 1, 30, 'R' },
 	{"oz2ml", units_oz_ml,	0, 1, 30, 'R' },
-	{"ml2oz", units_ml_oz,	"ounces / milliliters", 1, 30, 'R' },
+	{"ml2oz", units_ml_oz,	"US fluid ounces / milliliters", 1, 30, 'R' },
 	{"q2l", units_qt_l,	0, 1, 30, 'R' },
-	{"l2q", units_l_qt,	"quarts / liters", 1, 30, 'R' },
+	{"l2q", units_l_qt,	"US quarts / liters", 1, 30, 'R' },
 	{"d2r", units_deg_rad,	0, 1, 30, 'R' },
 	{"r2d", units_rad_deg,	"degrees / radians", 1, 30, 'R' },
+	{"mpg2l100km", units_mpg_l100km, "mpg to l/100km and vice versa", 1, 30, 'R' },
 	{""},
     {"Display:"},
 	{"P", printall,		"Print whole stack according to mode" },

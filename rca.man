@@ -474,7 +474,7 @@ left to right.  (This list has no meaning for RPN.)
  \fR 2  R \fB  ~ ! + - chs negate nop recip sqrt sin cos tan asin acos
  \fR      \fB   atan exp ln log2 log10 abs frac int i2mm mm2i ft2m
  \fR      \fB   m2ft mi2km km2mi f2c c2f oz2g g2oz oz2ml ml2oz q2l
- \fR      \fB   l2q d2r r2d
+ \fR      \fB   l2q d2r r2d mpg2l100km
  \fR 3  R \fB  ^ **
  \fR 4    \fB  atan2
  \fR 5    \fB  * x / %
