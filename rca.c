@@ -175,6 +175,7 @@ typedef struct token {
 		char *str;     /* UNKNOWN: points to input buffer, for errors */
 	} val;
 	int type;
+	int imode;	    /* input mode: if NUMERIC, how was it entered?  */
 	int alloced;	    /* should this token be freed or not? */
 	struct token *next; /* for stacking tokens when infix processing */
 } token;
@@ -3107,6 +3108,7 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 
 		t->val.val = dd * sign;
 		t->type = NUMERIC;
+		t->imode = 'H';
 
 	} else if (*p == '0' && (*(p + 1) == 'b' || *(p + 1) == 'B')) {
 		// binary
@@ -3115,6 +3117,7 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 		if (ln == 0 && p == *nextp)
 			goto unknown;
 		t->type = NUMERIC;
+		t->imode = 'B';
 		t->val.val = ln * sign;
 
 	} else if (*p == '0' && ('0' <= *(p + 1) && *(p + 1) <= '7')) {
@@ -3124,6 +3127,7 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 		if (ln == 0 && p == *nextp)
 			goto unknown;
 		t->type = NUMERIC;
+		t->imode = 'O';
 		t->val.val = ln * sign;
 
 	} else if (isdigit(*p) || match_dp(p)) {
@@ -3133,6 +3137,7 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 		if (dd == 0.0 && p == *nextp)
 			goto unknown;
 		t->type = NUMERIC;
+		t->imode = 'D';
 		t->val.val = dd * sign;
 	} else if (*p == '_' && isalnum(*(p+1))) {
 		// variable
@@ -3908,14 +3913,48 @@ struct oper opers[] = {
 };
 // *INDENT-ON*.
 
+void
+do_autoprint(token *pt)
+{
+	if (!autoprint)
+		return;
+
+	/* The goal is to autoprint unless it would be very redundant.
+	 * If the user types "23", we don't want to immediately print
+	 * "23".  But if they typed using a different base, or if what
+	 * they typed wasn't numeric, we'll print the top of stack. */
+
+	switch (pt->type) {
+	case OP:
+	case SYMBOLIC:
+	case VARIABLE:
+		break;
+
+	case NUMERIC:
+		if ((mode == 'F' || mode == 'D' || mode == 'U') &&
+			pt->imode == 'D')
+			return;
+		if (pt->imode == mode)
+			return;
+		break;
+
+	default:
+		return;
+	}
+
+	if (tracing)  // try not to mix our output with debug lines
+		putchar('\n');
+
+	print_top(mode);
+}
+
 int
 main(int argc, char *argv[])
 {
-	struct token tok;
-	token *t;
-	static int lasttoktype;
+	static token prevtok;
+	token tok, *t;
 	char *pn;
-	opreturn opret = BADOP;
+	opreturn opret = GOODOP;
 
 	pn = strrchr(argv[0], '/');
 	progname = pn ? (pn + 1) : argv[0];
@@ -3951,8 +3990,12 @@ main(int argc, char *argv[])
 		}
 		t = &tok;
 
-		if (t->type != EOL)
+		if (t->type != EOL) {
+			/* don't save pending info older than one command */
 			pending_clear();
+			/* preserve opret for autoprint decision */
+			opret = GOODOP;
+		}
 
 		switch (t->type) {
 		case NUMERIC:
@@ -3967,14 +4010,12 @@ main(int argc, char *argv[])
 			opret = (t->val.oper->func) ();
 			break;
 		case EOL:
-                        pending_flush();
-			if (!suppress_autoprint && autoprint &&
-				(lasttoktype == OP ||
-				 lasttoktype == SYMBOLIC ||
-				 lasttoktype == VARIABLE) &&
-				opret == GOODOP) {
-				if (tracing) putchar('\n');
-				print_top(mode);
+			pending_flush();
+			if (!suppress_autoprint) {
+				/* I'm on the fence about whether we autoprint
+				 * after errors.  We don't, currently.  */
+				if (opret == GOODOP)
+					do_autoprint(&prevtok);
 			}
 			suppress_autoprint = FALSE;
 			break;
@@ -3986,7 +4027,7 @@ main(int argc, char *argv[])
 		if (variable_write_enable)
 			variable_write_enable--;
 
-		lasttoktype = t->type;
+		prevtok = *t;
 
 	}
 	exit(3);  // not reached

@@ -431,9 +431,9 @@ see the LOCALE section) for readability.  (Startup: enabled)
 .B autoprint
 (or
 .BR a )
-toggles printing the top of stack after every newline.  (Startup: enabled)
-This output is suppressed if the most recent action
-explicitly set that value.
+toggles printing of the top of stack after every newline.  (Startup:
+enabled)  This output is suppressed if the output would exactly match
+what the user just entered.
 .P
 .B errorexit
 forces
