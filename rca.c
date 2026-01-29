@@ -2708,6 +2708,9 @@ open_paren(void)
 	tclear(&out_stack);
 	tclear(&oper_stack);
 
+	if (tracing)
+		printf("infix tokens: ");
+
 	// push the '(' token the user typed
 	tpush(&oper_stack, &open_paren_token);
 	paren_count = 1;
@@ -3446,9 +3449,6 @@ gettoken(struct token *t)
 		return 1;
 	}
 
-	if (tracing)
-		printf("input 'tokens':");
-
 	fflush(stdin);
 
 	if (!parse_tok(input_ptr, t, &next_input_ptr, 1)) {
@@ -3889,7 +3889,7 @@ struct oper opers[] = {
 	{"r", printrawhex,	"Print x as raw floating hex" },
 	{"R", moderawhex,	"Switch to raw floating hex mode"},
 	{"rounding", rounding,	"Toggle snapping and rounding of floats" },
-	{"tracing", tracetoggle,"Toggle debug tracing" },
+	{"tracing", tracetoggle,"Set tracing level" },
 //	{"commands", commands,	"Dump raw command table" }, # use "11 tracing"
 	{""},
     {"Housekeeping:"},
@@ -3973,6 +3973,7 @@ main(int argc, char *argv[])
 				 lasttoktype == SYMBOLIC ||
 				 lasttoktype == VARIABLE) &&
 				opret == GOODOP) {
+				if (tracing) putchar('\n');
 				print_top(mode);
 			}
 			suppress_autoprint = FALSE;
