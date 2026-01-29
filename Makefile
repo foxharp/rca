@@ -28,10 +28,10 @@ copyrightcheck:
 	grep -q "Copyright.*$$year" LICENSE && \
 	grep -q "Copyright.*$$year" rca.c
 
-html: readme.html html/rca-man.html html/rca-help.html
+html: html/index.html html/rca-man.html html/rca-help.html
 
-readme.html: FORCE
-	python3 -m markdown README.md >readme.html
+html/index.html: FORCE
+	python3 -m markdown README.md >html/index.html.new
 
 html/rca-man.html: FORCE
 	MAN_KEEP_FORMATTING=1 MANWIDTH=75 \
@@ -46,15 +46,14 @@ html/rca-help.html: FORCE
 		> html/rca-help.html.new
 
 htmldiff:
+	-diff -u html/index.html html/index.html.new
 	-diff -u html/rca-man.html html/rca-man.html.new
 	-diff -u html/rca-help.html html/rca-help.html.new
 
 htmlmv:
+	mv html/index.html.new html/index.html
 	mv html/rca-man.html.new html/rca-man.html
 	mv html/rca-help.html.new html/rca-help.html
-
-readme:
-	@python3 -m markdown README.md
 
 clean:
 	rm -f rca rca-norl rca.1 .test readme.html \
