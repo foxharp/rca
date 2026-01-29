@@ -1830,7 +1830,9 @@ printstate(void)
 	putchar('\n');
 	printf(" Locale elements (%s):\n", setlocale(LC_NUMERIC, NULL));
 	printf("  decimal '%s', thousands separator '%s', currency '%s'\n",
-		decimal_pt ?: "null", thousands_sep ?: "null", currency ?: "null");
+		decimal_pt ? decimal_pt : "null",
+		thousands_sep ? thousands_sep : "null",
+		currency ? currency : "null");
 
 	suppress_autoprint = TRUE;
 	return GOODOP;
@@ -2491,20 +2493,20 @@ stackname(token **tstackp)
 
 
 void
-tpush(token **tstackp, token *token)
+tpush(token **tstackp, token *tok)
 {
 	struct token *t;
 
 	/* if we originally malloc'ed the incoming token, just reuse
 	 * it, otherwise malloc and copy.  */
-	if (token->alloced) {
-		t = token;
+	if (tok->alloced) {
+		t = tok;
 	} else {
 		t = (struct token *)calloc(1, sizeof(struct token));
 		if (!t)
 			memory_failure();
 
-		*t = *token;
+		*t = *tok;
 		t->alloced = 1;
 	}
 
@@ -2572,6 +2574,8 @@ sprint_token(char *s, int slen, token *t)
 	case UNKNOWN:
 		snprintf(s, slen, "'unknown (%d)'", t->type);
 		break;
+	default:
+		error(" BUG: hit default in sprint_token()\n");
 	}
 }
 
