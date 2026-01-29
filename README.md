@@ -30,5 +30,5 @@ and rca's
 [help text](https://foxharp.github.io/rca/rca-help.html)
 have all the details.
 
-The license is BSD-2-Clause, and can be found in the source or viewed
-with _rca_'s "license" command.
+The license can be found in the source or viewed with _rca_'s<br>
+"license" command.  (It's BSD-2-Clause.)
