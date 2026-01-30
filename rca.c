@@ -227,6 +227,11 @@ int max_precision = 18;
 int float_specifier = 'g';  // 'f' or 'g'
 char *format_string;
 
+/* zerofill controls whether digits to the left of a value are
+ * left blank, or shown as zero.  useful for smaller word widths
+ * in hex, octal, and binary modes. */
+int zerofill = 0;
+
 #define LONGLONG_BITS (sizeof(long long) * 8)
 
 /* these all help limit the word size to anything we want.  */
@@ -1433,7 +1438,7 @@ void
 putbinary(long long n)
 {
 	int i;
-	int lz = 1; // leading_zeros;
+	int lz = zerofill; // leading_zeros;
 
 	n &= int_mask;
 
@@ -1461,7 +1466,7 @@ puthex(long long n)
 {
 	int i;
 	int nibbles = ((int_width + 3) / 4);
-	int lz = 0; // leading_zeros;
+	int lz = zerofill; // leading_zeros;
 
 	n &= int_mask;
 	if (!n) {
@@ -1487,7 +1492,7 @@ putoct(long long n)
 {
 	int i;
 	int triplets = ((int_width + 2) / 3);
-	int lz = 0; // leading_zeros;
+	int lz = zerofill; // leading_zeros;
 
 	n &= int_mask;
 	if (!n) {
@@ -2165,6 +2170,22 @@ width(void)
 		mask_stack();
 	}
 
+	return GOODOP;
+}
+
+opreturn
+zerof(void)
+{
+	ldouble wantzerofill;
+
+	if (!pop(&wantzerofill))
+		return BADOP;
+
+	toggle_warn(wantzerofill);
+
+	zerofill = (wantzerofill != 0);
+
+	pending_printf(" Zero fill in hex/octal/binary modes is now %s\n", zerofill ? "on" : "off");
 	return GOODOP;
 }
 
@@ -3915,6 +3936,8 @@ struct oper opers[] = {
 	{"K", decimal_length,	"Float format: digits after decimal (%f)" },
 	{"width", width,	0 },
 	{"w", width,		"Set effective word size for integer modes" },
+	{"zerofill", zerof,	0 },
+	{"z", zerof,	"Left-fill with zeros in H, O, and B modes" },
 	{"degrees", use_degrees, "Toggle trig functions: degrees (1) or radians (0)" },
 	{"autoprint", autop,	0 },
 	{"a", autop,		"Toggle autoprinting on/off with 0/1" },
