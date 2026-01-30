@@ -3150,6 +3150,7 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 	if (*p == '0' && (*(p + 1) == 'x' || *(p + 1) == 'X')) {
 		// hex
 		long double dd;
+		p += 2;
 		if (raw_hex_input_ok) {
 			// will accept floating hex like 0xc.90fdaa22168c23cp-2
 			dd = strtold(p, nextp);
@@ -3157,7 +3158,9 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 			// accept simple hex integers only
 			dd = strtoull(p, nextp, 16);
 		}
-		if (dd == 0.0 && p == *nextp)
+
+		/* be strict about what comes next */
+		if (isalnum(**nextp))
 			goto unknown;
 
 		t->val.val = dd * sign;
@@ -3166,10 +3169,13 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 
 	} else if (*p == '0' && (*(p + 1) == 'b' || *(p + 1) == 'B')) {
 		// binary
-		long long ln = strtoull(p + 2, nextp, 2);
+		p += 2;
+		long long ln = strtoull(p, nextp, 2);
 
-		if (ln == 0 && p == *nextp)
+		/* be strict about what comes next */
+		if (*nextp == p || isalnum(**nextp))
 			goto unknown;
+
 		t->type = NUMERIC;
 		t->imode = 'B';
 		t->val.val = ln * sign;
@@ -3178,8 +3184,10 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 		// octal
 		long long ln = strtoull(p, nextp, 8);
 
-		if (ln == 0 && p == *nextp)
+		/* be strict about what comes next */
+		if (*nextp == p || isalnum(**nextp))
 			goto unknown;
+
 		t->type = NUMERIC;
 		t->imode = 'O';
 		t->val.val = ln * sign;
@@ -3188,8 +3196,12 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 		// decimal
 		long double dd = strtold(p, nextp);
 
-		if (dd == 0.0 && p == *nextp)
+		/* don't be strict about what comes next.  mistakes are
+		 * less likely when entering decimal. this makes 3k or 18w
+		 * legal */
+		if (p == *nextp)
 			goto unknown;
+
 		t->type = NUMERIC;
 		t->imode = 'D';
 		t->val.val = dd * sign;
