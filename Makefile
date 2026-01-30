@@ -86,6 +86,6 @@ tweaktest:
 		tee .test | diff -u tests/tweaktests.txt -
 	@ echo test succeeded
 
-.PHONY: clean all test optest tweaktest html htmldiff htmlmv
+.PHONY: clean all gentest optest tweaktest html htmldiff htmlmv
 
 FORCE:
