@@ -265,11 +265,11 @@ h
 h
  0xffff,0000
 16 <<
- 00
+ 0
 exch
  017,677,777,777
 32 <<
- 00
+ 0
 clear
 F
  Mode is float.  Displaying 15 digits of total precision.

@@ -1430,67 +1430,83 @@ pending_printf(const char *fmt, ...)
 }
 
 void
-putbinarybyte(long long mask, unsigned long long n)
-{
-	int i;
-
-	n &= 0xff;
-	mask &= 0xff;
-
-	for (i = 0x80; i != 0; i >>= 1) {
-		if (mask & i)
-			putchar(n & i ? '1' : '0');
-	}
-}
-
-void
-putbinary2(int width, long long mask, unsigned long long n)
-{
-	int i, bytes = (width + 7) / 8;
-
-	for (i = bytes - 1; i >= 0; i--) {
-		putbinarybyte(mask >> (8 * i), n >> (8 * i));
-		if (digitseparators && i >= 1)	// commas every 8 bits
-			fputs(thousands_sep, stdout);
-	}
-}
-
-void
 putbinary(long long n)
 {
-	/* mode may be float but we can still print in binary */
-	if (floating_mode(mode))	// no masking in float mode
-		putbinary2(max_int_width, ~0, (unsigned long long)n);
-	else
-		putbinary2(int_width, int_mask, (unsigned long long)n);
+	int i;
+	int lz = 1; // leading_zeros;
+
+	n &= int_mask;
+
+	printf("0b");
+	if (!n && !lz) {
+		putchar('0');
+		return;
+	}
+	for (i = int_width-1; i >= 0; i--) {
+		if (n & (1L << i)) {
+			putchar('1');
+			lz = 1;
+		} else if (lz) {
+			putchar('0');
+		}
+		if (i && (i % 8 == 0)) {
+			if (digitseparators && lz)
+				fputs(thousands_sep, stdout);
+		}
+	}
 }
 
 void
-puthex(unsigned long long n)
+puthex(long long n)
 {
-	/* commas every 4 hex digits */
-	if (n < 0x10000) {
-		printf("%llx", n);
+	int i;
+	int nibbles = ((int_width + 3) / 4);
+	int lz = 0; // leading_zeros;
+
+	n &= int_mask;
+	if (!n) {
+		printf("0x0");
 		return;
 	}
-	puthex((n / 0x10000));
-	if (digitseparators)
-		fputs(thousands_sep, stdout);
-	printf("%04llx", n % 0x10000);
+	printf("0x");
+	for (i = nibbles-1; i >= 0; i--) {
+		int nibble = (n >> (4 * i)) & 0xf;
+		if (nibble || lz) {
+		    putchar("0123456789abcdef"[nibble]);
+		    lz = 1;
+		}
+		if (i && (i % 4 == 0)) {
+		    if (digitseparators && lz)
+			    fputs(thousands_sep, stdout);
+		}
+	}
 }
 
 void
-putoct(unsigned long long n)
+putoct(long long n)
 {
-	/* commas every 3 octal digits */
-	if (n < 01000) {
-		printf("%llo", n);
+	int i;
+	int triplets = ((int_width + 2) / 3);
+	int lz = 0; // leading_zeros;
+
+	n &= int_mask;
+	if (!n) {
+		printf("%o", 0);
 		return;
 	}
-	putoct(n / 01000);
-	if (digitseparators)
-		fputs(thousands_sep, stdout);
-	printf("%03llo", n % 01000);
+
+	printf("0");
+	for (i = triplets-1; i >= 0; i--) {
+		int triplet = (n >> (3 * i)) & 7;
+		if (triplet || lz) {
+		    putchar("01234567"[triplet]);
+		    lz = 1;
+		}
+		if (i && (i % 3 == 0)) {
+		    if (digitseparators && lz)
+			    fputs(thousands_sep, stdout);
+		}
+	}
 }
 
 boolean
@@ -1641,17 +1657,17 @@ print_n(ldouble *np, int format, boolean conv)
 	switch (format) {
 	case 'H':
 		ln = (long long)n & mask;
-		printf(" 0x");
+		putchar(' ');
 		puthex(ln);
 		break;
 	case 'O':
 		ln = (long long)n & mask;
-		printf(" 0");
+		putchar(' ');
 		putoct(ln);
 		break;
 	case 'B':
 		ln = (long long)n & mask;
-		printf(" 0b");
+		putchar(' ');
 		putbinary(ln);
 		break;
 	case 'U':
