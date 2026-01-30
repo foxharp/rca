@@ -1496,11 +1496,11 @@ putoct(long long n)
 
 	n &= int_mask;
 	if (!n) {
-		printf("%o", 0);
+		printf("0o0");
 		return;
 	}
 
-	printf("0");
+	printf("0o");
 	for (i = triplets-1; i >= 0; i--) {
 		int triplet = (n >> (3 * i)) & 7;
 		if (triplet || lz) {
@@ -3148,7 +3148,7 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 	}
 
 	if (*p == '0' && (*(p + 1) == 'x' || *(p + 1) == 'X')) {
-		// hex
+		// hex, leading "0x"
 		long double dd;
 		p += 2;
 		if (raw_hex_input_ok) {
@@ -3168,7 +3168,7 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 		t->imode = 'H';
 
 	} else if (*p == '0' && (*(p + 1) == 'b' || *(p + 1) == 'B')) {
-		// binary
+		// binary, leading "0b"
 		p += 2;
 		long long ln = strtoull(p, nextp, 2);
 
@@ -3180,8 +3180,9 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 		t->imode = 'B';
 		t->val.val = ln * sign;
 
-	} else if (*p == '0' && ('0' <= *(p + 1) && *(p + 1) <= '7')) {
-		// octal
+	} else if (*p == '0' && (*(p + 1) == 'o' || *(p + 1) == 'O')) {
+		// octal, leading "0o"
+		p += 2;
 		long long ln = strtoull(p, nextp, 8);
 
 		/* be strict about what comes next */
@@ -3695,7 +3696,7 @@ help(void)
   Operators replace either one or two stack values with their result.\n\
   Most whitespace is optional between numbers and operators.\n\
   Input can include locale currency%s symbols: %s12%s345%s67\n\
-  Always prefix hex (0x7f) or octal (0177) input, even in hex or octal mode.\n\
+  Always prefix hex (0x7f) or octal (0o177) input, even in hex or octal mode.\n\
   Infix expressions are entered using (...), as in: (sin(30)^2 + cos(30)^2)\n\
   Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
   rca's normal exit value reflects the logical value of the top of stack.\n\

@@ -181,11 +181,14 @@ regardless of mode, but in integer mode all stack values are masked to
 the current word width, and sign extended, if necessary.
 
 The input base of a number is independent of the mode, and controlled
-entirely by how it is entered:  10, 0xa, 012, 0b1010 and 1e01 are all
+entirely by how it is entered:  10, 0xa, 0o12, 0b1010 and 1e01 are all
 the same value.  The mode does not affect input:  for example, hex
 values must include the "0x" prefix even in
 .B H
-mode.)
+mode.)  Note that octal
+.I must
+be entered using the "0o" prefix, which is also how octal will be
+printed.  The more traditional "0" prefix will be interpreted as decimal.
 
 .SS Floating point
 In floating point mode (i.e.,
