@@ -1434,7 +1434,12 @@ pending_printf(const char *fmt, ...)
 
 }
 
-void
+char *m_bufp;
+size_t m_sizeloc;
+FILE *m_file;
+
+
+char *
 putbinary(long long n)
 {
 	int i;
@@ -1442,26 +1447,34 @@ putbinary(long long n)
 
 	n &= int_mask;
 
-	printf("0b");
+	if (!m_file) m_file = open_memstream(&m_bufp, &m_sizeloc);
+	rewind(m_file);
+
+	fprintf(m_file, " 0b");
 	if (!n && !lz) {
-		putchar('0');
-		return;
-	}
-	for (i = int_width-1; i >= 0; i--) {
-		if (n & (1L << i)) {
-			putchar('1');
-			lz = 1;
-		} else if (lz) {
-			putchar('0');
+		fputc('0', m_file);
+	} else {
+		for (i = int_width-1; i >= 0; i--) {
+			if (n & (1L << i)) {
+				fputc('1', m_file);
+				lz = 1;
+			} else if (lz) {
+				fputc('0', m_file);
+			}
+			if (i && (i % 8 == 0)) {
+				if (digitseparators && lz)
+					fputs(thousands_sep, m_file);
+			}
 		}
-		if (i && (i % 8 == 0)) {
-			if (digitseparators && lz)
-				fputs(thousands_sep, stdout);
-		}
 	}
+
+	fputc('\0', m_file);
+	fflush(m_file);
+
+	return m_bufp;
 }
 
-void
+char *
 puthex(long long n)
 {
 	int i;
@@ -1469,25 +1482,34 @@ puthex(long long n)
 	int lz = zerofill; // leading_zeros;
 
 	n &= int_mask;
+
+	if (!m_file) m_file = open_memstream(&m_bufp, &m_sizeloc);
+	rewind(m_file);
+
+	fprintf(m_file," 0x");
 	if (!n) {
-		printf("0x0");
-		return;
-	}
-	printf("0x");
-	for (i = nibbles-1; i >= 0; i--) {
-		int nibble = (n >> (4 * i)) & 0xf;
-		if (nibble || lz) {
-		    putchar("0123456789abcdef"[nibble]);
-		    lz = 1;
+		fprintf(m_file, "0");
+	} else {
+		for (i = nibbles-1; i >= 0; i--) {
+			int nibble = (n >> (4 * i)) & 0xf;
+			if (nibble || lz) {
+			    fputc("0123456789abcdef"[nibble], m_file);
+			    lz = 1;
+			}
+			if (i && (i % 4 == 0)) {
+			    if (digitseparators && lz)
+				    fputs(thousands_sep, m_file);
+			}
 		}
-		if (i && (i % 4 == 0)) {
-		    if (digitseparators && lz)
-			    fputs(thousands_sep, stdout);
-		}
 	}
+
+	fputc('\0', m_file);
+	fflush(m_file);
+
+	return m_bufp;
 }
 
-void
+char *
 putoct(long long n)
 {
 	int i;
@@ -1495,23 +1517,30 @@ putoct(long long n)
 	int lz = zerofill; // leading_zeros;
 
 	n &= int_mask;
-	if (!n) {
-		printf("0o0");
-		return;
-	}
 
-	printf("0o");
-	for (i = triplets-1; i >= 0; i--) {
-		int triplet = (n >> (3 * i)) & 7;
-		if (triplet || lz) {
-		    putchar("01234567"[triplet]);
-		    lz = 1;
-		}
-		if (i && (i % 3 == 0)) {
-		    if (digitseparators && lz)
-			    fputs(thousands_sep, stdout);
+	if (!m_file) m_file = open_memstream(&m_bufp, &m_sizeloc);
+	rewind(m_file);
+
+	fprintf(m_file," 0o");
+	if (!n) {
+		fputc('0', m_file);
+	} else {
+		for (i = triplets-1; i >= 0; i--) {
+			int triplet = (n >> (3 * i)) & 7;
+			if (triplet || lz) {
+			    fputc("01234567"[triplet], m_file);
+			    lz = 1;
+			}
+			if (i && (i % 3 == 0)) {
+			    if (digitseparators && lz)
+				    fputs(thousands_sep, m_file);
+			}
 		}
 	}
+	fputc('\0', m_file);
+	fflush(m_file);
+
+	return m_bufp;
 }
 
 boolean
@@ -1662,18 +1691,16 @@ print_n(ldouble *np, int format, boolean conv)
 	switch (format) {
 	case 'H':
 		ln = (long long)n & mask;
-		putchar(' ');
-		puthex(ln);
+		// printf("%30s", puthex(ln));
+		printf("%s", puthex(ln));
 		break;
 	case 'O':
 		ln = (long long)n & mask;
-		putchar(' ');
-		putoct(ln);
+		printf("%s", putoct(ln));
 		break;
 	case 'B':
 		ln = (long long)n & mask;
-		putchar(' ');
-		putbinary(ln);
+		printf("%s", putbinary(ln));
 		break;
 	case 'U':
 		/* convert in two steps, to avoid possibly undefined
@@ -1817,10 +1844,10 @@ printstate(void)
 
 	printf(" In integer modes:\n");
 	printf("  width is %d bits\n", int_width);
-	printf("  mask:     0x"); puthex(int_mask);	putchar('\n');
-	printf("  sign bit: 0x"); puthex(int_sign_bit);	putchar('\n');
-	printf("  max:      0x"); puthex(int_max);	putchar('\n');
-	printf("  min:      0x"); puthex(int_min);	putchar('\n');
+	printf("  mask:     %s\n", puthex(int_mask));
+	printf("  sign bit: %s\n", puthex(int_sign_bit));
+	printf("  max:      %s\n", puthex(int_max));
+	printf("  min:      %s\n", puthex(int_min));
 	putchar('\n');
 
 	s = stack;
