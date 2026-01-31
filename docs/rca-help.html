@@ -14,7 +14,7 @@
   Operators replace either one or two stack values with their result.
   Most whitespace is optional between numbers and operators.
   Input can include locale currency and grouping symbols: $12,345.67
-  Always prefix hex (0x7f) or octal (0177) input, even in hex or octal mode.
+  Always prefix hex (0x7f) or octal (0o177) input, even in hex or octal mode.
   Infix expressions are entered using (...), as in: (sin(30)^2 + cos(30)^2)
   Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.
   rca's normal exit value reflects the logical value of the top of stack.
@@ -69,10 +69,11 @@
            ft2m, m2ft     feet / meters
          mi2km, km2mi     miles / kilometers
              f2c, c2f     degrees F/C
-           oz2g, g2oz     ounces / grams
-         oz2ml, ml2oz     ounces / milliliters
-             q2l, l2q     quarts / liters
+           oz2g, g2oz     US ounces / grams
+         oz2ml, ml2oz     US fluid ounces / milliliters
+             q2l, l2q     US quarts / liters
              d2r, r2d     degrees / radians
+           mpg2l100km     mpg to l/100km and vice versa
 
  Display:
                     P     Print whole stack according to mode
@@ -87,6 +88,7 @@
       precision, or k     Float format: number of significant digits (%g)
        decimals, or K     Float format: digits after decimal (%f)
           width, or w     Set effective word size for integer modes
+       zerofill, or z     Left-fill with zeros in H, O, and B modes
               degrees     Toggle trig functions: degrees (1) or radians (0)
       autoprint, or a     Toggle autoprinting on/off with 0/1
      separators, or s     Toggle numeric separators (i.e., commas) on/off (0/1)
@@ -96,7 +98,7 @@
                     r     Print x as raw floating hex
                     R     Switch to raw floating hex mode
              rounding     Toggle snapping and rounding of floats
-              tracing     Toggle debug tracing
+              tracing     Set tracing level
 
  Housekeeping:
            ?, or help     Show this list (using $PAGER, if set)
@@ -107,7 +109,7 @@
               license     Display the rca copyright and license.
                     #     Comment. The rest of the line will be ignored.
 
-                                        version v12 built Jan 28 2026 18:01:00
+                                        version v13 built Jan 30 2026 19:00:43
 
  Tip:	Use &quot;rca help q | less&quot; to view this help
 </pre>

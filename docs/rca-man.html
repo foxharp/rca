@@ -114,10 +114,12 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        current word width, and sign extended, if necessary.
 
        The input base of a number is independent of the mode, and
-       controlled entirely by how it is entered:  10, 0xa, 012, 0b1010
+       controlled entirely by how it is entered:  10, 0xa, 0o12, 0b1010
        and 1e01 are all the same value.  The mode does not affect input:
        for example, hex values must include the &quot;0x&quot; prefix even in <span style="font-weight:bold;">H</span>
-       mode.)
+       mode.)  Note that octal <span style="font-style:italic;">must</span> be entered using the &quot;0o&quot; prefix,
+       which is also how octal will be printed.  The more traditional &quot;0&quot;
+       prefix will be interpreted as decimal.
 
    <span style="font-weight:bold;">Floating point</span>
        In floating point mode (i.e., <span style="font-weight:bold;">F </span>mode), all operations use the full
@@ -247,6 +249,12 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
               <span style="font-weight:bold;">width </span>(or <span style="font-weight:bold;">w</span>) chooses the size of integers, in bits.
               (Startup: system maximum, likely 64).
 
+              <span style="font-weight:bold;">zerofill </span>(or <span style="font-weight:bold;">z</span>) chooses whether or not hex, octal, and
+              binary integers will be left-padded out to the chosen word
+              width with zeros.  This can help align values vertically,
+              and along with word width, might help visualize a processor
+              register, for instance.
+
               <span style="font-weight:bold;">degrees </span>toggles whether degrees are used by the trig
               functions, instead of radians.  (Startup:  enabled)
 
@@ -254,10 +262,10 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
               separators (usually ',', but see the LOCALE section) for
               readability.  (Startup: enabled)
 
-              <span style="font-weight:bold;">autoprint </span>(or <span style="font-weight:bold;">a</span>) toggles printing the top of stack after
-              every newline.  (Startup: enabled) This output is
-              suppressed if the most recent action explicitly set that
-              value.
+              <span style="font-weight:bold;">autoprint </span>(or <span style="font-weight:bold;">a</span>) toggles printing of the top of stack after
+              every newline.  (Startup: enabled)  This output is
+              suppressed if the output would exactly match what the user
+              just entered.
 
               <span style="font-weight:bold;">errorexit </span>forces <span style="font-weight:bold;">rca </span>to exit on any subsequent error.
               Normally errors which result from user input are reported,
@@ -288,7 +296,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
          2  R   <span style="font-weight:bold;">~ ! + - chs negate nop recip sqrt sin cos tan asin acos</span>
                  <span style="font-weight:bold;">atan exp ln log2 log10 abs frac int i2mm mm2i ft2m</span>
                  <span style="font-weight:bold;">m2ft mi2km km2mi f2c c2f oz2g g2oz oz2ml ml2oz q2l</span>
-                 <span style="font-weight:bold;">l2q d2r r2d</span>
+                 <span style="font-weight:bold;">l2q d2r r2d mpg2l100km</span>
          3  R   <span style="font-weight:bold;">^ **</span>
          4      <span style="font-weight:bold;">atan2</span>
          5      <span style="font-weight:bold;">* x / %</span>
@@ -482,7 +490,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        Paul Fox created <span style="font-weight:bold;">rca </span>(formerly called &quot;ca&quot;) very slowly over a
        span of decades, starting in 1993.
 
-                                2026-01-28                         <span style="font-style:italic;">rca</span>(1)
+                                2026-01-30                         <span style="font-style:italic;">rca</span>(1)
 </pre>
 </body>
 </html>
