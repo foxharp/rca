@@ -232,6 +232,10 @@ char *format_string;
  * in hex, octal, and binary modes. */
 int zerofill = 0;
 
+/* rightalign controls whether, when printing, we line up least
+ * significant digits (right) or most significant digits (left).  */
+int rightalign = 1;
+
 #define LONGLONG_BITS (sizeof(long long) * 8)
 
 /* these all help limit the word size to anything we want.  */
@@ -1674,6 +1678,17 @@ print_floating(ldouble n, int format)
 
 }
 
+int
+calc_align(int bpd /* bits/digit */, int dps /* digits/separator */)
+{
+	if (!rightalign)
+		return 0;
+
+	int digits = (int_width + (bpd - 1)) / bpd;
+	int seps = ((digits-1)/ dps) * digitseparators;
+
+	return seps + digits + 3;  /* +3 for prefix:  " 0x" */
+}
 
 void
 print_n(ldouble *np, int format, boolean conv)
@@ -1682,6 +1697,7 @@ print_n(ldouble *np, int format, boolean conv)
 	long long ln;
 	long long mask = int_mask;
 	unsigned long long uln;
+	int align;
 	boolean changed;
 
 	suppress_autoprint = TRUE;
@@ -1708,21 +1724,22 @@ print_n(ldouble *np, int format, boolean conv)
 	 * printing in another mode's format.  */
 	changed = check_int_truncation(&n, conv);
 
-	int align = 30;
 	/* mode can be float but we can still print in hex, binary
 	 * format, etc */
 	switch (format) {
 	case 'H':
 		ln = (long long)n & mask;
-		// printf("%30s", puthex(ln));
+		align = calc_align(4, 4);
 		printf("%*s", align, puthex(ln));
 		break;
 	case 'O':
 		ln = (long long)n & mask;
+		align = calc_align(3, 3);
 		printf("%*s", align, putoct(ln));
 		break;
 	case 'B':
 		ln = (long long)n & mask;
+		align = calc_align(1, 8);
 		printf("%*s", align, putbinary(ln));
 		break;
 	case 'U':
@@ -1730,32 +1747,29 @@ print_n(ldouble *np, int format, boolean conv)
 		 * negative double to unsigned conversion */
 		ln = (long long)n & mask;
 		uln = (unsigned long long)ln;
+		/* for decimal, worst case width is like octal's */
+		align = calc_align(3, 3);
 		printf("%*s", align, putunsigned(uln));
 		break;
 	case 'D':
 		ln = (long long)n;
-		if (floating_mode(mode) || int_width == LONGLONG_BITS) {
-			printf("%*s", align, putsigned(ln));
-		} else {
+		if (!floating_mode(mode) && int_width != LONGLONG_BITS) {
 			/* shenanigans to make pos/neg numbers appear
 			 * properly.  our masked/shortened numbers
 			 * don't appear as negative to printf, so we
 			 * find the reduced-width sign bit, and fake
 			 * it.
 			 */
-			long long t;
-			int sign;
 
 			mask = (long long)int_mask & ~int_sign_bit;
 			if (ln & int_sign_bit) {	// negative
-				t = int_sign_bit - (ln & mask);
-				sign = -1;
+				ln = -1 * (int_sign_bit - (ln & mask));
 			} else {
-				t = ln & mask;
-				sign = 1;
+				ln = ln & mask;
 			}
-			printf("%*s", align, putsigned(sign * t));
 		}
+		align = calc_align(3, 3);
+		printf("%*s", align, putsigned(ln));
 		break;
 	default:
 		error(" bug: default case in print_n()\n");
