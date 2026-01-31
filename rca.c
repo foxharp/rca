@@ -234,7 +234,7 @@ int zerofill = 0;
 
 /* rightalign controls whether, when printing, we line up least
  * significant digits (right) or most significant digits (left).  */
-int rightalign = 1;
+int rightalignment = 1;
 
 #define LONGLONG_BITS (sizeof(long long) * 8)
 
@@ -1672,7 +1672,7 @@ print_floating(ldouble n, int format)
 int
 calc_align(int bpd /* bits/digit */, int dps /* digits/separator */)
 {
-	if (!rightalign)
+	if (!rightalignment)
 		return 0;
 
 	int digits = (int_width + (bpd - 1)) / bpd;
@@ -2225,6 +2225,13 @@ opreturn
 zerof(void)
 {
 	return toggler(&zerofill, "Zero fill in hex/octal/binary modes is now",
+		"on", "off");
+}
+
+opreturn
+rightalign(void)
+{
+	return toggler(&rightalignment, "Right alignment of integer modes is now",
 		"on", "off");
 }
 
@@ -3969,7 +3976,9 @@ struct oper opers[] = {
 	{"width", width,	0 },
 	{"w", width,		"Set effective word size for integer modes" },
 	{"zerofill", zerof,	0 },
-	{"z", zerof,	"Left-fill with zeros in H, O, and B modes" },
+	{"z", zerof,		"Toggle left-filling with zeros in H, O, and B modes" },
+	{"rightalign", rightalign, 0 },
+	{"right", rightalign,	"Toggle right alignment numbers (in integer modes)" },
 	{"degrees", use_degrees, "Toggle trig functions: degrees (1) or radians (0)" },
 	{"autoprint", autop,	0 },
 	{"a", autop,		"Toggle autoprinting on/off with 0/1" },
