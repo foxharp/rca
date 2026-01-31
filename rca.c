@@ -1438,6 +1438,20 @@ char *m_bufp;
 size_t m_sizeloc;
 FILE *m_file;
 
+void
+m_file_start(void)
+{
+	if (!m_file) m_file = open_memstream(&m_bufp, &m_sizeloc);
+	rewind(m_file);
+}
+
+void
+m_file_finish(void)
+{
+	fputc('\0', m_file);
+	fflush(m_file);
+
+}
 
 char *
 putbinary(long long n)
@@ -1447,8 +1461,7 @@ putbinary(long long n)
 
 	n &= int_mask;
 
-	if (!m_file) m_file = open_memstream(&m_bufp, &m_sizeloc);
-	rewind(m_file);
+	m_file_start();
 
 	fprintf(m_file, " 0b");
 	if (!n && !lz) {
@@ -1468,8 +1481,7 @@ putbinary(long long n)
 		}
 	}
 
-	fputc('\0', m_file);
-	fflush(m_file);
+	m_file_finish();
 
 	return m_bufp;
 }
@@ -1483,8 +1495,7 @@ puthex(long long n)
 
 	n &= int_mask;
 
-	if (!m_file) m_file = open_memstream(&m_bufp, &m_sizeloc);
-	rewind(m_file);
+	m_file_start();
 
 	fprintf(m_file," 0x");
 	if (!n) {
@@ -1503,8 +1514,7 @@ puthex(long long n)
 		}
 	}
 
-	fputc('\0', m_file);
-	fflush(m_file);
+	m_file_finish();
 
 	return m_bufp;
 }
@@ -1518,8 +1528,7 @@ putoct(long long n)
 
 	n &= int_mask;
 
-	if (!m_file) m_file = open_memstream(&m_bufp, &m_sizeloc);
-	rewind(m_file);
+	m_file_start();
 
 	fprintf(m_file," 0o");
 	if (!n) {
@@ -1537,8 +1546,32 @@ putoct(long long n)
 			}
 		}
 	}
-	fputc('\0', m_file);
-	fflush(m_file);
+
+	m_file_finish();
+
+	return m_bufp;
+}
+
+char *
+putunsigned(unsigned long long uln)
+{
+	m_file_start();
+
+	fprintf(m_file, digitseparators ? " %'llu" : " %llu", uln);
+
+	m_file_finish();
+
+	return m_bufp;
+}
+
+char *
+putsigned(long long ln)
+{
+	m_file_start();
+
+	fprintf(m_file, digitseparators ? " %'lld" : " %lld", ln);
+
+	m_file_finish();
 
 	return m_bufp;
 }
@@ -1686,33 +1719,34 @@ print_n(ldouble *np, int format, boolean conv)
 	 * printing in another mode's format.  */
 	changed = check_int_truncation(&n, conv);
 
+	int align = 30;
 	/* mode can be float but we can still print in hex, binary
 	 * format, etc */
 	switch (format) {
 	case 'H':
 		ln = (long long)n & mask;
 		// printf("%30s", puthex(ln));
-		printf("%s", puthex(ln));
+		printf("%*s", align, puthex(ln));
 		break;
 	case 'O':
 		ln = (long long)n & mask;
-		printf("%s", putoct(ln));
+		printf("%*s", align, putoct(ln));
 		break;
 	case 'B':
 		ln = (long long)n & mask;
-		printf("%s", putbinary(ln));
+		printf("%*s", align, putbinary(ln));
 		break;
 	case 'U':
 		/* convert in two steps, to avoid possibly undefined
 		 * negative double to unsigned conversion */
 		ln = (long long)n & mask;
 		uln = (unsigned long long)ln;
-		printf(digitseparators ? " %'llu" : " %llu", uln);
+		printf("%*s", align, putunsigned(uln));
 		break;
 	case 'D':
 		ln = (long long)n;
 		if (floating_mode(mode) || int_width == LONGLONG_BITS) {
-			printf(digitseparators ? " %'lld" : " %lld", ln);
+			printf("%*s", align, putsigned(ln));
 		} else {
 			/* shenanigans to make pos/neg numbers appear
 			 * properly.  our masked/shortened numbers
@@ -1721,16 +1755,17 @@ print_n(ldouble *np, int format, boolean conv)
 			 * it.
 			 */
 			long long t;
+			int sign;
 
 			mask = (long long)int_mask & ~int_sign_bit;
 			if (ln & int_sign_bit) {	// negative
 				t = int_sign_bit - (ln & mask);
-				printf(" -");
+				sign = -1;
 			} else {
 				t = ln & mask;
-				printf(" ");
+				sign = 1;
 			}
-			printf(digitseparators ? "%'lld" : "%lld", t);
+			printf("%*s", align, putsigned(sign * t));
 		}
 		break;
 	default:
