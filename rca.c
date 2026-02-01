@@ -236,6 +236,13 @@ int zerofill = 0;
  * significant digits (right) or most significant digits (left).  */
 int rightalignment = 1;
 
+/* I tried making these alignment columns dynamic, adjusting to the
+ * max width of a float, or an integer in whichever particular base,
+ * but it added complexity for not a lot of value.  So now there are
+ * just two choices, which just fit 64 bit octal and binary output. */
+#define ALIGN_COL        32
+#define ALIGN_COL_BINARY 71
+
 #define LONGLONG_BITS (sizeof(long long) * 8)
 
 /* these all help limit the word size to anything we want.  */
@@ -1675,13 +1682,22 @@ print_floating(ldouble n, int format)
 int
 calc_align(int bpd /* bits/digit */, int dps /* digits/separator */)
 {
+	(void)dps;
+
 	if (!rightalignment)
 		return 0;
 
+#if DYNAMIC_ALIGNMENT
 	int digits = (int_width + (bpd - 1)) / bpd;
 	int seps = ((digits-1)/ dps) * digitseparators;
 
 	return seps + digits + 3;  /* +3 for prefix:  " 0x" */
+#else
+	if (bpd == 8)
+		return ALIGN_COL_BINARY;
+	else
+		return ALIGN_COL;
+#endif
 }
 
 void
@@ -1704,7 +1720,7 @@ print_n(ldouble *np, int format, boolean conv)
 		align = 0;
 		if (rightalignment) {
 			char *eos, *dp;
-			align = max_precision * 2;
+			align = ALIGN_COL;
 			dp = strstr(pf, decimal_pt);
 			if (dp) {
 				eos = pf + strlen(pf);
