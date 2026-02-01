@@ -421,13 +421,17 @@ chooses "decimal places" output, and how many.
 .BR w )
 chooses the size of integers, in bits. (Startup: system maximum, likely 64).
 .P
+.B rightalign
+(or
+.BR right )
+toggles whether values should be vertically aligned at the left margin by their
+first digit, or to the right, by their decimal point. (Startup: enabled)
+.P
 .B zerofill
 (or
 .BR z )
-chooses whether or not hex, octal, and binary integers will be
-left-padded out to the chosen word width with zeros.  This can help
-align values vertically, and along with word width, might help
-visualize a processor register, for instance.
+toggles whether or not hex, octal, and binary integers will be
+left-padded out to the chosen word width with zeros.  (Startup: disabled)
 .P
 .B degrees
 toggles whether degrees are used by the trig functions, instead of
