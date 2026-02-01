@@ -290,32 +290,6 @@ error(const char *fmt, ...)
 }
 
 void
-toggle_warn(int n)
-{
-	if (n == 0 || n == 1)
-		return;
-	error(" warning: toggle commands usually take 0 or 1 as their argument\n");
-}
-
-opreturn
-enable_errexit(void)
-{
-	ldouble want_errexit;
-	boolean pop(ldouble *);
-
-	if (!pop(&want_errexit))
-		return BADOP;
-
-	exit_on_error = (want_errexit != 0);
-
-	toggle_warn(want_errexit);
-
-	pending_printf(" errors and warnings will %s cause exit\n",
-		exit_on_error ? "now" : "not");
-	return GOODOP;
-}
-
-void
 detect_epsilon(void)
 {
 	epsilon = 1.0L;
@@ -452,6 +426,33 @@ pop(ldouble *f)
 		stack_mark = 0;
 
 	return TRUE;
+}
+
+opreturn
+toggler(int *control, char *descrip, char *yes, char *no)
+{
+	ldouble n;
+
+	if (!pop(&n))
+		return BADOP;
+
+	if (n != 0 && n != 1) {
+		push(n);
+		error(" error: toggle commands only take 0/1 as an argument\n");
+		return BADOP;
+	}
+
+	*control = n;
+
+	pending_printf(" %s %s\n", descrip, n ? yes : no);
+	return GOODOP;
+}
+
+opreturn
+enable_errexit(void)
+{
+	return toggler(&exit_on_error,  "Exiting on errors and warnings ",
+		"enabled", "disabled");
 }
 
 opreturn
@@ -929,18 +930,8 @@ int trig_degrees = 1;  // work in degrees by default
 opreturn
 use_degrees(void)
 {
-	ldouble wantdegrees;
-
-	if (!pop(&wantdegrees))
-		return BADOP;
-
-	toggle_warn(wantdegrees);
-
-	trig_degrees = (wantdegrees != 0);
-
-	pending_printf(" trig functions will now use %s\n",
-		trig_degrees ? "degrees" : "radians");
-	return GOODOP;
+	return toggler(&trig_degrees, "trig functions will now use",
+		"degrees", "radians");
 }
 
 ldouble
@@ -2076,28 +2067,20 @@ setup_format_string(void)
 opreturn
 separators(void)
 {
-	ldouble wantsep;
-
-	if (!pop(&wantsep))
-		return BADOP;
-
-	toggle_warn(wantsep);
-
 	if (!thousands_sep[0]) {
-		pending_printf(" No thousands separator defined in the "
-			"current locale. so no numeric separators.\n");
+		pending_printf(" No thousands separator found in the "
+			"current locale. so numeric separators are disabled\n");
 		digitseparators = 0;
 		return GOODOP;
 	}
 
-	digitseparators = (wantsep != 0);
+	if (!toggler(&digitseparators, "Numeric separators now", "on", "off"))
+		return BADOP;
 
 	setup_format_string();
 
-	pending_printf(" Numeric separators now %s\n",
-		digitseparators ? "on" : "off");
-
 	return GOODOP;
+
 }
 
 opreturn
@@ -2241,17 +2224,8 @@ width(void)
 opreturn
 zerof(void)
 {
-	ldouble wantzerofill;
-
-	if (!pop(&wantzerofill))
-		return BADOP;
-
-	toggle_warn(wantzerofill);
-
-	zerofill = (wantzerofill != 0);
-
-	pending_printf(" Zero fill in hex/octal/binary modes is now %s\n", zerofill ? "on" : "off");
-	return GOODOP;
+	return toggler(&zerofill, "Zero fill in hex/octal/binary modes is now",
+		"on", "off");
 }
 
 /* for store/recall */
@@ -3026,17 +3000,7 @@ open_paren(void)
 opreturn
 autop(void)
 {
-	ldouble wantautop;
-
-	if (!pop(&wantautop))
-		return BADOP;
-
-	toggle_warn(wantautop);
-
-	autoprint = (wantautop != 0);
-
-	pending_printf(" Autoprinting is now %s\n", autoprint ? "on" : "off");
-	return GOODOP;
+	return toggler(&autoprint, "Autoprinting is now", "on", "off");
 }
 
 /* debug support */
@@ -3065,18 +3029,8 @@ tracetoggle(void)
 opreturn
 rounding(void)
 {
-	ldouble wantrounding;
-
-	if (!pop(&wantrounding))
-		return BADOP;
-
-	toggle_warn(wantrounding);
-
-	do_rounding = (wantrounding != 0);
-
-	pending_printf( " Float snapping/rounding is now %s\n",
-		do_rounding ? "on" : "off");
-	return GOODOP;
+	return toggler(&do_rounding, "Float snapping/rounding is now",
+		"on", "off");
 }
 
 void
