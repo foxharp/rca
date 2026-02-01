@@ -1607,10 +1607,11 @@ min(int a, int b)
 	return (a < b) ? a : b;
 }
 
-void
+char *
 print_floating(ldouble n, int format)
 {
-	putchar(' ');
+	m_file_start();
+	fputc(' ', m_file);
 	if (format == 'R') {
 
 		raw_hex_input_ok = TRUE;
@@ -1623,7 +1624,7 @@ print_floating(ldouble n, int format)
 		 * the mantissa differently.  */
 
 		// 1 digit per 4 bits, and 1 of them is before the decimal
-		printf("%.*La\n", (LDBL_MANT_DIG + 3)/4 - 1, n);
+		fprintf(m_file, "%.*La\n", (LDBL_MANT_DIG + 3)/4 - 1, n);
 
 	} else if (format == 'F' && float_specifier == 'f') {
 		char buf[128];
@@ -1660,13 +1661,15 @@ print_floating(ldouble n, int format)
 
 			snprintf(buf, sizeof(buf), format_string, decimals, n);
 		}
-		puts(buf);
+		fputs(buf, m_file);
 
 	} else {
-		printf(format_string, float_digits, n);
-		putchar('\n');
+		fprintf(m_file, format_string, float_digits, n);
 	}
 
+	m_file_finish();
+
+	return m_bufp;
 }
 
 int
@@ -1696,7 +1699,19 @@ print_n(ldouble *np, int format, boolean conv)
 	old_n = n = *np;
 
 	if (floating_mode(format) || !isfinite(n)) {
-		print_floating(n, format);
+		char *pf;
+		pf = print_floating(n, format);
+		align = 0;
+		if (rightalignment) {
+			char *eos, *dp;
+			align = max_precision * 2;
+			dp = strstr(pf, decimal_pt);
+			if (dp) {
+				eos = pf + strlen(pf);
+				align += (int)(eos - dp);
+			}
+		}
+		printf("%*s\n", align, pf);
 		return;
 	}
 
@@ -3978,7 +3993,7 @@ struct oper opers[] = {
 	{"zerofill", zerof,	0 },
 	{"z", zerof,		"Toggle left-filling with zeros in H, O, and B modes" },
 	{"rightalign", rightalign, 0 },
-	{"right", rightalign,	"Toggle right alignment numbers (in integer modes)" },
+	{"right", rightalign,	"Toggle right alignment of numbers" },
 	{"degrees", use_degrees, "Toggle trig functions: degrees (1) or radians (0)" },
 	{"autoprint", autop,	0 },
 	{"a", autop,		"Toggle autoprinting on/off with 0/1" },
