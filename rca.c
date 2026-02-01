@@ -1464,20 +1464,16 @@ putbinary(long long n)
 	m_file_start();
 
 	fprintf(m_file, " 0b");
-	if (!n && !lz) {
-		fputc('0', m_file);
-	} else {
-		for (i = int_width-1; i >= 0; i--) {
-			if (n & (1L << i)) {
-				fputc('1', m_file);
-				lz = 1;
-			} else if (lz) {
-				fputc('0', m_file);
-			}
-			if (i && (i % 8 == 0)) {
-				if (digitseparators && lz)
-					fputs(thousands_sep, m_file);
-			}
+	for (i = int_width-1; i >= 0; i--) {
+		if (n & (1L << i)) {
+			fputc('1', m_file);
+			lz = 1;
+		} else if (lz || i == 0) {
+			fputc('0', m_file);
+		}
+		if (i && (i % 8 == 0)) {
+			if (digitseparators && lz)
+				fputs(thousands_sep, m_file);
 		}
 	}
 
@@ -1498,19 +1494,15 @@ puthex(long long n)
 	m_file_start();
 
 	fprintf(m_file," 0x");
-	if (!n) {
-		fprintf(m_file, "0");
-	} else {
-		for (i = nibbles-1; i >= 0; i--) {
-			int nibble = (n >> (4 * i)) & 0xf;
-			if (nibble || lz) {
-			    fputc("0123456789abcdef"[nibble], m_file);
-			    lz = 1;
-			}
-			if (i && (i % 4 == 0)) {
-			    if (digitseparators && lz)
-				    fputs(thousands_sep, m_file);
-			}
+	for (i = nibbles-1; i >= 0; i--) {
+		int nibble = (n >> (4 * i)) & 0xf;
+		if (nibble || lz || i == 0) {
+		    fputc("0123456789abcdef"[nibble], m_file);
+		    lz = 1;
+		}
+		if (i && (i % 4 == 0)) {
+		    if (digitseparators && lz)
+			    fputs(thousands_sep, m_file);
 		}
 	}
 
@@ -1520,30 +1512,27 @@ puthex(long long n)
 }
 
 char *
-putoct(long long n)
+putoct(long long sn)
 {
 	int i;
 	int triplets = ((int_width + 2) / 3);
 	int lz = zerofill; // leading_zeros;
+	unsigned long long n = (unsigned long long)sn;
 
 	n &= int_mask;
 
 	m_file_start();
 
 	fprintf(m_file," 0o");
-	if (!n) {
-		fputc('0', m_file);
-	} else {
-		for (i = triplets-1; i >= 0; i--) {
-			int triplet = (n >> (3 * i)) & 7;
-			if (triplet || lz) {
-			    fputc("01234567"[triplet], m_file);
-			    lz = 1;
-			}
-			if (i && (i % 3 == 0)) {
-			    if (digitseparators && lz)
-				    fputs(thousands_sep, m_file);
-			}
+	for (i = triplets-1; i >= 0; i--) {
+		int triplet = (n >> (3 * i)) & 7;
+		if (triplet || lz || i == 0) {
+		    fputc("01234567"[triplet], m_file);
+		    lz = 1;
+		}
+		if (i && (i % 3 == 0)) {
+		    if (digitseparators && lz)
+			    fputs(thousands_sep, m_file);
 		}
 	}
 
