@@ -1,4 +1,6 @@
 
+0 rightalign
+ Right alignment of integer modes is now off
 # ============================================
 # Unary + and - versus binary
 # ============================================

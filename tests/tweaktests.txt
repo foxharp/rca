@@ -4,6 +4,8 @@
 # q2l, l2q, xor, clearb, setb, precision, separators, e, pi
 # RPN expressions used where convenient.  Infix-only tests are wrapped in ( ... ).
 
+0 rightalign
+ Right alignment of integer modes is now off
 # =============================
 # Exact integers
 # =============================

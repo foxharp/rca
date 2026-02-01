@@ -1,4 +1,6 @@
 
+0 rightalign
+ Right alignment of integer modes is now off
 1 1 +
  2
 10 10 x
