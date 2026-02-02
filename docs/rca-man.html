@@ -36,7 +36,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
 
        The value at the top of the stack can be shown with the <span style="font-weight:bold;">p </span>command,
        and the entire stack with <span style="font-weight:bold;">P</span>.  Autoprinting will print the top of
-       the stack after every input line.  This is on by default; it can
+       the stack after most input lines.  This is on by default; it can
        be toggled off with <span style="font-weight:bold;">0 autoprint </span>(or <span style="font-weight:bold;">0 a</span>).
 
        If <span style="font-weight:bold;">rca </span>is built with the readline library, then command line
@@ -249,11 +249,13 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
               <span style="font-weight:bold;">width </span>(or <span style="font-weight:bold;">w</span>) chooses the size of integers, in bits.
               (Startup: system maximum, likely 64).
 
-              <span style="font-weight:bold;">zerofill </span>(or <span style="font-weight:bold;">z</span>) chooses whether or not hex, octal, and
+              <span style="font-weight:bold;">rightalign </span>(or <span style="font-weight:bold;">right</span>) toggles whether values should be
+              vertically aligned at the left margin by their first digit,
+              or to the right, by their decimal point. (Startup: enabled)
+
+              <span style="font-weight:bold;">zerofill </span>(or <span style="font-weight:bold;">z</span>) toggles whether or not hex, octal, and
               binary integers will be left-padded out to the chosen word
-              width with zeros.  This can help align values vertically,
-              and along with word width, might help visualize a processor
-              register, for instance.
+              width with zeros.  (Startup: disabled)
 
               <span style="font-weight:bold;">degrees </span>toggles whether degrees are used by the trig
               functions, instead of radians.  (Startup:  enabled)
@@ -263,9 +265,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
               readability.  (Startup: enabled)
 
               <span style="font-weight:bold;">autoprint </span>(or <span style="font-weight:bold;">a</span>) toggles printing of the top of stack after
-              every newline.  (Startup: enabled)  This output is
-              suppressed if the output would exactly match what the user
-              just entered.
+              newlines.  (Startup: enabled)
 
               <span style="font-weight:bold;">errorexit </span>forces <span style="font-weight:bold;">rca </span>to exit on any subsequent error.
               Normally errors which result from user input are reported,
@@ -490,7 +490,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        Paul Fox created <span style="font-weight:bold;">rca </span>(formerly called &quot;ca&quot;) very slowly over a
        span of decades, starting in 1993.
 
-                                2026-01-30                         <span style="font-style:italic;">rca</span>(1)
+                                2026-02-02                         <span style="font-style:italic;">rca</span>(1)
 </pre>
 </body>
 </html>
