@@ -1396,62 +1396,76 @@ exchange(void)
 }
 
 
-char pending_info[1024];
+/* descriptor for an open_memstream() FILE pointer */
+struct memfile {
+	char *bufp;
+	size_t sizeloc;
+	FILE *fp;
+};
+
+void
+memfile_open(struct memfile *mfp)
+{
+	mfp->fp = open_memstream(&mfp->bufp, &mfp->sizeloc);
+	if (!mfp->fp) {
+		perror("rca: open_memstream failure");
+		exit(3);
+	}
+}
+
+struct memfile pp;
 
 void
 pending_clear(void)
 {
-	*pending_info = '\0';
+	if (pp.fp) {
+		rewind(pp.fp);
+		fputc('\0', pp.fp);
+		fseek(pp.fp, -1, SEEK_CUR);
+	}
 }
 
 void
-pending_flush(void)
+pending_show(void)
 {
-	if (*pending_info) {
-		printf("%s", pending_info);
-		*pending_info = '\0';
+	if (pp.fp) {
+		fflush(pp.fp);
+		printf("%s", pp.bufp);
+		pending_clear();
 	}
 }
 
 void
 pending_printf(const char *fmt, ...)
 {
-	int n, remaining;
 	va_list ap;
-	static int used;
 
-	if (!pending_info[0]) used = 0;
-
-	remaining = sizeof(pending_info) - used;
-	if (remaining <= 0) return;
+	if (!pp.fp)
+		memfile_open(&pp);
 
 	va_start(ap, fmt);
-	n = vsnprintf(pending_info + used, remaining, fmt, ap);
+	vfprintf(pp.fp, fmt, ap);
 	va_end(ap);
-
-	if (n >= 0 && n < remaining)
-		used += n;
-	else
-		used += remaining;
-
+	// ensure it's always null-terminated
+	fputc('\0', pp.fp);
+	fseek(pp.fp, -1, SEEK_CUR);
 }
 
-char *m_bufp;
-size_t m_sizeloc;
-FILE *m_file;
+struct memfile mp;
 
 void
 m_file_start(void)
 {
-	if (!m_file) m_file = open_memstream(&m_bufp, &m_sizeloc);
-	rewind(m_file);
+	if (!mp.fp)
+		memfile_open(&mp);
+	rewind(mp.fp);
 }
 
 void
 m_file_finish(void)
 {
-	fputc('\0', m_file);
-	fflush(m_file);
+	fputc('\0', mp.fp);
+	fflush(mp.fp);
 
 }
 
@@ -1465,23 +1479,23 @@ putbinary(long long n)
 
 	m_file_start();
 
-	fprintf(m_file, " 0b");
+	fprintf(mp.fp, " 0b");
 	for (i = int_width-1; i >= 0; i--) {
 		if (n & (1L << i)) {
-			fputc('1', m_file);
+			fputc('1', mp.fp);
 			lz = 1;
 		} else if (lz || i == 0) {
-			fputc('0', m_file);
+			fputc('0', mp.fp);
 		}
 		if (i && (i % 8 == 0)) {
 			if (digitseparators && lz)
-				fputs(thousands_sep, m_file);
+				fputs(thousands_sep, mp.fp);
 		}
 	}
 
 	m_file_finish();
 
-	return m_bufp;
+	return mp.bufp;
 }
 
 char *
@@ -1495,22 +1509,22 @@ puthex(long long n)
 
 	m_file_start();
 
-	fprintf(m_file," 0x");
+	fprintf(mp.fp," 0x");
 	for (i = nibbles-1; i >= 0; i--) {
 		int nibble = (n >> (4 * i)) & 0xf;
 		if (nibble || lz || i == 0) {
-		    fputc("0123456789abcdef"[nibble], m_file);
+		    fputc("0123456789abcdef"[nibble], mp.fp);
 		    lz = 1;
 		}
 		if (i && (i % 4 == 0)) {
 		    if (digitseparators && lz)
-			    fputs(thousands_sep, m_file);
+			    fputs(thousands_sep, mp.fp);
 		}
 	}
 
 	m_file_finish();
 
-	return m_bufp;
+	return mp.bufp;
 }
 
 char *
@@ -1525,22 +1539,22 @@ putoct(long long sn)
 
 	m_file_start();
 
-	fprintf(m_file," 0o");
+	fprintf(mp.fp," 0o");
 	for (i = triplets-1; i >= 0; i--) {
 		int triplet = (n >> (3 * i)) & 7;
 		if (triplet || lz || i == 0) {
-		    fputc("01234567"[triplet], m_file);
+		    fputc("01234567"[triplet], mp.fp);
 		    lz = 1;
 		}
 		if (i && (i % 3 == 0)) {
 		    if (digitseparators && lz)
-			    fputs(thousands_sep, m_file);
+			    fputs(thousands_sep, mp.fp);
 		}
 	}
 
 	m_file_finish();
 
-	return m_bufp;
+	return mp.bufp;
 }
 
 char *
@@ -1548,11 +1562,11 @@ putunsigned(unsigned long long uln)
 {
 	m_file_start();
 
-	fprintf(m_file, digitseparators ? " %'llu" : " %llu", uln);
+	fprintf(mp.fp, digitseparators ? " %'llu" : " %llu", uln);
 
 	m_file_finish();
 
-	return m_bufp;
+	return mp.bufp;
 }
 
 char *
@@ -1560,11 +1574,11 @@ putsigned(long long ln)
 {
 	m_file_start();
 
-	fprintf(m_file, digitseparators ? " %'lld" : " %lld", ln);
+	fprintf(mp.fp, digitseparators ? " %'lld" : " %lld", ln);
 
 	m_file_finish();
 
-	return m_bufp;
+	return mp.bufp;
 }
 
 boolean
@@ -1618,7 +1632,7 @@ char *
 print_floating(ldouble n, int format)
 {
 	m_file_start();
-	fputc(' ', m_file);
+	fputc(' ', mp.fp);
 	if (format == 'R') {
 
 		raw_hex_input_ok = TRUE;
@@ -1631,7 +1645,7 @@ print_floating(ldouble n, int format)
 		 * the mantissa differently.  */
 
 		// 1 digit per 4 bits, and 1 of them is before the decimal
-		fprintf(m_file, "%.*La\n", (LDBL_MANT_DIG + 3)/4 - 1, n);
+		fprintf(mp.fp, "%.*La\n", (LDBL_MANT_DIG + 3)/4 - 1, n);
 
 	} else if (format == 'F' && float_specifier == 'f') {
 		char buf[128];
@@ -1668,15 +1682,15 @@ print_floating(ldouble n, int format)
 
 			snprintf(buf, sizeof(buf), format_string, decimals, n);
 		}
-		fputs(buf, m_file);
+		fputs(buf, mp.fp);
 
 	} else {
-		fprintf(m_file, format_string, float_digits, n);
+		fprintf(mp.fp, format_string, float_digits, n);
 	}
 
 	m_file_finish();
 
-	return m_bufp;
+	return mp.bufp;
 }
 
 int
@@ -4139,7 +4153,7 @@ main(int argc, char *argv[])
 			opret = (t->val.oper->func) ();
 			break;
 		case EOL:
-			pending_flush();
+			pending_show();
 			if (!suppress_autoprint) {
 				/* I'm on the fence about whether we autoprint
 				 * after errors.  We don't, currently.  */
