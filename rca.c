@@ -3099,8 +3099,10 @@ exitret(void)
 opreturn
 quit(void)
 {
-	if (autoprint)
+	if (autoprint) {
 		print_top(mode);
+		pending_show();
+	}
 
 	exitret();
 	return GOODOP; // not reached
