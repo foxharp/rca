@@ -170,7 +170,6 @@ e 5 ln ^ 5 ==
 
 0 separators
  Numeric separators now off
- 0
 
 9007199254740992 1 +
  9007199254740993

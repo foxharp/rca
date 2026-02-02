@@ -51,9 +51,9 @@ pop
  4,096
 
 H
+ Mode is hex.  Integer math with 64 bits.
  0x2     # warning: accuracy lost, was 2.60840734641020676
  0x1000
- Mode is hex.  Integer math with 64 bits.
 0xfffff
 0xaaaaa ~ &
  0x5,5555
@@ -98,17 +98,14 @@ cos
  -0.0174524
 0 degrees
  trig functions will now use radians
- -0.0174524
 acos 180 * pi /
  91
 1 degrees
  trig functions will now use degrees
- 91
 cos
  -0.0174524
 1 degrees
  trig functions will now use degrees
- -0.0174524
 lastx +
  90.9825
 frac
@@ -137,9 +134,9 @@ h
 0xf0 +
  302.019602647756
 H
+ Mode is hex.  Integer math with 20 bits.
  0x0     # warning: accuracy lost, was 0.982547593562716898
  0x12e     # warning: accuracy lost, was 302.019602647756157
- Mode is hex.  Integer math with 20 bits.
 0xf00 |
  0xf2e
 4 <<
@@ -175,18 +172,16 @@ b
  0b10000111,01100101,00000000,00000000
 0 separators
  Numeric separators now off
- 0x87650000
 16w
  Integers are now 16 bits wide.
  0x0
 h
  0x0
 B
- 0b0
  Mode is binary.  Integer math with 16 bits.
+ 0b0
 1s
  Numeric separators now on
- 0b0
 b
  0b0
 0xabc
@@ -196,13 +191,11 @@ b
  0b00001010,10111100
 0s
  Numeric separators now off
- 0b0000101010111100
 P
  0b0000000000000000
  0b0000101010111100
 1s
  Numeric separators now on
- 0b00001010,10111100
 P
  0b00000000,00000000
  0b00001010,10111100
@@ -214,13 +207,11 @@ P
  0b00000000,00001010,10111100
 0s
  Numeric separators now off
- 0b000000000000101010111100
 P
  0b000000000000000000000000
  0b000000000000101010111100
 1s
  Numeric separators now on
- 0b00000000,00001010,10111100
 P
  0b00000000,00000000,00000000
  0b00000000,00001010,10111100
@@ -233,8 +224,8 @@ pop
  Integers are now 16 bits wide.
  0b0
 D
- 0
  Mode is signed decimal.  Integer math with 16 bits.
+ 0
 32w
  Integers are now 32 bits wide.
  0
@@ -244,24 +235,23 @@ h
  -2,023,424,000
 
 F
+ Mode is float.  Displaying 15 digits of total precision.
  0
  -2,023,424,000
- Mode is float.  Displaying 15 digits of total precision.
 pi 100,000 *
  314,159.265358979
 H
+ Mode is hex.  Integer math with 32 bits.
  0x0
  0x8765,0000
  0x4,cb2f     # warning: accuracy lost, was 314159.265358979324
- Mode is hex.  Integer math with 32 bits.
 D
+ Mode is signed decimal.  Integer math with 32 bits.
  0
  -2,023,424,000
  314,159
- Mode is signed decimal.  Integer math with 32 bits.
 0s
  Numeric separators now off
- 314159
 
 # comment test
 clear H  # comment test
@@ -284,15 +274,14 @@ chs
  0x7effffff
 
 O
- 0o17677777777
  Mode is octal.  Integer math with 32 bits.
+ 0o17677777777
 ~
  0o20100000000
 h
  0x81000000
 1 separators
  Numeric separators now on
- 0o20,100,000,000
 h
  0x8100,0000
 ~
@@ -300,9 +289,9 @@ h
 dup
  0o17,677,777,777
 O
- 0o17,677,777,777
- 0o17,677,777,777
  Mode is octal.  Integer math with 32 bits.
+ 0o17,677,777,777
+ 0o17,677,777,777
 h
  0x7eff,ffff
 16 <<
@@ -391,12 +380,10 @@ pop
  15
 1 2
 0 mark
- 2
 3 4 5
 sum
  12
 0 mark
- 12
 26 34
 +
  60
@@ -592,13 +579,11 @@ atan
  1,016
 0 s
  Numeric separators now off
- 1016
 3K
  Will show at most 3 digits after the decimal.
  1016.000
 1 s
  Numeric separators now on
- 1,016.000
 clear
 H
  Mode is hex.  Integer math with 32 bits.

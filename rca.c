@@ -191,8 +191,10 @@ typedef struct token {
 /* values for # of operands field in opers table:
  *  1 & 2 are used verbatim as operand counts
  *  0 denotes a pseudo-op, i.e. it manipulates the calculator itself
- * -1 means a "named number", like pi, or lastx */
+ * -1 (Sym) means a "named number", like pi, or lastx
+ * -2 (Auto) is a pseudo-op that wants autoprint, like "pop", "exch", "sum" */
 #define Sym	-1
+#define Auto	-2
 
 
 /* 7 major modes:  float, decimal, unsigned, hex, octal, binary, and raw
@@ -208,12 +210,11 @@ boolean exit_on_error = FALSE;
 /* if true, print the top of stack after any line that ends with an operator */
 boolean autoprint = TRUE;
 
-/* if true, temporarily suppress autoprint, e.g., right after printing */
-boolean suppress_autoprint = FALSE;
-
 /* informative feedback, which is only printed if the command generating
  * it is followed by a newline */
 void pending_printf(const char *fmt, ...);
+#define p_printf pending_printf    // shorthand
+
 
 /* if true, will decorate numbers, like "1,333,444".  */
 boolean digitseparators = PRINTF_SEPARATORS;
@@ -451,7 +452,7 @@ toggler(int *control, char *descrip, char *yes, char *no)
 
 	*control = n;
 
-	pending_printf(" %s %s\n", descrip, n ? yes : no);
+	p_printf(" %s %s\n", descrip, n ? yes : no);
 	return GOODOP;
 }
 
@@ -1605,10 +1606,11 @@ void
 show_int_truncation(boolean changed, ldouble old_n)
 {
 	if (!changed) {
-		putchar('\n');
+		p_printf("\n");
 		return;
 	}
 
+	pending_show();
 	if (floating_mode(mode))
 		error("     # warning: display format loses accuracy\n");
 	else
@@ -1724,8 +1726,6 @@ print_n(ldouble *np, int format, boolean conv)
 	int align;
 	boolean changed;
 
-	suppress_autoprint = TRUE;
-
 	old_n = n = *np;
 
 	if (floating_mode(format) || !isfinite(n)) {
@@ -1741,7 +1741,7 @@ print_n(ldouble *np, int format, boolean conv)
 				align += (int)(eos - dp);
 			}
 		}
-		printf("%*s\n", align, pf);
+		p_printf("%*s\n", align, pf);
 		return;
 	}
 
@@ -1766,17 +1766,17 @@ print_n(ldouble *np, int format, boolean conv)
 	case 'H':
 		ln = (long long)n & mask;
 		align = calc_align(4, 4);
-		printf("%*s", align, puthex(ln));
+		p_printf("%*s", align, puthex(ln));
 		break;
 	case 'O':
 		ln = (long long)n & mask;
 		align = calc_align(3, 3);
-		printf("%*s", align, putoct(ln));
+		p_printf("%*s", align, putoct(ln));
 		break;
 	case 'B':
 		ln = (long long)n & mask;
 		align = calc_align(1, 8);
-		printf("%*s", align, putbinary(ln));
+		p_printf("%*s", align, putbinary(ln));
 		break;
 	case 'U':
 		/* convert in two steps, to avoid possibly undefined
@@ -1785,7 +1785,7 @@ print_n(ldouble *np, int format, boolean conv)
 		uln = (unsigned long long)ln;
 		/* for decimal, worst case width is like octal's */
 		align = calc_align(3, 3);
-		printf("%*s", align, putunsigned(uln));
+		p_printf("%*s", align, putunsigned(uln));
 		break;
 	case 'D':
 		ln = (long long)n;
@@ -1805,7 +1805,7 @@ print_n(ldouble *np, int format, boolean conv)
 			}
 		}
 		align = calc_align(3, 3);
-		printf("%*s", align, putsigned(ln));
+		p_printf("%*s", align, putsigned(ln));
 		break;
 	default:
 		error(" bug: default case in print_n()\n");
@@ -1905,59 +1905,58 @@ printstate(void)
 {
 	struct num *s;
 
-	putchar('\n');
-	printf(" Current mode is %c\n", mode);
-	putchar('\n');
-	printf(" In floating mode:\n");
-	printf("  max precision is %u decimal digits\n", max_precision);
-	printf("  current display mode is \"%d %s\"\n",
+	p_printf("\n");
+	p_printf(" Current mode is %c\n", mode);
+	p_printf("\n");
+	p_printf(" In floating mode:\n");
+	p_printf("  max precision is %u decimal digits\n", max_precision);
+	p_printf("  current display mode is \"%d %s\"\n",
 		float_digits, float_specifier == 'f' ? "decimals" : "precision");
-	printf("  format string is \"%s\"\n", format_string);
-	printf("  snapping/rounding is %s\n", do_rounding ? "on" : "off");
-	putchar('\n');
+	p_printf("  format string is \"%s\"\n", format_string);
+	p_printf("  snapping/rounding is %s\n", do_rounding ? "on" : "off");
+	p_printf("\n");
 
-	printf(" In integer modes:\n");
-	printf("  width is %d bits\n", int_width);
-	printf("  mask:     %s\n", puthex(int_mask));
-	printf("  sign bit: %s\n", puthex(int_sign_bit));
-	printf("  max:      %s\n", puthex(int_max));
-	printf("  min:      %s\n", puthex(int_min));
-	putchar('\n');
+	p_printf(" In integer modes:\n");
+	p_printf("  width is %d bits\n", int_width);
+	p_printf("  mask:     %s", puthex(int_mask));
+	p_printf("     sign bit: %s\n", puthex(int_sign_bit));
+	p_printf("  min:      %s", puthex(int_min));
+	p_printf("     max:      %s\n", puthex(int_max));
+	p_printf("\n");
 
 	s = stack;
-	printf(" Stack, top comes first:\n");
+	p_printf(" Stack, top comes first:\n");
 	if (!s) {
-		printf("%16s\n", "<empty>");
+		p_printf("%16s\n", "<empty>");
 	} else {
-		printf(" %20s   %20s\n",
+		p_printf(" %20s   %20s\n",
 		    "long long", "long double ('%#20.20Lg' and '%La')");
 		while (s) {
-			printf(" %#20llx   %#20.20Lg    %La\n",
+			p_printf(" %#20llx   %#20.20Lg    %La\n",
 				(long long)(s->val), s->val, s->val);
 			s = s->next;
 		}
 	}
-	printf(" stack count %d, stack mark %d\n", stack_count, stack_mark);
+	p_printf(" stack count %d, stack mark %d\n", stack_count, stack_mark);
 
-	putchar('\n');
-	printf("\n Build-time sizes:\n");
-	printf("  Native sizes (bits):\n");
-	printf("   sizeof(long long):\t%lu\n", (unsigned long)(8 * sizeof(long long)));
-	printf("   LLONG_MIN: %llx, LLONG_MAX: %llx\n", LLONG_MIN, LLONG_MAX);
-	printf("   sizeof(long double):\t%lu\n", (unsigned long)(8 * sizeof(long double)));
-	printf("   LDBL_MANT_DIG: %u\n", LDBL_MANT_DIG);
-	printf("   LDBL_MAX: %.20Lg\n", LDBL_MAX);
-	printf("   LDBL_EPSILON is %Lg (%La)\n", LDBL_EPSILON, LDBL_EPSILON);
-	printf("  Calculated:\n");
-	printf("   detected epsilon is %Lg (%La)\n", epsilon, epsilon);
-	putchar('\n');
-	printf(" Locale elements (%s):\n", setlocale(LC_NUMERIC, NULL));
-	printf("  decimal '%s', thousands separator '%s', currency '%s'\n",
+	p_printf("\n");
+	p_printf("\n Build-time sizes:\n");
+	p_printf("  Native sizes (bits):\n");
+	p_printf("   sizeof(long long):\t%lu\n", (unsigned long)(8 * sizeof(long long)));
+	p_printf("   LLONG_MIN: %llx, LLONG_MAX: %llx\n", LLONG_MIN, LLONG_MAX);
+	p_printf("   sizeof(long double):\t%lu\n", (unsigned long)(8 * sizeof(long double)));
+	p_printf("   LDBL_MANT_DIG: %u\n", LDBL_MANT_DIG);
+	p_printf("   LDBL_MAX: %.20Lg\n", LDBL_MAX);
+	p_printf("   LDBL_EPSILON is %Lg (%La)\n", LDBL_EPSILON, LDBL_EPSILON);
+	p_printf("  Calculated:\n");
+	p_printf("   detected epsilon is %Lg (%La)\n", epsilon, epsilon);
+	p_printf("\n");
+	p_printf(" Locale elements (%s):\n", setlocale(LC_NUMERIC, NULL));
+	p_printf("  decimal '%s', thousands separator '%s', currency '%s'\n",
 		decimal_pt ? decimal_pt : "null",
 		thousands_sep ? thousands_sep : "null",
 		currency ? currency : "null");
 
-	suppress_autoprint = TRUE;
 	return GOODOP;
 }
 
@@ -1988,7 +1987,7 @@ void
 showmode(void)
 {
 
-	pending_printf(" Mode is %s. ", mode2name());
+	p_printf(" Mode is %s. ", mode2name());
 
 	if (mode == 'F') {
 		char *msg;
@@ -2000,14 +1999,13 @@ showmode(void)
 			/* float_digits == 7 gives:  123.4560000  */
 			msg = "after the decimal";
 		}
-		pending_printf(" Displaying %u digits %s.\n", float_digits, msg);
+		p_printf(" Displaying %u digits %s.\n", float_digits, msg);
 	} else if (mode == 'R') {
-		pending_printf(" Displaying using floating hexadecimal.\n");
+		p_printf(" Displaying using floating hexadecimal.\n");
 	} else {
-		pending_printf(" Integer math with %d bits.\n", int_width);
+		p_printf(" Integer math with %d bits.\n", int_width);
 	}
 
-	suppress_autoprint = TRUE;
 }
 
 opreturn
@@ -2113,7 +2111,7 @@ opreturn
 separators(void)
 {
 	if (!thousands_sep[0]) {
-		pending_printf(" No thousands separator found in the "
+		p_printf(" No thousands separator found in the "
 			"current locale. so numeric separators are disabled\n");
 		digitseparators = 0;
 		return GOODOP;
@@ -2150,11 +2148,11 @@ precision(void)
 
 	setup_format_string();
 
-	pending_printf(" Will show %s%d significant digit%s.\n", limited,
+	p_printf(" Will show %s%d significant digit%s.\n", limited,
 		float_digits, float_digits == 1 ? "" : "s");
 
 	if (mode != 'F')
-		pending_printf(" Not in floating decimal mode, float precision"
+		p_printf(" Not in floating decimal mode, float precision"
 				" recorded but ignored.\n");
 
 	return GOODOP;
@@ -2180,13 +2178,13 @@ decimal_length(void)
 	setup_format_string();
 
 	if (float_digits == 0)
-		pending_printf(" Will show no digits after the decimal.\n");
+		p_printf(" Will show no digits after the decimal.\n");
 	else
-		pending_printf(" Will show at most %d digit%s after the decimal.\n",
+		p_printf(" Will show at most %d digit%s after the decimal.\n",
 			float_digits, float_digits == 1 ? "" : "s");
 
 	if (mode != 'F')
-		pending_printf(" Not in floating decimal mode, decimal"
+		p_printf(" Not in floating decimal mode, decimal"
 				" length is recorded but ignored.\n");
 
 
@@ -2247,17 +2245,17 @@ width(void)
 		bits = max_int_width;
 	} else if (bits > max_int_width) {
 		bits = max_int_width;
-		printf(" Width out of range, set to max (%lld)\n", bits);
+		p_printf(" Width out of range, set to max (%lld)\n", bits);
 	} else if (bits < 2) {
 		bits = 2;
-		printf(" Width out of range, set to min (%lld)\n", bits);
+		p_printf(" Width out of range, set to min (%lld)\n", bits);
 	}
 
 	setup_width(bits);
 
-	pending_printf(" Integers are now %d bits wide.\n", int_width);
+	p_printf(" Integers are now %d bits wide.\n", int_width);
 	if (floating_mode(mode)) {
-		pending_printf(" In floating mode, integer width"
+		p_printf(" In floating mode, integer width"
 				" is recorded but ignored.\n");
 	} else {
 		mask_stack();
@@ -3074,7 +3072,7 @@ tracetoggle(void)
 	// 2 is full shunting algorithm logging, plus also snapping/rounding
 	tracing = wanttracing;
 
-	printf(" internal tracing is now level %d\n", tracing);
+	p_printf(" internal tracing is now level %d\n", tracing);
 	return GOODOP;
 }
 
@@ -3101,8 +3099,9 @@ exitret(void)
 opreturn
 quit(void)
 {
-	if (!suppress_autoprint && autoprint)
+	if (autoprint)
 		print_top(mode);
+
 	exitret();
 	return GOODOP; // not reached
 }
@@ -3129,15 +3128,23 @@ showvars(void)
 {
 	dynvar *v;
 
+	if (!variables->name) {
+		p_printf(" <none>\n");
+		return GOODOP;
+	}
 	for (v = variables; v->name; v++)
 		/* count the variables */;
 
 	qsort(variables, v - variables, sizeof(*v), comparevars);
 
+	int savealign = rightalignment;
+	rightalignment = 0;
 	for (v = variables; v->name; v++) {
-		printf(" %-20s ", v->name);
+		p_printf(" %20s ", v->name);
 		print_n(&v->value, mode, 0);
 	}
+	rightalignment = savealign;
+
 	return GOODOP;
 }
 
@@ -3588,6 +3595,7 @@ gettoken(struct token *t)
 
 	if (*input_ptr == '\0') {	/* out of input */
 		t->type = EOL;
+		if (tracing) show_tok(t);
 		input_ptr = NULL;
 		return 1;
 	}
@@ -3620,7 +3628,7 @@ precedence(void)
 	char *prefix[NUM_PRECEDENCE] = {0};
 	int prec, i;
 
-	printf(" Precedence for operators in infix expressions, from \n"
+	p_printf(" Precedence for operators in infix expressions, from \n"
 	       "  top to bottom in order of descending precedence.\n"
 	       " All operators are left-associative, except for those\n"
 	       "  in rows marked 'R', which associate right to left.\n");
@@ -3688,7 +3696,7 @@ precedence(void)
 	i = 1;
 	for (prec = NUM_PRECEDENCE-1; prec >=0; prec--) {
 		if (prec_ops[prec]) {
-			printf(" %-2i  %c     %s\n", i,
+			p_printf(" %-2i  %c     %s\n", i,
 			assoc[prec] ? 'R' : ' ',
 			prec_ops[prec]);
 			i++;
@@ -3707,9 +3715,9 @@ commands(void)
 
 	op = opers;
 
-	printf("%s %s %s %s %s %s\n",
+	p_printf("%s %s %s %s %s %s\n",
 	       "oper", "alias", "oprnds", "prc", "ass", "help");
-	printf("---- ----- ------ --- --- ---------\n");
+	p_printf("---- ----- ------ --- --- ---------\n");
 	while (op->name) {
 		if (op->func ) {
 			int name_fmt;
@@ -3718,7 +3726,7 @@ commands(void)
 			else
 				name_fmt = -10;
 
-			printf("%*s  %2d    %2d  %c   %s\n", name_fmt,
+			p_printf("%*s  %2d    %2d  %c   %s\n", name_fmt,
 				op->name, op->operands, op->prec,
 				op->assoc ? 'R' : ' ',
 				op->help ? op->help : "");
@@ -3735,7 +3743,7 @@ license(void)
 	int i = 0;
 
 	while (licensetext[i])
-		printf("%s\n", licensetext[i++]);
+		p_printf("%s\n", licensetext[i++]);
 
 	return GOODOP;
 }
@@ -3751,7 +3759,7 @@ help(void)
 
 	if (pager && pager[0] && isatty(fileno(stdout)) &&
 			(fout = popen(pager, "w"))) {
-		printf("Using '%s' (from $PAGER) to show help text\n", pager);
+		p_printf("Using '%s' (from $PAGER) to show help text\n", pager);
 		fout_is_pipe = 1;
 	} else {
 		fout = stdout;
@@ -3819,9 +3827,9 @@ help(void)
 	}
 
 	if (pclose(fout) != 0)
-		printf(" Failed showing help. Unset PAGER to show help directly\n");
+		p_printf(" Failed showing help. Unset PAGER to show help directly\n");
 	else
-		printf(" (Help ended)\n");
+		p_printf(" (Help ended)\n");
 
 	return GOODOP;
 }
@@ -3959,19 +3967,19 @@ struct oper opers[] = {
 	{""},
     {"Stack manipulation:"},
 	{"clear", clear,	"Clear stack" },
-	{"pop", rolldown,	"Pop (and discard) x" },
-	{"push", enter,		0 },
-	{"dup", enter,		"Push (a duplicate of) x" },
+	{"pop", rolldown,	"Pop (and discard) x", Auto },
+	{"push", enter,		0, Auto },
+	{"dup", enter,		"Push (a duplicate of) x", Auto },
 	{"lastx", repush,	0, Sym },
 	{"lx", repush,		"Fetch previous value of x", Sym },
-	{"exch", exchange,	0 },
-	{"swap", exchange,	"Exchange x and y" },
+	{"exch", exchange,	0, Auto },
+	{"swap", exchange,	"Exchange x and y", Auto },
 	{"mark", mark,		"Mark stack for later summing" },
-	{"sum", sum,		"Sum stack to \"mark\", or entire stack if no mark" },
-	{"avg", avg,		"Average stack to \"mark\", or entire stack if no mark" },
+	{"sum", sum,		"Sum stack to \"mark\", or entire stack if no mark", Auto },
+	{"avg", avg,		"Average stack to \"mark\", or entire stack if no mark", Auto },
 	{""},
     {"Constants and storage (no operands):"},
-	{"sto", store,		0, 0 },
+	{"sto", store,		0, Auto },
 	{"rcl", recall,		"Save/fetch off-stack storage", Sym },
 	{"pi", push_pi,		"Push constant pi", Sym },
 	{"e", push_e,		"Push constant e", Sym },
@@ -4014,16 +4022,16 @@ struct oper opers[] = {
 	{"H", modehex,		0 },
 	{"O", modeoct,		0 },
 	{"B", modebin,		"     hex, octal, or binary modes" },
-	{"precision", precision, 0 },
-	{"k", precision,	"Float format: number of significant digits (%g)" },
-	{"decimals", decimal_length, 0 },
-	{"K", decimal_length,	"Float format: digits after decimal (%f)" },
-	{"width", width,	0 },
-	{"w", width,		"Set effective word size for integer modes" },
-	{"zerofill", zerof,	0 },
-	{"z", zerof,		"Toggle left-filling with zeros in H, O, and B modes" },
-	{"rightalign", rightalign, 0 },
-	{"right", rightalign,	"Toggle right alignment of numbers" },
+	{"precision", precision, 0, Auto },
+	{"k", precision,	"Float format: number of significant digits (%g)", Auto },
+	{"decimals", decimal_length, 0, Auto },
+	{"K", decimal_length,	"Float format: digits after decimal (%f)", Auto },
+	{"width", width,	0, Auto },
+	{"w", width,		"Set effective word size for integer modes", Auto },
+	{"zerofill", zerof,	0, Auto },
+	{"z", zerof,		"Toggle left-filling with zeros in H, O, and B modes", Auto },
+	{"rightalign", rightalign, 0, Auto },
+	{"right", rightalign,	"Toggle right alignment of numbers", Auto },
 	{"degrees", use_degrees, "Toggle trig functions: degrees (1) or radians (0)" },
 	{"autoprint", autop,	0 },
 	{"a", autop,		"Toggle autoprinting on/off with 0/1" },
@@ -4062,13 +4070,17 @@ do_autoprint(token *pt)
 	if (!autoprint)
 		return;
 
-	/* The goal is to autoprint unless it would be very redundant.
-	 * If the user types "23", we don't want to immediately print
-	 * "23".  But if they typed using a different base, or if what
-	 * they typed wasn't numeric, we'll print the top of stack. */
-
+	/* The goal is to autoprint unless it would be very redundant,
+	 * or if nothing really happened.  If the user types "23", we
+	 * don't want to immediately print "23".  But if they typed
+	 * using a different base, or if what they typed wasn't
+	 * numeric, we'll print the top of stack.  */
 	switch (pt->type) {
 	case OP:
+		if (pt->val.oper->operands == 0)  // pseudo op
+			return;
+		break;
+
 	case SYMBOLIC:
 	case VARIABLE:
 		break;
@@ -4097,7 +4109,6 @@ main(int argc, char *argv[])
 	static token prevtok;
 	token tok, *t;
 	char *pn;
-	opreturn opret = GOODOP;
 
 	pn = strrchr(argv[0], '/');
 	progname = pn ? (pn + 1) : argv[0];
@@ -4133,11 +4144,9 @@ main(int argc, char *argv[])
 		}
 		t = &tok;
 
-		if (t->type != EOL) {
+		if (t->type != EOL && t->type != OP) {
 			/* don't save pending info older than one command */
 			pending_clear();
-			/* preserve opret for autoprint decision */
-			opret = GOODOP;
 		}
 
 		switch (t->type) {
@@ -4150,17 +4159,15 @@ main(int argc, char *argv[])
 		case SYMBOLIC:
 		case OP:
 			trace(( "invoking %s\n", t->val.oper->name));
-			opret = (t->val.oper->func) ();
+			if (t->val.oper->func == quit)
+				pending_show();
+			else
+				pending_clear();
+			(void)(t->val.oper->func) ();
 			break;
 		case EOL:
+			do_autoprint(&prevtok);
 			pending_show();
-			if (!suppress_autoprint) {
-				/* I'm on the fence about whether we autoprint
-				 * after errors.  We don't, currently.  */
-				if (opret == GOODOP)
-					do_autoprint(&prevtok);
-			}
-			suppress_autoprint = FALSE;
 			break;
 		default:
 		case UNKNOWN:

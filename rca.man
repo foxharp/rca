@@ -29,7 +29,7 @@ The value at the top of the stack can be shown with the
 .B p
 command, and the entire stack with
 .BR P .
-Autoprinting will print the top of the stack after every input line.  This
+Autoprinting will print the top of the stack after most input lines.  This
 is on by default; it can be toggled off with
 .B 0 autoprint
 (or
@@ -446,9 +446,8 @@ see the LOCALE section) for readability.  (Startup: enabled)
 .B autoprint
 (or
 .BR a )
-toggles printing of the top of stack after every newline.  (Startup:
-enabled)  This output is suppressed if the output would exactly match
-what the user just entered.
+toggles printing of the top of stack after newlines.  (Startup:
+enabled)
 .P
 .B errorexit
 forces
