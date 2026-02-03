@@ -120,6 +120,8 @@ typedef int opreturn;
 #define BADOP 0
 
 typedef long double ldouble;
+typedef long long ll;
+typedef unsigned long long ull;
 
 /* global copies of main's argc/argv */
 int g_argc;
@@ -357,10 +359,8 @@ tweak_float(ldouble x)
 }
 
 long long
-sign_extend(ldouble a)
+sign_extend(ull b)
 {
-	long long b = a;
-
 	if (int_width == LONGLONG_BITS)
 		return b;
 	else
@@ -380,9 +380,9 @@ push(ldouble n)
 		p->val = n;
 		trace((" pushed %Lg\n", n));
 	} else {
-		p->val = sign_extend((long long)n & int_mask);
+		p->val = sign_extend((ull)n & int_mask);
 		trace((" pushed masked/extended %lld/0x%llx\n",
-		(long long)(p->val), (long long)(p->val)));
+			(long long)(p->val), (long long)(p->val)));
 	}
 
 	p->next = stack;
@@ -397,6 +397,32 @@ result_push(ldouble n)
 		n = tweak_float(n);
 	push(n);
 }
+
+
+#define push_l(X) push(X)
+
+#if 0  // maybe
+void
+push_l(ull l)
+{
+	struct num *p;
+
+	if (floating_mode(mode))
+		error(" BUG: push_l() called in floating mode");
+
+	p = (struct num *)calloc(1, sizeof(struct num));
+	if (!p)
+		memory_failure();
+
+	trace((" pushing ulong %llu\n", l));
+	p->val = sign_extend(l & int_mask);
+	trace((" actually pushing ulong %llu\n", sign_extend(l & int_mask)));
+
+	p->next = stack;
+	stack = p;
+	stack_count++;
+}
+#endif
 
 boolean
 peek(ldouble *f)
@@ -473,6 +499,14 @@ assignment(void)
 	return GOODOP;
 }
 
+int
+are_finite(ldouble a, ldouble b)
+{
+	if (isfinite(a) && isfinite(b))
+		return 1;
+
+	return 0;
+}
 opreturn
 add(void)
 {
@@ -480,7 +514,11 @@ add(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			result_push(a + b);
+			if (floating_mode(mode) || !are_finite(a,b)) {
+				result_push(a + b);
+			} else {
+				push_l((ull)a + (ull)b);
+			}
 			lastx = b;
 			return GOODOP;
 		}
@@ -496,7 +534,11 @@ subtract(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			result_push(a - b);
+			if (floating_mode(mode) || !are_finite(a,b)) {
+				result_push(a - b);
+			} else {
+				push_l((ull)a - (ull)b);
+			}
 			lastx = b;
 			return GOODOP;
 		}
@@ -512,7 +554,11 @@ multiply(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			result_push(a * b);
+			if (floating_mode(mode) || !are_finite(a,b)) {
+				result_push(a * b);
+			} else {
+				push_l((ull)a * (ull)b);
+			}
 			lastx = b;
 			return GOODOP;
 		}
@@ -528,7 +574,11 @@ divide(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			result_push(a / b);
+			if (floating_mode(mode) || !are_finite(a,b)) {
+				result_push(a / b);
+			} else {
+				push_l((ull)a / (ull)b);
+			}
 			lastx = b;
 			return GOODOP;
 		}
@@ -544,13 +594,28 @@ modulo(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			result_push(fmodl(a,b));
+			if (floating_mode(mode) || !are_finite(a,b)) {
+				result_push(fmodl(a,b));
+			} else {
+				push_l((ull)a % (ull)b);
+			}
 			lastx = b;
 			return GOODOP;
 		}
 		push(b);
 	}
 	return BADOP;
+}
+
+ll
+int_pow(ll base, ll exp)
+{
+	ll result = 1;
+
+	for (ll i = 0; i < exp; i++) {
+		result *= base;
+	}
+	return result;
 }
 
 opreturn
@@ -560,7 +625,11 @@ y_to_the_x(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			result_push(powl(a, b));
+			if (floating_mode(mode) || !are_finite(a,b)) {
+				result_push(powl(a, b));
+			} else {
+				push_l(int_pow((ull)a, (ull)b));
+			}
 			lastx = b;
 			return GOODOP;
 		}
@@ -582,6 +651,10 @@ e_to_the_x(void)
 	return BADOP;
 }
 
+/* This is poorly named.  The goal it to report whether the two
+ * arguments are both finite (i.e., useful) to an operation, and if
+ * not, to propagate the either nan, or inf, in that order, as the
+ * result of the operation.  */
 int
 bothfinite(ldouble a, ldouble b)
 {
@@ -656,7 +729,10 @@ rshift(void)
 			} else if (b >= sizeof(a) * CHAR_BIT) {
 				push(0);
 			} else {
-				push(i >>= j);
+				if (floating_mode(mode))
+					push(i >> j);
+				else
+					push_l(i >> j);
 			}
 			lastx = b;
 			return GOODOP;
@@ -691,7 +767,10 @@ lshift(void)
 			} else if (b >= sizeof(a) * CHAR_BIT) {
 				push(0);
 			} else {
-				push(i << j);
+				if (floating_mode(mode))
+					push(i << j);
+				else
+					push_l(i << j);
 			}
 			lastx = b;
 			return GOODOP;
@@ -708,7 +787,7 @@ bitwise_and(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			long long i, j;
+			ull i, j;
 
 			if (!bothfinite(a, b))
 				return GOODOP;
@@ -716,9 +795,12 @@ bitwise_and(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			i = (long long)a;
-			j = (long long)b;
-			push(i & j);
+			i = (ull)a;
+			j = (ull)b;
+			if (floating_mode(mode))
+				push(i & j);
+			else
+				push_l(i & j);
 			lastx = b;
 			return GOODOP;
 		}
@@ -734,7 +816,7 @@ bitwise_or(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			long long i, j;
+			ull i, j;
 
 			if (!bothfinite(a, b))
 				return GOODOP;
@@ -742,9 +824,12 @@ bitwise_or(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			i = (long long)a;
-			j = (long long)b;
-			push(i | j);
+			i = (ull)a;
+			j = (ull)b;
+			if (floating_mode(mode))
+				push(i | j);
+			else
+				push_l(i | j);
 			lastx = b;
 			return GOODOP;
 		}
@@ -760,7 +845,7 @@ bitwise_xor(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			long long i, j;
+			ull i, j;
 
 			if (!bothfinite(a, b))
 				return GOODOP;
@@ -768,9 +853,12 @@ bitwise_xor(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			i = (long long)a;
-			j = (long long)b;
-			push(i ^ j);
+			i = (ull)a;
+			j = (ull)b;
+			if (floating_mode(mode))
+				push(i ^ j);
+			else
+				push_l(i ^ j);
 			lastx = b;
 			return GOODOP;
 		}
@@ -786,7 +874,7 @@ setbit(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			long long i, j;
+			ull i, j;
 
 			if (!bothfinite(a, b))
 				return GOODOP;
@@ -794,18 +882,20 @@ setbit(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			i = (long long)a;
-			j = (long long)b;
 			if (b < 0) {
 				error(" error: negative bit number not allowed\n");
 				push(a);
 				push(b);
 				return BADOP;
 			}
-			if (b >= sizeof(i) * CHAR_BIT)
+			i = (ull)a;
+			j = (ull)b;
+			if (b < sizeof(i) * CHAR_BIT)
+				i |= (1LL << j);
+			if (floating_mode(mode))
 				push(i);
 			else
-				push(i | (1LL << j));
+				push_l(i);
 			lastx = b;
 			return GOODOP;
 		}
@@ -821,7 +911,7 @@ clearbit(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			long long i, j;
+			ull i, j;
 
 			if (!bothfinite(a, b))
 				return GOODOP;
@@ -829,18 +919,21 @@ clearbit(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			i = (long long)a;
-			j = (long long)b;
 			if (b < 0) {
 				error(" error: negative bit number not allowed\n");
 				push(a);
 				push(b);
 				return BADOP;
 			}
-			if (b >= sizeof(i) * CHAR_BIT)
+			i = (ull)a;
+			j = (ull)b;
+			if (b < sizeof(i) * CHAR_BIT)
+				i &= ~(1LL << j);
+
+			if (floating_mode(mode))
 				push(i);
 			else
-				push(i & ~(1LL << j));
+				push_l(i);
 			lastx = b;
 			return GOODOP;
 		}
@@ -863,7 +956,10 @@ bitwise_not(void)
 		if (bitwise_operand_too_big(a))
 			return BADOP;
 
-		push(~(long long)a);
+		if (floating_mode(mode))
+			push(~(ull)a);
+		else
+			push_l(~(ull)a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1241,7 +1337,10 @@ is_lt(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			push(a < b);
+			if (floating_mode(mode) || mode == 'D')
+				push(a < b);
+			else
+				push((ull)a < (ull)b);
 			lastx = b;
 			return GOODOP;
 		}
@@ -1257,7 +1356,10 @@ is_le(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			push(a <= b);
+			if (floating_mode(mode) || mode == 'D')
+				push(a <= b);
+			else
+				push((ull)a <= (ull)b);
 			lastx = b;
 			return GOODOP;
 		}
@@ -1273,7 +1375,10 @@ is_gt(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			push(a > b);
+			if (floating_mode(mode) || mode == 'D')
+				push(a > b);
+			else
+				push((ull)a > (ull)b);
 			lastx = b;
 			return GOODOP;
 		}
@@ -1289,7 +1394,10 @@ is_ge(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			push(a >= b);
+			if (floating_mode(mode) || mode == 'D')
+				push(a >= b);
+			else
+				push((ull)a >= (ull)b);
 			lastx = b;
 			return GOODOP;
 		}
@@ -1589,8 +1697,7 @@ check_int_truncation(ldouble *np, boolean conv)
 	boolean changed = 0;
 
 	if (isnan(n) || !isfinite(n)) {
-		n = sign_extend(int_sign_bit);
-		changed = 1;
+		return 0;
 	} else if (n != sign_extend((long long)n & int_mask)) {
 		n = sign_extend((long long)n & int_mask);
 		changed = 1;
@@ -2349,16 +2456,20 @@ sum_worker(boolean do_sum)
 	while (stack_count > stack_mark) {
 		if ((r = pop(&a)) == BADOP)
 			break;
-		tot += a;
+		if (floating_mode(mode) || mode == 'D') {
+			tot += a;
+		} else {
+			tot += (ull)a;
+		}
 		n++;
 	}
 
 	stack_mark = 0;
 
-	if (do_sum)
-		result_push(tot);
+	if (floating_mode(mode))
+		result_push(do_sum ? tot : tot/n );
 	else
-		result_push(tot/n);
+		push_l(do_sum ? (ull)tot : (ull)(tot/n) );
 
 	return r;
 }
@@ -3928,7 +4039,7 @@ struct oper opers[] = {
 	{"xor", bitwise_xor,	"Bitwise AND, OR, and XOR of y and x", 2, 18 },
 	{"setb", setbit,	0, 2, 16 },
 	{"clearb", clearbit,	"Set and clear bit x in y", 2, 20 },
-	{"=", assignment,	"Assignment (to storage locations", 2, 6 },
+	{"=", assignment,	"Assignment to variable", 2, 6 },
 	{""},		// all-null entries cause blank line in output
     {"Numerical operators with one operand:"},
 	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 30, 'R' },
