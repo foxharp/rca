@@ -2094,7 +2094,7 @@ void
 showmode(void)
 {
 
-	p_printf(" Mode is %s. ", mode2name());
+	p_printf(" Mode is %s (%c). ", mode2name(), mode);
 
 	if (mode == 'F') {
 		char *msg;

@@ -51,7 +51,7 @@ pop
  4,096
 
 H
- Mode is hex.  Integer math with 64 bits.
+ Mode is hex (H).  Integer math with 64 bits.
  0x2     # warning: accuracy lost, was 2.60840734641020676
  0x1000
 0xfffff
@@ -78,7 +78,7 @@ d
  4,113
 clear
 F
- Mode is float.  Displaying 6 digits of total precision.
+ Mode is float (F).  Displaying 6 digits of total precision.
 3
 recip
  0.333333
@@ -134,7 +134,7 @@ h
 0xf0 +
  302.019602647756
 H
- Mode is hex.  Integer math with 20 bits.
+ Mode is hex (H).  Integer math with 20 bits.
  0x0     # warning: accuracy lost, was 0.982547593562716898
  0x12e     # warning: accuracy lost, was 302.019602647756157
 0xf00 |
@@ -178,7 +178,7 @@ b
 h
  0x0
 B
- Mode is binary.  Integer math with 16 bits.
+ Mode is binary (B).  Integer math with 16 bits.
  0b0
 1s
  Numeric separators now on
@@ -224,7 +224,7 @@ pop
  Integers are now 16 bits wide.
  0b0
 D
- Mode is signed decimal.  Integer math with 16 bits.
+ Mode is signed decimal (D).  Integer math with 16 bits.
  0
 32w
  Integers are now 32 bits wide.
@@ -235,18 +235,18 @@ h
  -2,023,424,000
 
 F
- Mode is float.  Displaying 15 digits of total precision.
+ Mode is float (F).  Displaying 15 digits of total precision.
  0
  -2,023,424,000
 pi 100,000 *
  314,159.265358979
 H
- Mode is hex.  Integer math with 32 bits.
+ Mode is hex (H).  Integer math with 32 bits.
  0x0
  0x8765,0000
  0x4,cb2f     # warning: accuracy lost, was 314159.265358979324
 D
- Mode is signed decimal.  Integer math with 32 bits.
+ Mode is signed decimal (D).  Integer math with 32 bits.
  0
  -2,023,424,000
  314,159
@@ -255,7 +255,7 @@ D
 
 # comment test
 clear H  # comment test
- Mode is hex.  Integer math with 32 bits.
+ Mode is hex (H).  Integer math with 32 bits.
 0x7fffffff#ffff
 chs
  0x80000001
@@ -274,7 +274,7 @@ chs
  0x7effffff
 
 O
- Mode is octal.  Integer math with 32 bits.
+ Mode is octal (O).  Integer math with 32 bits.
  0o17677777777
 ~
  0o20100000000
@@ -289,7 +289,7 @@ h
 dup
  0o17,677,777,777
 O
- Mode is octal.  Integer math with 32 bits.
+ Mode is octal (O).  Integer math with 32 bits.
  0o17,677,777,777
  0o17,677,777,777
 h
@@ -306,7 +306,7 @@ exch
  0o0
 clear
 F
- Mode is float.  Displaying 15 digits of total precision.
+ Mode is float (F).  Displaying 15 digits of total precision.
 32k
  Will show the maximum of 18 significant digits.
 pi
@@ -586,7 +586,7 @@ atan
  Numeric separators now on
 clear
 H
- Mode is hex.  Integer math with 32 bits.
+ Mode is hex (H).  Integer math with 32 bits.
 16w
  Integers are now 16 bits wide.
 0xffff
