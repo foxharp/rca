@@ -205,7 +205,9 @@ typedef struct token {
  */
 int mode = 'F';			/* 'F', 'D', 'U', 'H', 'O', 'B', 'R' */
 boolean floating_mode(int m) { return (m == 'F' || m == 'R'); }
-boolean unsigned_mode(int m) { return (!floating_mode(m) && (m != 'D')) ; }
+
+int do_unsigned = 0;
+boolean use_unsigned_math() { return (!floating_mode(mode) && do_unsigned) ; }
 
 /* if true, exit(4) on error, warning, or access to empty operand stack */
 boolean exit_on_error = FALSE;
@@ -620,7 +622,7 @@ e_to_the_x(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		if (unsigned_mode(mode))
+		if (use_unsigned_math())
 			result_push(expl((ull)a));
 		else
 			result_push(expl(a));
@@ -946,7 +948,7 @@ absolute(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		if (unsigned_mode(mode))
+		if (use_unsigned_math())
 			a = (ull)a;
 		push((a < 0) ? -a : a);
 		lastx = a;
@@ -973,7 +975,7 @@ squarert(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		if (unsigned_mode(mode))
+		if (use_unsigned_math())
 			push(sqrtl((ull)a));
 		else
 			result_push(sqrtl(a));
@@ -1163,7 +1165,7 @@ log_worker(int which)
 	ldouble n, l;
 
 	if (pop(&n)) {
-		if (unsigned_mode(mode))
+		if (use_unsigned_math())
 			n = (ull)n;
 		switch(which) {
 		default:  // warning suppression
@@ -1307,7 +1309,7 @@ is_lt(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			if (unsigned_mode(mode))
+			if (use_unsigned_math())
 				push((ull)a < (ull)b);
 			else
 				push(a < b);
@@ -1326,7 +1328,7 @@ is_le(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			if (unsigned_mode(mode))
+			if (use_unsigned_math())
 				push((ull)a <= (ull)b);
 			else
 				push(a <= b);
@@ -1345,7 +1347,7 @@ is_gt(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			if (unsigned_mode(mode))
+			if (use_unsigned_math())
 				push((ull)a > (ull)b);
 			else
 				push(a > b);
@@ -1364,7 +1366,7 @@ is_ge(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			if (unsigned_mode(mode))
+			if (use_unsigned_math())
 				push((ull)a >= (ull)b);
 			else
 				push(a >= b);
@@ -2080,7 +2082,8 @@ showmode(void)
 	} else if (mode == 'R') {
 		p_printf(" Displaying using floating hexadecimal.\n");
 	} else {
-		p_printf(" Integer math with %d bits.\n", int_width);
+		p_printf(" Integer math is %s, with %d bits.\n",
+			do_unsigned ? "unsigned":"signed", int_width);
 	}
 
 }
@@ -2342,6 +2345,13 @@ width(void)
 }
 
 opreturn
+unsigned_math(void)
+{
+	return toggler(&do_unsigned, "Math in integer modes will now be",
+		"unsigned", "signed");
+}
+
+opreturn
 zerof(void)
 {
 	return toggler(&zerofill, "Zero fill in hex/octal/binary modes is now",
@@ -2426,7 +2436,7 @@ sum_worker(boolean do_sum)
 	while (stack_count > stack_mark) {
 		if ((r = pop(&a)) == BADOP)
 			break;
-		if (unsigned_mode(mode)) {
+		if (use_unsigned_math()) {
 			tot += (ull)a;
 		} else {
 			tot += a;
@@ -4111,6 +4121,7 @@ struct oper opers[] = {
 	{"K", decimal_length,	"Float format: digits after decimal (%f)", Auto },
 	{"width", width,	0, Auto },
 	{"w", width,		"Set effective word size for integer modes", Auto },
+	{"unsigned", unsigned_math, "Toggle unsigned math. All values positive, if enabled"},
 	{"zerofill", zerof,	0, Auto },
 	{"z", zerof,		"Toggle left-filling with zeros in H, O, and B modes", Auto },
 	{"rightalign", rightalign, 0, Auto },

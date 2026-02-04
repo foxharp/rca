@@ -178,16 +178,17 @@ The difference between the various integer modes lies in how
 values are displayed by default, but floating point differs
 in a few additional ways.  Most math is done in long double,
 regardless of mode, but in integer mode all stack values are masked to
-the current word width, and sign extended, if necessary.  Where the
-difference matters, math is performed using signed arithmetic in
-signed decimal
-.RB ( D )
-mode, but using unsigned arithmetic in
-.BR U ,
-.BR H ,
-.BR O , and
-.B B
-modes.
+the current word width, and sign extended, if necessary.
+Math is performed using signed arithmetic in all modes, even when
+unsigned
+.RB ( U )
+display mode is selected.  The calculator will perform math as if
+all values are positive (i.e., the sign bit will not be honored) if
+the
+.B unsigned
+toggle command is used to enable unsigned math.  This setting applies to
+all integer modes.  (Using unsigned math in signed decimal display mode,
+or vice versa, can be confusing, but perhaps educational.)
 
 The input base of a number is independent of the mode, and controlled
 entirely by how it is entered:  10, 0xa, 0o12, 0b1010 and 1e01 are all
@@ -443,6 +444,10 @@ first digit, or to the right, by their decimal point. (Startup: enabled)
 .BR z )
 toggles whether or not hex, octal, and binary integers will be
 left-padded out to the chosen word width with zeros.  (Startup: disabled)
+.P
+.B unsigned
+toggles whether math is done as if all numbers are positive.  This can
+affect, for instance, how numbers compare.  (Startup: disabled)
 .P
 .B degrees
 toggles whether degrees are used by the trig functions, instead of
