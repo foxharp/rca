@@ -139,20 +139,24 @@ Variables, named with a leading
 .BR _tmp ,
 or
 .BR _my_var .
-can be referenced for either reading or writing.  (Variab
+can be referenced for either reading or writing.
 See the SPECIAL VALUES AND VARIABLES section, below.
 .P
 Multiple expressions separated by
 .RB ' ; '
 (semicolon) can be enclosed in a single pair of parentheses.  The
 result of the parenthesized expression is the result of the last such
-sub-expression.  (Like ',' in the C language,
+sub-expression.  Like ',' in the C language,
 .RB ' ; '
 is implemented as an operator whose result is its right-hand operand -- the
-left-hand operand is discarded (after evaluation).  So
+left-hand operand is evaluated, and the result discarded.  The primary
+use of
+.RB ' ; '
+is likely for expressions which assign to variables.
+See the example in the SPECIAL VALUES AND VARIABLES section, below.
 .RB ' ; '
 is also available in RPN:  when executed, it discards the second-to-top
-stack element, leaving the top undisturbed.)
+stack element, leaving the top undisturbed.
 .P
 If an error occurs during evaluation of an infix expression,
 evaluation will cease, and the stack will be left as it was at the
