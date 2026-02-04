@@ -205,6 +205,7 @@ typedef struct token {
  */
 int mode = 'F';			/* 'F', 'D', 'U', 'H', 'O', 'B', 'R' */
 boolean floating_mode(int m) { return (m == 'F' || m == 'R'); }
+boolean unsigned_mode(int m) { return (!floating_mode(m) && (m != 'D')) ; }
 
 /* if true, exit(4) on error, warning, or access to empty operand stack */
 boolean exit_on_error = FALSE;
@@ -399,31 +400,6 @@ result_push(ldouble n)
 }
 
 
-#define push_l(X) push(X)
-
-#if 0  // maybe
-void
-push_l(ull l)
-{
-	struct num *p;
-
-	if (floating_mode(mode))
-		error(" BUG: push_l() called in floating mode");
-
-	p = (struct num *)calloc(1, sizeof(struct num));
-	if (!p)
-		memory_failure();
-
-	trace((" pushing ulong %llu\n", l));
-	p->val = sign_extend(l & int_mask);
-	trace((" actually pushing ulong %llu\n", sign_extend(l & int_mask)));
-
-	p->next = stack;
-	stack = p;
-	stack_count++;
-}
-#endif
-
 boolean
 peek(ldouble *f)
 {
@@ -517,7 +493,7 @@ add(void)
 			if (floating_mode(mode) || !are_finite(a,b)) {
 				result_push(a + b);
 			} else {
-				push_l((ull)a + (ull)b);
+				push((ull)a + (ull)b);
 			}
 			lastx = b;
 			return GOODOP;
@@ -537,7 +513,7 @@ subtract(void)
 			if (floating_mode(mode) || !are_finite(a,b)) {
 				result_push(a - b);
 			} else {
-				push_l((ull)a - (ull)b);
+				push((ull)a - (ull)b);
 			}
 			lastx = b;
 			return GOODOP;
@@ -557,7 +533,7 @@ multiply(void)
 			if (floating_mode(mode) || !are_finite(a,b)) {
 				result_push(a * b);
 			} else {
-				push_l((ull)a * (ull)b);
+				push((ull)a * (ull)b);
 			}
 			lastx = b;
 			return GOODOP;
@@ -577,7 +553,7 @@ divide(void)
 			if (floating_mode(mode) || !are_finite(a,b)) {
 				result_push(a / b);
 			} else {
-				push_l((ull)a / (ull)b);
+				push((ull)a / (ull)b);
 			}
 			lastx = b;
 			return GOODOP;
@@ -597,7 +573,7 @@ modulo(void)
 			if (floating_mode(mode) || !are_finite(a,b)) {
 				result_push(fmodl(a,b));
 			} else {
-				push_l((ull)a % (ull)b);
+				push((ull)a % (ull)b);
 			}
 			lastx = b;
 			return GOODOP;
@@ -628,7 +604,7 @@ y_to_the_x(void)
 			if (floating_mode(mode) || !are_finite(a,b)) {
 				result_push(powl(a, b));
 			} else {
-				push_l(int_pow((ull)a, (ull)b));
+				push(int_pow((ull)a, (ull)b));
 			}
 			lastx = b;
 			return GOODOP;
@@ -644,7 +620,10 @@ e_to_the_x(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		result_push(expl(a));
+		if (unsigned_mode(mode))
+			result_push(expl((ull)a));
+		else
+			result_push(expl(a));
 		lastx = a;
 		return GOODOP;
 	}
@@ -729,10 +708,7 @@ rshift(void)
 			} else if (b >= sizeof(a) * CHAR_BIT) {
 				push(0);
 			} else {
-				if (floating_mode(mode))
-					push(i >> j);
-				else
-					push_l(i >> j);
+				push(i >> j);
 			}
 			lastx = b;
 			return GOODOP;
@@ -767,10 +743,7 @@ lshift(void)
 			} else if (b >= sizeof(a) * CHAR_BIT) {
 				push(0);
 			} else {
-				if (floating_mode(mode))
-					push(i << j);
-				else
-					push_l(i << j);
+				push(i << j);
 			}
 			lastx = b;
 			return GOODOP;
@@ -797,10 +770,7 @@ bitwise_and(void)
 
 			i = (ull)a;
 			j = (ull)b;
-			if (floating_mode(mode))
-				push(i & j);
-			else
-				push_l(i & j);
+			push(i & j);
 			lastx = b;
 			return GOODOP;
 		}
@@ -826,10 +796,7 @@ bitwise_or(void)
 
 			i = (ull)a;
 			j = (ull)b;
-			if (floating_mode(mode))
-				push(i | j);
-			else
-				push_l(i | j);
+			push(i | j);
 			lastx = b;
 			return GOODOP;
 		}
@@ -855,10 +822,7 @@ bitwise_xor(void)
 
 			i = (ull)a;
 			j = (ull)b;
-			if (floating_mode(mode))
-				push(i ^ j);
-			else
-				push_l(i ^ j);
+			push(i ^ j);
 			lastx = b;
 			return GOODOP;
 		}
@@ -892,10 +856,7 @@ setbit(void)
 			j = (ull)b;
 			if (b < sizeof(i) * CHAR_BIT)
 				i |= (1LL << j);
-			if (floating_mode(mode))
-				push(i);
-			else
-				push_l(i);
+			push(i);
 			lastx = b;
 			return GOODOP;
 		}
@@ -930,10 +891,7 @@ clearbit(void)
 			if (b < sizeof(i) * CHAR_BIT)
 				i &= ~(1LL << j);
 
-			if (floating_mode(mode))
-				push(i);
-			else
-				push_l(i);
+			push(i);
 			lastx = b;
 			return GOODOP;
 		}
@@ -956,10 +914,7 @@ bitwise_not(void)
 		if (bitwise_operand_too_big(a))
 			return BADOP;
 
-		if (floating_mode(mode))
-			push(~(ull)a);
-		else
-			push_l(~(ull)a);
+		push(~(ull)a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -991,6 +946,8 @@ absolute(void)
 	ldouble a;
 
 	if (pop(&a)) {
+		if (unsigned_mode(mode))
+			a = (ull)a;
 		push((a < 0) ? -a : a);
 		lastx = a;
 		return GOODOP;
@@ -1016,7 +973,10 @@ squarert(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		result_push(sqrtl(a));
+		if (unsigned_mode(mode))
+			push(sqrtl((ull)a));
+		else
+			result_push(sqrtl(a));
 		return GOODOP;
 	}
 	return BADOP;
@@ -1203,6 +1163,8 @@ log_worker(int which)
 	ldouble n, l;
 
 	if (pop(&n)) {
+		if (unsigned_mode(mode))
+			n = (ull)n;
 		switch(which) {
 		default:  // warning suppression
 		case 0: l = logl(n); break;
@@ -1240,6 +1202,10 @@ fraction(void)
 	ldouble a;
 
 	if (pop(&a)) {
+		if (!floating_mode(mode)) {
+			push(0);
+			return GOODOP;
+		}
 		if (a > 0)
 			result_push(a - floorl(a));
 		else
@@ -1256,6 +1222,10 @@ integer(void)
 	ldouble a;
 
 	if (pop(&a)) {
+		if (!floating_mode(mode)) {
+			push(a);
+			return GOODOP;
+		}
 		if (a > 0)
 			result_push(floorl(a));
 		else
@@ -1337,10 +1307,10 @@ is_lt(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			if (floating_mode(mode) || mode == 'D')
-				push(a < b);
-			else
+			if (unsigned_mode(mode))
 				push((ull)a < (ull)b);
+			else
+				push(a < b);
 			lastx = b;
 			return GOODOP;
 		}
@@ -1356,10 +1326,10 @@ is_le(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			if (floating_mode(mode) || mode == 'D')
-				push(a <= b);
-			else
+			if (unsigned_mode(mode))
 				push((ull)a <= (ull)b);
+			else
+				push(a <= b);
 			lastx = b;
 			return GOODOP;
 		}
@@ -1375,10 +1345,10 @@ is_gt(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			if (floating_mode(mode) || mode == 'D')
-				push(a > b);
-			else
+			if (unsigned_mode(mode))
 				push((ull)a > (ull)b);
+			else
+				push(a > b);
 			lastx = b;
 			return GOODOP;
 		}
@@ -1394,10 +1364,10 @@ is_ge(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			if (floating_mode(mode) || mode == 'D')
-				push(a >= b);
-			else
+			if (unsigned_mode(mode))
 				push((ull)a >= (ull)b);
+			else
+				push(a >= b);
 			lastx = b;
 			return GOODOP;
 		}
@@ -2456,10 +2426,10 @@ sum_worker(boolean do_sum)
 	while (stack_count > stack_mark) {
 		if ((r = pop(&a)) == BADOP)
 			break;
-		if (floating_mode(mode) || mode == 'D') {
-			tot += a;
-		} else {
+		if (unsigned_mode(mode)) {
 			tot += (ull)a;
+		} else {
+			tot += a;
 		}
 		n++;
 	}
@@ -2469,7 +2439,7 @@ sum_worker(boolean do_sum)
 	if (floating_mode(mode))
 		result_push(do_sum ? tot : tot/n );
 	else
-		push_l(do_sum ? (ull)tot : (ull)(tot/n) );
+		push(do_sum ? (ull)tot : (ull)(tot/n) );
 
 	return r;
 }
