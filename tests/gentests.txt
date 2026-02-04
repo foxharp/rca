@@ -592,20 +592,28 @@ H
 0xffff
 d
  -1
+u
+ 65,535
 32w
  Integers are now 32 bits wide.
  0xffff,ffff
 d
  -1
+u
+ 4,294,967,295
 0xffff &
  0xffff
 d
+ 65,535
+u
  65,535
 16w
  Integers are now 16 bits wide.
  0xffff
 d
  -1
+u
+ 65,535
 2w
  Integers are now 2 bits wide.
  0x3
@@ -613,13 +621,19 @@ p
  0x3
 d
  -1
+u
+ 3
 1 -
  0x2
 d
  -2
+u
+ 2
 1-
  0x1
 d
+ 1
+u
  1
 1-
  0x0

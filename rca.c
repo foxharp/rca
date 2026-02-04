@@ -1612,6 +1612,18 @@ putoct(long long sn)
 }
 
 char *
+putunsigned(unsigned long long uln)
+{
+	m_file_start();
+
+	fprintf(mp.fp, digitseparators ? " %'llu" : " %llu", uln);
+
+	m_file_finish();
+
+	return mp.bufp;
+}
+
+char *
 putsigned(long long ln)
 {
 	m_file_start();
@@ -1817,6 +1829,16 @@ print_n(ldouble *np, int format, boolean conv)
 		align = calc_align(1, 8);
 		p_printf("%*s", align, putbinary(ln));
 		break;
+	case 'U':
+		unsigned long long uln;
+		/* convert in two steps, to avoid possibly undefined
+		 * (by the language) negative double to unsigned conversion */
+		ln = (long long)n & mask;
+		uln = (unsigned long long)ln;
+		/* for decimal, worst case width is like octal's */
+		align = calc_align(3, 3);
+		p_printf("%*s", align, putunsigned(uln));
+		break;
 	case 'D':
 		ln = (long long)n;
 		if (!floating_mode(mode) && int_width != LONGLONG_BITS) {
@@ -1892,6 +1914,13 @@ opreturn
 printoct(void)
 {
 	print_top('O');
+	return GOODOP;
+}
+
+opreturn
+printuns(void)
+{
+	print_top('U');
 	return GOODOP;
 }
 
@@ -4023,9 +4052,10 @@ struct oper opers[] = {
 	{"p", printone,		"Print x according to mode" },
 	{"f", printfloat,	0 },
 	{"d", printdec,		0 },
+	{"u", printuns,		"Print x as float, decimal, unsigned decimal," },
 	{"h", printhex,		0 },
 	{"o", printoct,		0 },
-	{"b", printbin,		"Print x as float, decimal, hex, octal, or binary" },
+	{"b", printbin,		"     hex, octal, or binary" },
 	{"state", printstate,	"Show calculator state" },
 	{""},
     {"Modes:"},

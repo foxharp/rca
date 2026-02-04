@@ -263,10 +263,18 @@ Regardless of the default format, individual values can be
 viewed at any time in any format by using
 .BR f ,
 .BR d ,
+.BR u ,
 .BR h ,
 .BR o ,
-or
-.BR b .
+and
+.BR b ,
+which correspond to the similarly named modes.
+The
+.RB ' u '
+command prints as unsigned decimal.  (There is no corresponding
+"unsigned decimal' (i.e.,
+.RB ' U ')
+mode.
 
 By default the width of
 .BR rca 's
