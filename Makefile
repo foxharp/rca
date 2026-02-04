@@ -45,10 +45,14 @@ docs/rca-help.html: FORCE
 	    aha -t "rca calculator help text" --style 'font-size:125%' \
 		> docs/rca-help.html.new
 
+SHELL = /bin/bash
 htmldiff:
-	-diff -u docs/index.html docs/index.html.new
-	-diff -u docs/rca-man.html docs/rca-man.html.new
-	-diff -u docs/rca-help.html docs/rca-help.html.new
+	-diff -u <( links -dump docs/index.html ) \
+		<( links -dump docs/index.html.new )
+	-diff -u <( links -dump docs/rca-man.html ) \
+		<( links -dump docs/rca-man.html.new )
+	-diff -u <( links -dump docs/rca-help.html ) \
+		<( links -dump docs/rca-help.html.new )
 
 htmlmv:
 	mv docs/index.html.new docs/index.html
