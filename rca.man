@@ -165,8 +165,6 @@ can be configured into two main modes of operation:  floating point
 command, and integer, using one of
 .B D
 (signed decimal),
-.B U
-(unsigned decimal),
 .B H
 (hex),
 .B O
@@ -179,16 +177,7 @@ values are displayed by default, but floating point differs
 in a few additional ways.  Most math is done in long double,
 regardless of mode, but in integer mode all stack values are masked to
 the current word width, and sign extended, if necessary.
-Math is performed using signed arithmetic in all modes, even when
-unsigned
-.RB ( U )
-display mode is selected.  The calculator will perform math as if
-all values are positive (i.e., the sign bit will not be honored) if
-the
-.B unsigned
-toggle command is used to enable unsigned math.  This setting applies to
-all integer modes.  (Using unsigned math in signed decimal display mode,
-or vice versa, can be confusing, but perhaps educational.)
+Math is always performed using signed arithmetic in all modes.
 
 The input base of a number is independent of the mode, and controlled
 entirely by how it is entered:  10, 0xa, 0o12, 0b1010 and 1e01 are all
@@ -199,8 +188,6 @@ mode.)  Note that octal
 .I must
 be entered using the "0o" prefix, which is also how octal will be
 printed.  The more traditional "0" prefix will be interpreted as decimal.
-Also note that numbers can be entered as negative decimals even when
-the resulting bit pattern will be interpreted using unsigned arithmetic.
 
 .SS Floating point
 In floating point mode (i.e.,
@@ -259,8 +246,6 @@ Integer mode is selected with any of the following commands, which
 also choose the default display format:
 .B D
 (signed decimal),
-.B U
-(unsigned decimal),
 .B H
 (hex),
 .B O
@@ -278,7 +263,6 @@ Regardless of the default format, individual values can be
 viewed at any time in any format by using
 .BR f ,
 .BR d ,
-.BR u ,
 .BR h ,
 .BR o ,
 or
@@ -410,7 +394,6 @@ list may be useful:
 
 .BR F ,
 .BR D ,
-.BR U ,
 .BR H ,
 .BR O ,
 and
@@ -444,10 +427,6 @@ first digit, or to the right, by their decimal point. (Startup: enabled)
 .BR z )
 toggles whether or not hex, octal, and binary integers will be
 left-padded out to the chosen word width with zeros.  (Startup: disabled)
-.P
-.B unsigned
-toggles whether math is done as if all numbers are positive.  This can
-affect, for instance, how numbers compare.  (Startup: disabled)
 .P
 .B degrees
 toggles whether degrees are used by the trig functions, instead of

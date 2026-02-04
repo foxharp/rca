@@ -120,8 +120,6 @@ typedef int opreturn;
 #define BADOP 0
 
 typedef long double ldouble;
-typedef long long ll;
-typedef unsigned long long ull;
 
 /* global copies of main's argc/argv */
 int g_argc;
@@ -199,15 +197,12 @@ typedef struct token {
 #define Auto	-2
 
 
-/* 7 major modes:  float, decimal, unsigned, hex, octal, binary, and raw
- * float.  all but float and raw float are integer modes.
- * (raw float is a debug mode:  it uses the printf %a format)
+/* 6 major modes:  float, decimal, hex, octal, binary, and raw float.
+ * all but float and raw float are integer modes.  (raw float is a
+ * debug mode:  it uses the printf %a format)
  */
-int mode = 'F';			/* 'F', 'D', 'U', 'H', 'O', 'B', 'R' */
+int mode = 'F';			/* 'F', 'D', 'H', 'O', 'B', 'R' */
 boolean floating_mode(int m) { return (m == 'F' || m == 'R'); }
-
-int do_unsigned = 0;
-boolean use_unsigned_math() { return (!floating_mode(mode) && do_unsigned) ; }
 
 /* if true, exit(4) on error, warning, or access to empty operand stack */
 boolean exit_on_error = FALSE;
@@ -362,7 +357,7 @@ tweak_float(ldouble x)
 }
 
 long long
-sign_extend(ull b)
+sign_extend(long long b)
 {
 	if (int_width == LONGLONG_BITS)
 		return b;
@@ -383,7 +378,7 @@ push(ldouble n)
 		p->val = n;
 		trace((" pushed %Lg\n", n));
 	} else {
-		p->val = sign_extend((ull)n & int_mask);
+		p->val = sign_extend((long long)n & int_mask);
 		trace((" pushed masked/extended %lld/0x%llx\n",
 			(long long)(p->val), (long long)(p->val)));
 	}
@@ -495,7 +490,7 @@ add(void)
 			if (floating_mode(mode) || !are_finite(a,b)) {
 				result_push(a + b);
 			} else {
-				push((ull)a + (ull)b);
+				push((long long)a + (long long)b);
 			}
 			lastx = b;
 			return GOODOP;
@@ -515,7 +510,7 @@ subtract(void)
 			if (floating_mode(mode) || !are_finite(a,b)) {
 				result_push(a - b);
 			} else {
-				push((ull)a - (ull)b);
+				push((long long)a - (long long)b);
 			}
 			lastx = b;
 			return GOODOP;
@@ -535,7 +530,7 @@ multiply(void)
 			if (floating_mode(mode) || !are_finite(a,b)) {
 				result_push(a * b);
 			} else {
-				push((ull)a * (ull)b);
+				push((long long)a * (long long)b);
 			}
 			lastx = b;
 			return GOODOP;
@@ -555,7 +550,7 @@ divide(void)
 			if (floating_mode(mode) || !are_finite(a,b)) {
 				result_push(a / b);
 			} else {
-				push((ull)a / (ull)b);
+				push((long long)a / (long long)b);
 			}
 			lastx = b;
 			return GOODOP;
@@ -575,7 +570,7 @@ modulo(void)
 			if (floating_mode(mode) || !are_finite(a,b)) {
 				result_push(fmodl(a,b));
 			} else {
-				push((ull)a % (ull)b);
+				push((long long)a % (long long)b);
 			}
 			lastx = b;
 			return GOODOP;
@@ -585,12 +580,12 @@ modulo(void)
 	return BADOP;
 }
 
-ll
-int_pow(ll base, ll exp)
+long long
+int_pow(long long base, long long exp)
 {
-	ll result = 1;
+	long long result = 1;
 
-	for (ll i = 0; i < exp; i++) {
+	for (long long i = 0; i < exp; i++) {
 		result *= base;
 	}
 	return result;
@@ -606,7 +601,7 @@ y_to_the_x(void)
 			if (floating_mode(mode) || !are_finite(a,b)) {
 				result_push(powl(a, b));
 			} else {
-				push(int_pow((ull)a, (ull)b));
+				push(int_pow((long long)a, (long long)b));
 			}
 			lastx = b;
 			return GOODOP;
@@ -622,10 +617,7 @@ e_to_the_x(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		if (use_unsigned_math())
-			result_push(expl((ull)a));
-		else
-			result_push(expl(a));
+		result_push(expl(a));
 		lastx = a;
 		return GOODOP;
 	}
@@ -762,7 +754,7 @@ bitwise_and(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			ull i, j;
+			long long i, j;
 
 			if (!bothfinite(a, b))
 				return GOODOP;
@@ -770,8 +762,8 @@ bitwise_and(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			i = (ull)a;
-			j = (ull)b;
+			i = (long long)a;
+			j = (long long)b;
 			push(i & j);
 			lastx = b;
 			return GOODOP;
@@ -788,7 +780,7 @@ bitwise_or(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			ull i, j;
+			long long i, j;
 
 			if (!bothfinite(a, b))
 				return GOODOP;
@@ -796,8 +788,8 @@ bitwise_or(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			i = (ull)a;
-			j = (ull)b;
+			i = (long long)a;
+			j = (long long)b;
 			push(i | j);
 			lastx = b;
 			return GOODOP;
@@ -814,7 +806,7 @@ bitwise_xor(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			ull i, j;
+			long long i, j;
 
 			if (!bothfinite(a, b))
 				return GOODOP;
@@ -822,8 +814,8 @@ bitwise_xor(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			i = (ull)a;
-			j = (ull)b;
+			i = (long long)a;
+			j = (long long)b;
 			push(i ^ j);
 			lastx = b;
 			return GOODOP;
@@ -840,7 +832,7 @@ setbit(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			ull i, j;
+			long long i, j;
 
 			if (!bothfinite(a, b))
 				return GOODOP;
@@ -854,8 +846,8 @@ setbit(void)
 				push(b);
 				return BADOP;
 			}
-			i = (ull)a;
-			j = (ull)b;
+			i = (long long)a;
+			j = (long long)b;
 			if (b < sizeof(i) * CHAR_BIT)
 				i |= (1LL << j);
 			push(i);
@@ -874,7 +866,7 @@ clearbit(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			ull i, j;
+			long long i, j;
 
 			if (!bothfinite(a, b))
 				return GOODOP;
@@ -888,8 +880,8 @@ clearbit(void)
 				push(b);
 				return BADOP;
 			}
-			i = (ull)a;
-			j = (ull)b;
+			i = (long long)a;
+			j = (long long)b;
 			if (b < sizeof(i) * CHAR_BIT)
 				i &= ~(1LL << j);
 
@@ -916,7 +908,7 @@ bitwise_not(void)
 		if (bitwise_operand_too_big(a))
 			return BADOP;
 
-		push(~(ull)a);
+		push(~(long long)a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -948,8 +940,6 @@ absolute(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		if (use_unsigned_math())
-			a = (ull)a;
 		push((a < 0) ? -a : a);
 		lastx = a;
 		return GOODOP;
@@ -975,10 +965,7 @@ squarert(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		if (use_unsigned_math())
-			push(sqrtl((ull)a));
-		else
-			result_push(sqrtl(a));
+		result_push(sqrtl(a));
 		return GOODOP;
 	}
 	return BADOP;
@@ -1165,8 +1152,6 @@ log_worker(int which)
 	ldouble n, l;
 
 	if (pop(&n)) {
-		if (use_unsigned_math())
-			n = (ull)n;
 		switch(which) {
 		default:  // warning suppression
 		case 0: l = logl(n); break;
@@ -1309,10 +1294,7 @@ is_lt(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			if (use_unsigned_math())
-				push((ull)a < (ull)b);
-			else
-				push(a < b);
+			push(a < b);
 			lastx = b;
 			return GOODOP;
 		}
@@ -1328,10 +1310,7 @@ is_le(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			if (use_unsigned_math())
-				push((ull)a <= (ull)b);
-			else
-				push(a <= b);
+			push(a <= b);
 			lastx = b;
 			return GOODOP;
 		}
@@ -1347,10 +1326,7 @@ is_gt(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			if (use_unsigned_math())
-				push((ull)a > (ull)b);
-			else
-				push(a > b);
+			push(a > b);
 			lastx = b;
 			return GOODOP;
 		}
@@ -1366,10 +1342,7 @@ is_ge(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			if (use_unsigned_math())
-				push((ull)a >= (ull)b);
-			else
-				push(a >= b);
+			push(a >= b);
 			lastx = b;
 			return GOODOP;
 		}
@@ -1639,18 +1612,6 @@ putoct(long long sn)
 }
 
 char *
-putunsigned(unsigned long long uln)
-{
-	m_file_start();
-
-	fprintf(mp.fp, digitseparators ? " %'llu" : " %llu", uln);
-
-	m_file_finish();
-
-	return mp.bufp;
-}
-
-char *
 putsigned(long long ln)
 {
 	m_file_start();
@@ -1801,7 +1762,6 @@ print_n(ldouble *np, int format, boolean conv)
 	ldouble old_n, n;
 	long long ln;
 	long long mask = int_mask;
-	unsigned long long uln;
 	int align;
 	boolean changed;
 
@@ -1856,15 +1816,6 @@ print_n(ldouble *np, int format, boolean conv)
 		ln = (long long)n & mask;
 		align = calc_align(1, 8);
 		p_printf("%*s", align, putbinary(ln));
-		break;
-	case 'U':
-		/* convert in two steps, to avoid possibly undefined
-		 * negative double to unsigned conversion */
-		ln = (long long)n & mask;
-		uln = (unsigned long long)ln;
-		/* for decimal, worst case width is like octal's */
-		align = calc_align(3, 3);
-		p_printf("%*s", align, putunsigned(uln));
 		break;
 	case 'D':
 		ln = (long long)n;
@@ -1941,13 +1892,6 @@ opreturn
 printoct(void)
 {
 	print_top('O');
-	return GOODOP;
-}
-
-opreturn
-printuns(void)
-{
-	print_top('U');
 	return GOODOP;
 }
 
@@ -2045,8 +1989,6 @@ mode2name(void)
 	switch (mode) {
 	case 'D':
 		return "signed decimal";
-	case 'U':
-		return "unsigned decimal";
 	case 'O':
 		return "octal";
 	case 'H':
@@ -2082,8 +2024,7 @@ showmode(void)
 	} else if (mode == 'R') {
 		p_printf(" Displaying using floating hexadecimal.\n");
 	} else {
-		p_printf(" Integer math is %s, with %d bits.\n",
-			do_unsigned ? "unsigned":"signed", int_width);
+		p_printf(" Integer math with %d bits.\n", int_width);
 	}
 
 }
@@ -2135,15 +2076,6 @@ opreturn
 modedec(void)
 {
 	mode = 'D';
-	showmode();
-	printstack(1,stack);
-	return GOODOP;
-}
-
-opreturn
-modeuns(void)
-{
-	mode = 'U';
 	showmode();
 	printstack(1,stack);
 	return GOODOP;
@@ -2345,13 +2277,6 @@ width(void)
 }
 
 opreturn
-unsigned_math(void)
-{
-	return toggler(&do_unsigned, "Math in integer modes will now be",
-		"unsigned", "signed");
-}
-
-opreturn
 zerof(void)
 {
 	return toggler(&zerofill, "Zero fill in hex/octal/binary modes is now",
@@ -2436,11 +2361,7 @@ sum_worker(boolean do_sum)
 	while (stack_count > stack_mark) {
 		if ((r = pop(&a)) == BADOP)
 			break;
-		if (use_unsigned_math()) {
-			tot += (ull)a;
-		} else {
-			tot += a;
-		}
+		tot += a;
 		n++;
 	}
 
@@ -2449,7 +2370,7 @@ sum_worker(boolean do_sum)
 	if (floating_mode(mode))
 		result_push(do_sum ? tot : tot/n );
 	else
-		push(do_sum ? (ull)tot : (ull)(tot/n) );
+		push(do_sum ? tot : (tot/n) );
 
 	return r;
 }
@@ -4102,26 +4023,23 @@ struct oper opers[] = {
 	{"p", printone,		"Print x according to mode" },
 	{"f", printfloat,	0 },
 	{"d", printdec,		0 },
-	{"u", printuns,		"Print x as float, decimal, unsigned decimal," },
 	{"h", printhex,		0 },
 	{"o", printoct,		0 },
-	{"b", printbin,		"     hex, octal, or binary" },
+	{"b", printbin,		"Print x as float, decimal, hex, octal, or binary" },
 	{"state", printstate,	"Show calculator state" },
 	{""},
     {"Modes:"},
 	{"F", modefloat,	0 },
 	{"D", modedec,		0 },
-	{"U", modeuns,		"Switch to floating point, decimal, unsigned decimal," },
 	{"H", modehex,		0 },
 	{"O", modeoct,		0 },
-	{"B", modebin,		"     hex, octal, or binary modes" },
+	{"B", modebin,		"Switch to floating, decimal, hex, octal, binary modes" },
 	{"precision", precision, 0, Auto },
 	{"k", precision,	"Float format: number of significant digits (%g)", Auto },
 	{"decimals", decimal_length, 0, Auto },
 	{"K", decimal_length,	"Float format: digits after decimal (%f)", Auto },
 	{"width", width,	0, Auto },
 	{"w", width,		"Set effective word size for integer modes", Auto },
-	{"unsigned", unsigned_math, "Toggle unsigned math. All values positive, if enabled"},
 	{"zerofill", zerof,	0, Auto },
 	{"z", zerof,		"Toggle left-filling with zeros in H, O, and B modes", Auto },
 	{"rightalign", rightalign, 0, Auto },
@@ -4180,7 +4098,7 @@ do_autoprint(token *pt)
 		break;
 
 	case NUMERIC:
-		if ((mode == 'F' || mode == 'D' || mode == 'U') &&
+		if ((mode == 'F' || mode == 'D') &&
 			pt->imode == 'D')
 			return;
 		if (pt->imode == mode)
