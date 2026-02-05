@@ -1,4 +1,8 @@
 
+# override with make PREFIX=/xyzzy install
+PREFIX = /usr/local
+MANPREFIX = $(PREFIX)/share/man
+
 # build both the readline and no-readline versions by default
 all: rca rca-norl rca.1 copyrightcheck html 
 
@@ -28,19 +32,22 @@ copyrightcheck:
 	grep -q "Copyright.*$$year" LICENSE && \
 	grep -q "Copyright.*$$year" rca.c
 
-html: rca docs/index.html docs/rca-man.html docs/rca-help.html
+# we build the docs/*.html.new files regularly, and only occasionally,
+# usually when doing releases, do we move and commit them to docs/*.html
+# this keeps the git tree clean(er) most of the time.
+html: docs/index.html.new docs/rca-man.html.new docs/rca-help.html.new
 
-docs/index.html: FORCE
+docs/index.html.new: README.md
 	python3 -m markdown README.md >docs/index.html.new
 
-docs/rca-man.html: FORCE
+docs/rca-man.html.new: rca.1
 	MAN_KEEP_FORMATTING=1 MANWIDTH=75 \
 	    man --no-justification --no-hyphenation --local-file rca.1 | \
 	     aha -w -t "rca(1) man page" --style 'font-size:125%' | \
 	      sed -e 's/text-decoration: *underline;/font-style:italic;/g' \
 		> docs/rca-man.html.new
 
-docs/rca-help.html: FORCE
+docs/rca-help.html.new: rca
 	PAGER= ./rca help q | \
 	    aha -t "rca calculator help text" --style 'font-size:125%' \
 		> docs/rca-help.html.new
@@ -87,6 +94,22 @@ htmlmv:
 clean:
 	rm -f rca rca-norl rca.1 .test docs/index.html.new \
 		docs/rca-man.html.new docs/rca-help.html.new
+
+install: all
+	@echo "INSTALL bin/rca"
+	install -D -m 755 -o root -g root rca \
+		$(PREFIX)/bin/rca
+	@echo "INSTALL rca.1"
+	install -D -m 644 -o root -g root rca.1 \
+		$(MANPREFIX)/man1/rca.1
+
+uninstall:
+	@echo "REMOVE installed bin/rca"
+	rm -f $(PREFIX)/bin/rca
+	@echo "REMOVE installed rca.1"
+	rm -f $(MANPREFIX)/man1/rca.1
+
+
 
 # test files are simply verbatim output from an rca session.  program
 # output is always indented by one space, so we remove those lines
