@@ -85,17 +85,19 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        expression being invoked.
 
        Variables, named with a leading '<span style="font-weight:bold;">_</span>' (underscore), like <span style="font-weight:bold;">_a</span>, <span style="font-weight:bold;">_tmp</span>,
-       or <span style="font-weight:bold;">_my_var</span>.  can be referenced for either reading or writing.
-       (Variab See the SPECIAL VALUES AND VARIABLES section, below.
+       or <span style="font-weight:bold;">_my_var</span>.  can be referenced for either reading or writing.  See
+       the SPECIAL VALUES AND VARIABLES section, below.
 
        Multiple expressions separated by '<span style="font-weight:bold;">;</span>' (semicolon) can be enclosed
        in a single pair of parentheses.  The result of the parenthesized
-       expression is the result of the last such sub-expression.  (Like
+       expression is the result of the last such sub-expression.  Like
        ',' in the C language, '<span style="font-weight:bold;">;</span>' is implemented as an operator whose
        result is its right-hand operand -- the left-hand operand is
-       discarded (after evaluation).  So '<span style="font-weight:bold;">;</span>' is also available in RPN:
-       when executed, it discards the second-to-top stack element,
-       leaving the top undisturbed.)
+       evaluated, and the result discarded.  The primary use of '<span style="font-weight:bold;">;</span>' is
+       likely for expressions which assign to variables.  See the example
+       in the SPECIAL VALUES AND VARIABLES section, below.  '<span style="font-weight:bold;">;</span>' is also
+       available in RPN:  when executed, it discards the second-to-top
+       stack element, leaving the top undisturbed.
 
        If an error occurs during evaluation of an infix expression,
        evaluation will cease, and the stack will be left as it was at the
@@ -493,7 +495,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        Paul Fox created <span style="font-weight:bold;">rca </span>(formerly called &quot;ca&quot;) very slowly over a
        span of decades, starting in 1993.
 
-                                2026-02-04                         <span style="font-style:italic;">rca</span>(1)
+                                version v16                        <span style="font-style:italic;">rca</span>(1)
 </pre>
 </body>
 </html>

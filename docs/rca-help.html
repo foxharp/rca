@@ -27,7 +27,6 @@
                &gt;&gt;, &lt;&lt;     Right/left logical shift of y by x bits
             &amp;, |, xor     Bitwise AND, OR, and XOR of y and x
          setb, clearb     Set and clear bit x in y
-                    =     Assignment to variable
 
  Numerical operators with one operand:
                     ~     Bitwise NOT of x (1's complement)
@@ -40,29 +39,19 @@
                   exp     Raise e to the x'th power
       ln, log2, log10     Natural, base 2, and base 10 logarithms
        abs, frac, int     Absolute value, fractional and integer parts of x
-                 (, )     Infix grouping
-                    ;     Infix separator (in RPN, discards y)
 
  Logical operators (mostly two operands):
                &amp;&amp;, ||     Logical AND and OR
  ==, !=, &lt;, &lt;=, &gt;, &gt;=     Arithmetic comparisons
                     !     Logical NOT of x
 
- Stack manipulation:
-                clear     Clear stack
-                  pop     Pop (and discard) x
-         push, or dup     Push (a duplicate of) x
-         lastx, or lx     Fetch previous value of x
-        exch, or swap     Exchange x and y
-                 mark     Mark stack for later summing
-                  sum     Sum stack to &quot;mark&quot;, or entire stack if no mark
-                  avg     Average stack to &quot;mark&quot;, or entire stack if no mark
-
- Constants and storage (no operands):
-             sto, rcl     Save/fetch off-stack storage
-                   pi     Push constant pi
-                    e     Push constant e
-              _&lt;name&gt;     Read or set a variable
+ Constants and storage:
+             sto, rcl     Save, or push off-stack storage
+                pi, e     Push constant pi or e
+         lastx, or lx     Push previous value of x
+              _&lt;name&gt;     Push variable
+                    =     Assign variable.  RPN: &quot;3 = _v&quot;   infix: &quot;(_v = 3)&quot;
+    varables, or vars     Show the current list of variables
 
  Unit conversions (one operand):
            i2mm, mm2i     inches / millimeters
@@ -74,6 +63,18 @@
              q2l, l2q     US quarts / liters
              d2r, r2d     degrees / radians
            mpg2l100km     mpg to l/100km and vice versa
+
+ Other:
+                 (, )     Infix grouping
+                    ;     Infix separator (in RPN, discards y)
+             sum, avg     Sum or average stack, stop at &quot;mark&quot; if set
+                 mark     Mark stack to limit later summing/averaging
+
+ Stack manipulation:
+                clear     Clear stack
+                  pop     Pop (and discard) x
+         push, or dup     Push (a duplicate of) x
+        exch, or swap     Exchange x and y
 
  Display:
                     P     Print whole stack according to mode
@@ -103,13 +104,13 @@
  Housekeeping:
            ?, or help     Show this list (using $PAGER, if set)
            precedence     List infix operator precedence
-   vars, or variables     Show the current list of variables
      quit, q, or exit     Leave the calculator
             errorexit     Toggle exiting on error and warning
               license     Display the rca copyright and license.
+              version     Show program version
                     #     Comment. The rest of the line will be ignored.
 
-                             version v15-5-g3512765 built Feb  4 2026 12:24:07
+                                                                   version v16
 
  Tip:	Use &quot;rca help q | less&quot; to view this help
 </pre>
