@@ -9,17 +9,17 @@ all: rca rca-norl rca.1 copyrightcheck html
 rca: rca.c
 	v="$$(git describe --dirty=+ 2>/dev/null)"; \
 	gcc -g -O -Wall -Wextra -o rca \
-		-DVERSION=\"$${v}\" -D USE_READLINE \
+		-DCCVERSION=\"$${v}\" -D USE_READLINE \
 		rca.c -lm -lreadline
 
 rca-norl: rca.c
 	v="$$(git describe --dirty=+ 2>/dev/null)"; \
 	gcc -g -Wall -Wextra -o rca-norl \
-		-DVERSION=\"$${v}\" \
+		-DCCVERSION=\"$${v}\" \
 		rca.c -lm
 
 rca.1: rca.man
-	v="$$(date +%Y-%m-%d)"; \
+	v="\"$$(rca version q)\""; \
 	sed -e "s/VERSIONSTRING/$${v}/g" rca.man > rca.1
 
 copyrightcheck:
@@ -28,7 +28,7 @@ copyrightcheck:
 	grep -q "Copyright.*$$year" LICENSE && \
 	grep -q "Copyright.*$$year" rca.c
 
-html: docs/index.html docs/rca-man.html docs/rca-help.html
+html: rca docs/index.html docs/rca-man.html docs/rca-help.html
 
 docs/index.html: FORCE
 	python3 -m markdown README.md >docs/index.html.new
@@ -44,6 +44,31 @@ docs/rca-help.html: FORCE
 	PAGER= ./rca help q | \
 	    aha -t "rca calculator help text" --style 'font-size:125%' \
 		> docs/rca-help.html.new
+
+# to release a version:
+#   vi rca.c (bump version)
+#   git commit	    # "bumped to vNN"
+#   make tag clean all versioncheck
+#   make htmldiff   # check html files
+#   make htmlmv
+#   git commit      # "new man/help html files for vNN"
+
+release: tag clean all versioncheck
+
+tag: FORCE
+	@git diff --quiet HEAD -- || (echo dirty tree; false)
+	@tag=$$(sed -n -e 's/[^"]*"\([^"]*\).*/\1/p' -e '1q' rca.c); \
+	read -p "Hit ^C to abort tagging with $$tag..."; \
+	echo git tagging as $$tag;  \
+	set -x; \
+	git tag -a $$tag -m "Release version $$tag"
+
+versioncheck:
+	@echo rca: ;rca version q || true
+	@echo "man & help": ; \
+		tail -n 6 docs/*.new | \
+		sed -n -e 's/<span .*//' \
+			-e 's/^ *\( version v[0-9]\+.*\)/\1/p'
 
 SHELL = /bin/bash
 htmldiff:
@@ -91,6 +116,7 @@ tweaktest:
 		tee .test | diff -u tests/tweaktests.txt -
 	@ echo test succeeded
 
-.PHONY: clean all gentest optest tweaktest html htmldiff htmlmv
+.PHONY: clean all gentest optest tweaktest html htmldiff htmlmv \
+	release tag versioncheck
 
 FORCE:

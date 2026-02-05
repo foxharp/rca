@@ -1,3 +1,4 @@
+char *progversion = "v15";
 /*
  *
  *	This program is a mediocre but practical stack-based floating
@@ -56,9 +57,12 @@ char *licensetext[] = {
 "",
   0 };
 
-
-#ifndef VERSION
-#define VERSION "v?"
+/* in addition to progversion, above, Makefile may pass in a
+ * definition of CCVERSION */
+#ifdef CCVERSION
+char *ccprogversion = CCVERSION;
+#else
+char *ccprogversion = "built " __DATE__ " " __TIME__;
 #endif
 
 #include <stdlib.h>
@@ -3791,6 +3795,27 @@ license(void)
 	return GOODOP;
 }
 
+char *
+getversion(void)
+{
+	static char vbuf[100];
+	if (!ccprogversion[0] || strcmp(ccprogversion, progversion) == 0) {
+		snprintf(vbuf, sizeof(vbuf), "version %s",
+			progversion);
+	} else {
+		snprintf(vbuf, sizeof(vbuf), "version %s (%s)",
+			progversion, ccprogversion);
+	}
+	return vbuf;
+}
+
+opreturn
+version(void)
+{
+	p_printf(" %s\n", getversion());
+	return GOODOP;
+}
+
 opreturn
 help(void)
 {
@@ -3860,7 +3885,7 @@ help(void)
 		prevfunc = op->func;
 		op++;
 	}
-	fprintf(fout, "\n%78s\n", "version " VERSION " built " __DATE__ " " __TIME__);
+	fprintf(fout, "\n%78s\n",  getversion());
 
 	if (!fout_is_pipe) {
 		// tip not needed if a pager's already in use
@@ -4103,6 +4128,7 @@ struct oper opers[] = {
 	{"exit", quit,		"Leave the calculator" },
 	{"errorexit", enable_errexit,	"Toggle exiting on error and warning" },
 	{"license", license,	"Display the rca copyright and license." },
+	{"version", version,	"Show program version" },
 	{"#", help,		"Comment. The rest of the line will be ignored." },
 	{NULL, NULL, 0},
 };
