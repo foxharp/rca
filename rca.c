@@ -263,7 +263,7 @@ long double epsilon;
 
 /* we don't allow parsing of floating hex input (e.g., -0x8.0p-63) by
  * default, to avoid confusion.  it's enabled after the first use of
- * floating hex output (with "r" or "R") */
+ * floating hex output (with "raw" or "Raw") */
 boolean raw_hex_input_ok;
 
 /* if true, perform snapping and rounding of float values */
@@ -4186,8 +4186,8 @@ struct oper opers[] = {
 	{""},
     {"Debug support:"},
 	{"state", printstate,	"Show calculator state" },
-	{"r", printrawhex,	"Print x as raw floating hex" },
-	{"R", moderawhex,	"Switch to raw floating hex mode"},
+	{"raw", printrawhex,	"Print x as raw floating hex" },
+	{"Raw", moderawhex,	"Switch to raw floating hex mode"},
 	{"rounding", rounding,	"Toggle snapping and rounding of floats" },
 	{"tracing", tracetoggle,"Set tracing level" },
 //	{"commands", commands,	"Dump raw command table" }, # use "11 tracing"
