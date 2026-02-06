@@ -642,14 +642,30 @@ will cause a later
 .BR avg )
 to include the current top N values,
 plus any more values that have been pushed prior to the sum.
-N cannot be greater than the length of the stack.
+N cannot be greater than the depth of the stack.
 .B 0 mark
 will cause only subsequent pushes to be summed/averaged.
 .B -1 mark
 will clear the mark.
-.B sum
+.P
+.B snapshot
+will make a copy of the stack, which can be retrieved later using the
+.B restore
+command.
+.B restore
+will push the snapshot on top of the current stack.
+.B mark
+can be used, as above, to limit the range of the snapshot.  An exact
+copy of the stack is ensured by
+.B -1 mark snapshot
+followed by
+.B clear
+.BR restore .
+.P
+.BR sum ,
+.BR avg ,
 and
-.B avg
+.B snapshot
 are the only operators to consume more than 2 stack elements.
 .RE
 

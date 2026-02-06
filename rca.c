@@ -1956,6 +1956,20 @@ printfloat(void)
 	return GOODOP;
 }
 
+// worker for printstate()
+void
+rawprintstack(int n, struct num *s)
+{
+	if (!s) return;
+
+	if (s->next)
+		rawprintstack(n-1, s->next);
+
+	p_printf(" %#20llx   %#20.20Lg    %La%s\n",
+		(long long)(s->val), s->val, s->val,
+		(n == stack_mark) ? "   <-  mark":"");
+}
+
 opreturn
 printstate(void)
 {
@@ -1981,19 +1995,18 @@ printstate(void)
 	p_printf("\n");
 
 	s = stack;
-	p_printf(" Stack, top comes first:\n");
+	p_printf(" Stack, bottom comes first:\n");
 	if (!s) {
 		p_printf("%16s\n", "<empty>");
 	} else {
 		p_printf(" %20s   %20s\n",
 		    "long long", "long double ('%#20.20Lg' and '%La')");
-		while (s) {
-			p_printf(" %#20llx   %#20.20Lg    %La\n",
-				(long long)(s->val), s->val, s->val);
-			s = s->next;
-		}
+		p_printf("  bottom of stack\n");
+		rawprintstack(stack_count, stack);
+		p_printf("  top of stack\n");
 	}
-	p_printf(" stack count %d, stack mark %d\n", stack_count, stack_mark);
+	p_printf(" stack count %d, depth of the stack mark is %d\n",
+			stack_count, stack_count - stack_mark);
 
 	p_printf("\n");
 	p_printf("\n Build-time sizes:\n");
@@ -2377,6 +2390,64 @@ mark(void)
 		stack_mark = 0; // special case:  clear the mark
 	else
 		stack_mark = stack_count - n;
+	return GOODOP;
+}
+
+struct num *snapstack;
+
+opreturn
+snapshot(void)
+{
+	struct num *p;
+
+	if (stack_count <= stack_mark) {
+		error(" error: nothing to snapshot\n");
+		return BADOP;
+	}
+
+	p = stack;
+	if (!p) { // if stack count/mark are correct, this can't happen
+		error(" empty stack\n");
+		return BADOP;
+	}
+
+	// clear existing snapstack
+	while ((p = snapstack)) {
+		snapstack = p->next;
+		free(p);
+	}
+
+	// copy (as much as we want of the) real stack to snapstack
+	p = stack;
+	snapstack = NULL;
+	int n = stack_count;
+	while (n > stack_mark) {
+		struct num *np;
+
+		// push p->val on snapstack
+		np = (struct num *)calloc(1, sizeof(struct num));
+		if (!np)
+			memory_failure();
+		np->val = p->val;
+		np->next = snapstack;
+		snapstack = np;
+
+		// next item from "real" stack
+		p = p->next;
+		n--;
+	}
+
+	return GOODOP;
+}
+
+opreturn
+restore(void)
+{
+	struct num *p = snapstack;
+	while (p) {
+		push(p->val);
+		p = p->next;
+	}
 	return GOODOP;
 }
 
@@ -4064,9 +4135,11 @@ struct oper opers[] = {
 	{"(", open_paren,	0, 0, 32 },
 	{")", close_paren,	"Infix grouping", 0, 32 },
 	{";", semicolon,	"Infix separator (in RPN, discards y)", 2, 4 },
+	{"snapshot", snapshot,	0, Auto}, // "Snapshot the stack, stop at \"mark\" if set", Auto },
 	{"sum", sum,		0, Auto },
-	{"avg", avg,		"Sum or average stack, stop at \"mark\" if set", Auto },
-	{"mark", mark,		"Mark stack to limit later summing/averaging" },
+	{"avg", avg,		"Snapshot, sum or average stack, stop at \"mark\" if set", Auto },
+	{"mark", mark,		"Mark stack to limit later snap/sum/average" },
+	{"restore", restore,	"Push the snapshot onto current stack", Auto },
 	{""},
     {"Stack manipulation:"},
 	{"clear", clear,	"Clear stack" },
@@ -4085,7 +4158,6 @@ struct oper opers[] = {
 	{"h", printhex,		0 },
 	{"o", printoct,		0 },
 	{"b", printbin,		"     hex, octal, or binary" },
-	{"state", printstate,	"Show calculator state" },
 	{""},
     {"Modes:"},
 	{"F", modefloat,	0 },
@@ -4113,6 +4185,7 @@ struct oper opers[] = {
 	{"mode", modeinfo,	"Display current mode parameters" },
 	{""},
     {"Debug support:"},
+	{"state", printstate,	"Show calculator state" },
 	{"r", printrawhex,	"Print x as raw floating hex" },
 	{"R", moderawhex,	"Switch to raw floating hex mode"},
 	{"rounding", rounding,	"Toggle snapping and rounding of floats" },
