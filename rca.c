@@ -1685,6 +1685,88 @@ min(int a, int b)
 	return (a < b) ? a : b;
 }
 
+
+int
+convert_eng_format(char *buf)
+{
+	char *p, *odp, *f, *ep, *dp;
+	int exp, nexp, shift;
+
+	/* The printf %e format looks like:
+	 *     [-]W.FFFFe[-]EE
+	 * There's always just one digit before the decimal (which
+	 * might be multibyte, in some locales), and there's always a
+	 * sign (+ or -) on the two (or more) digit exponent.  Our job
+	 * is to move the decimal point to the right (by moving digits
+	 * to the left), in order to match a new exponent that is
+	 * always a multiple of three.  */
+	p = buf;
+
+	// sign
+	if (*p == '+' || *p == '-')
+		p++;
+
+	// the single leading digit
+	p++;
+
+	// the check for the decimal point
+	if (strncmp(p, decimal_pt, decimal_pt_len) != 0)
+		return 0;
+
+	odp = p;  // remember where the current decimal point starts
+	p += decimal_pt_len;
+
+	f = p;	 // the start of fractional part
+
+	// get past the fractional part
+	while (isdigit((unsigned char)*p))
+		p++;
+
+	if (*p++ != 'e')
+		return 0;
+
+	// get the exponent
+	exp = strtol(p, &ep, 10);
+
+	// that should have taken us to the end of the buffer
+	if (*ep != '\0')
+		return 0;
+
+	// reuse ep to point at the exponent
+	ep = p;
+
+	// calculate the new exponent...
+	if (exp >= 0)
+		nexp = (exp / 3) * 3;
+	else
+		nexp = ((exp-2) / 3) * 3;
+
+	// ...and how many digits we need to shift (either 1 or 2)
+	shift = exp - nexp;
+
+	// move some fractional digits left to where the decimal used to be
+	p = odp;
+	while (shift--)
+		*p++ = *f++;
+
+	// then copy a new decimal point into place
+	dp = decimal_pt;
+	while (*dp)
+		*p++ = *dp++;
+
+	// we don't include exponent if it's "e+00"
+	if (nexp == 0) {
+		*(ep - 1) = '\0';   // zero the 'e'
+		return 1;
+	}
+
+	// append the exponent's sign and value
+	*ep++ = (nexp < 0) ? '-' : '+';
+	sprintf(ep, "%02d", abs(nexp));
+
+	return 1;
+}
+
 char *
 print_floating(ldouble n, int format)
 {
@@ -1759,52 +1841,31 @@ print_floating(ldouble n, int format)
 		fputs(buf, mp.fp);
 
 	} else if (format == 'F' && float_specifier == 'e') {
-		char buf[256];
-		int exp, nexp, shift;
-		static char *whole, *frac, *w, *f;
+		int bsize = max_precision * 2;  // heuristic
+		static char *buf;
 
-		/* we start with %e format, which is very easy to
-		 * dissect.  Then we do textual manipulation to move
-		 * the decimal point and adjust the exponent, to
-		 * renormalize.  */
-
-		if (!whole) whole = calloc(1, max_precision * 2);
-		if (!frac) frac = calloc(1, max_precision * 2);
-		if (!whole || !frac)
+		if (!buf)
+			buf = calloc(1, bsize);
+		if (!buf)
 			memory_failure();
 
-		snprintf(buf, sizeof(buf), "%.*Le", float_digits-1, n);
-
-		sscanf(buf, "%[0-9-].%[0-9]e%d", whole, frac, &exp);
-
-		if (exp >= 0)
-			nexp = (exp / 3) * 3;
-		else
-			nexp = ((exp-2) / 3) * 3;
-
-		shift = exp - nexp;
-		f = frac;
-		w = whole;
-		if (*w == '-' || *w == '+')
-			w +=2;
-		else
-			w +=1;
-		// w now points at decimal point
-		while (shift--) {
-			*w++ = *f++;
-			*w = '\0';
+		/* %e format is easy to dissect, so we start there */
+		int l = snprintf(buf, bsize, "%.*Le", float_digits-1, n);
+		if (l >= bsize) {
+			error(" BUG: buffer overflow using engineering format\n");
+			goto error;
 		}
-		if (nexp)
-			snprintf(buf, sizeof(buf), "%s.%se%+.02d", whole, f, nexp);
-		else
-			snprintf(buf, sizeof(buf), "%s.%s", whole, f);
+
+		/* Do text manipulation to renormalize.  */
+		if (!convert_eng_format(buf)) {
+			error(" BUG: parse error in engineering format\n");
+			goto error;
+		}
 
 		fputs(buf, mp.fp);
-
-	} else {
-		error(" BUG: bad floating format in print_floating()\n");
 	}
 
+    error:
 	m_file_finish();
 
 	return mp.bufp;
@@ -2251,9 +2312,11 @@ engineering(void)
 		return BADOP;
 
 	float_digits = abs((int)digits);
-	// this is total digits, so '0' doesn't make sense
-	if (float_digits < 1) {
-		float_digits = 1;
+	/* the conversion from %e to our format doesn't work with
+	 * fewer than 3 digits */
+	if (float_digits < 3) {
+		float_digits = 3;
+		limited = "the minimum of ";
 	} else if (float_digits > max_precision) {
 		float_digits = max_precision;
 		limited = "the maximum of ";
