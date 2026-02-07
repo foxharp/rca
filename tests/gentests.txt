@@ -1068,3 +1068,36 @@ clear (7 / e ((5 % pi) - chs 2) 3)
 clear (exp 5 chs 3)
  error: bad expression sequence, at '5' and 'chs'
 
+1 rightalign
+ Right alignment of integer modes is now on
+pi
+                               3.14159
+6 eng
+ Will show 6 significant digits.
+                               3.14159
+100 /
+                              31.4159e-03
+100 *
+                               3.14159
+chs
+                              -3.14159
+100 *
+                            -314.159
+100 *
+                             -31.4159e+03
+100 *
+                              -3.14159e+06
+chs
+                               3.14159e+06
+recip
+                             318.310e-09
+100 *
+                              31.8310e-06
+chs
+                             -31.8310e-06
+100 *
+                              -3.18310e-03
+100 *
+                            -318.310e-03
+recip
+                              -3.14159

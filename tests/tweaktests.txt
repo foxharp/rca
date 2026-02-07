@@ -164,7 +164,7 @@ e 5 ln ^ 5 ==
 # Large integers and +/-0 behavior
 # =============================
 
-18 precision
+18 general
  Will show 18 significant digits.
  0
 

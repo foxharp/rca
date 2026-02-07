@@ -196,44 +196,8 @@ printed.  The more traditional "0" prefix will be interpreted as decimal.
 .SS Floating point
 In floating point mode (i.e.,
 .B F
-mode), all operations use the full size of long double.  Printing can
-be controlled by either the
-.B precision
-.RB ( k )
-command (which specifies a number of digits for the printf "%g" format), or
-by the
-.B decimals
-.RB ( K )
-command (which specifies the number of decimals for the printf "%f"
-format).  So the value of pi multiplied by 1 million will display as
-3.14159e+06 with
-.B 6 k
-or as 3,141,592.6535898 with
-.B 7
-.BR K .
-
-Scientific notation (e.g., 1e09) will be used in
-.B precision
-mode when the
-exponent is less than -4, or greater than the chosen precision.  (These
-cutoffs come from directly from printf.)
-.B rca
-will try to prevent you from printing with more than the available
-significant digits on the system:  the default
-.B precision
-value is set based on this limit (18 digits for most modern PC
-architectures), and can't be raised above it.  However, if viewing %f
-output (by choosing a
-.B decimals
-.RB ( K )
-value), it's easy to start seeing "unclean" bits if the magnitude of
-the number grows beyond the number of significant digits.  The numbers
-are really big at that point:  over 1e19 on a modern system.  Use
-.B precision
-.RB ( k )
-display to select "smart" printing, which will hide insignificant
-digits.
-
+mode), all operations use the full size of long double.
+.P
 Because floating point is inherently inexact, values are sometimes
 calculated which are
 .I almost
@@ -241,9 +205,66 @@ correct (like .99999999999... instead of 1), but not quite.
 .B rca
 tries to help by "snapping" values that are very close to integers to
 those integers, and by rounding when the precision limits of the
-floating point representation are reached.
-
-See also the DATA TYPES, OVERFLOW, ACCURACY section, below.
+floating point representation are reached.  See also the DATA TYPES,
+OVERFLOW, ACCURACY section, below.
+.P
+Floating point printing can be controlled by the
+.BR fixed ,
+.BR general ,
+and
+.B engineering
+commands.
+.P
+With
+.B fixed
+(or
+.BR fix ),
+.B rca
+never uses exponential notation, always presenting numbers as just a
+whole and fractional part.  This works well for values with small
+numbers of digits near decimal point, but gets awkward with very large
+or very small numbers.  Also, when using
+.BR fix ,
+.B rca
+can't prevent non-significant digits from being shown to the right of
+very large values.  The argument is the desired number of digits after
+the decimal point.
+.P
+With
+.B general
+(or
+.BR gen ),
+display is more flexible:  exponential notation (e.g., 1e09) will be used
+when the exponent is less than -4, or greater than the chosen number of
+significant digits.  Otherwise the display will resemble that of
+.BR fixed .
+.P
+.B engineering
+(or
+.BR eng )
+is suited to engineering and science:  exponential notation is
+always used, but only with exponents which are a multiple of 3.  This
+allows direct reading of values that might be in units with prefixes
+like kilo, mega, nano, pico, etc.  The argument is the desired number
+of significant digits.
+.P
+.B rca
+will try to prevent you from printing with more than the available
+significant digits on the system:  the maximum argument to any of
+the three display methods
+is set based on this limit (18 digits for most modern PC
+architectures), and can't be raised above it.  However, as noted
+above, if using
+.B fixed
+output
+it's easy to start seeing "unclean" bits if the magnitude of
+the number grows beyond the number of significant digits.  The numbers
+are really big at that point:  over 1e19 on a modern system.  At that
+point it's wise to choose
+.B general
+or
+.BR engineering ,
+which will hide insignificant digits.
 
 .SS Integer
 Integer mode is selected with any of the following commands, which
@@ -397,9 +418,9 @@ and from any command line arguments.  Initial conditions can be
 established by either method.  Printed output from
 commands run from $RCA_INIT is suppressed.
 
-The commands that control
+Many of the commands that control
 .BR rca 's
-operation and appearance have all been fully described elsewhere, but a concise
+operation and appearance have been described elsewhere, but a concise
 list may be useful:
 .RS
 .P
@@ -413,15 +434,34 @@ and
 choose float or integer, and the default output base. (Startup:
 .BR F )
 .P
-.B precision
+.B general
 (or
-.BR k )
-chooses "significant digits" output, and how many. (Startup: 6)
+.BR gen )
+chooses a flexible display mode that adjusts with the magnitude of the
+number being shown.  The argument is the number of significant digits
+to show.  Exponential notation will be used when needed to limit the
+display to just significant digits, and to control the total number of
+characters printed.  (Startup:  6)
 .P
-.B decimals
+.B fixed
 (or
-.BR K )
-chooses "decimal places" output, and how many.
+.BR fix )
+will never use
+exponential notation.  The argument is the number of decimal
+places to show.  The number of decimals will be reduced in order
+to hide non-significant digits if the magnitude of the number grows
+too large.  If it grows large enough, no decimals will be shown, and
+zeros will start appearing to the left of the decimal.  Those zeros
+are not significant digits.
+.P
+.B engineering
+(or
+.BR eng )
+chooses a mode suited to engineering and science.  Exponential notation
+is always used, but only with exponents which are a multiple of 3.
+This allows more direct reading of values that might be in units with
+metric prefixes (e.g., kilo, mega, nano, pico).  The argument is the
+number of significant digits to show.
 .P
 .B width
 (or
@@ -793,7 +833,7 @@ into the shell is straightforward:
 # Use RCA_INIT to set common initial conditions.  Defaults are
 # provided here, but values set externally will override.
 
-export RCA_INIT="3decimals 0separators 1errorexit ${RCA_INIT:-}"
+export RCA_INIT="3fixed 0separators 1errorexit ${RCA_INIT:-}"
 
 _rca_run()    # support routine
 {

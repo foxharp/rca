@@ -229,7 +229,7 @@ boolean digitseparators = PRINTF_SEPARATORS;
  * value is calculated at startup.  */
 int float_digits = 6;
 int max_precision = 18;
-int float_specifier = 'g';  // 'f' or 'g'
+int float_specifier = 'g';  // 'g', 'f', or 'e'
 char *format_string;
 
 /* zerofill controls whether digits to the left of a value are
@@ -1695,15 +1695,20 @@ print_floating(ldouble n, int format)
 
 		raw_hex_input_ok = TRUE;
 
-		/* NB:  this printing format is accurate and exact,
-		 * but there can be at least 4 different combinations
-		 * of first digit and exponent that all represent the
-		 * same number.  so what is printed may vary from
-		 * machine to machine because printf may canonicalize
-		 * the mantissa differently.  */
+		/* NB:  This printing format is accurate and exact,
+		 * but there can be at least 4 different normalizations
+		 * (combinations of first digit and exponent) that all
+		 * represent the same number.  What is printed may
+		 * vary from machine to machine because printf may
+		 * canonicalize the mantissa differently.  */
 
 		// 1 digit per 4 bits, and 1 of them is before the decimal
 		fprintf(mp.fp, "%.*La\n", (LDBL_MANT_DIG + 3)/4 - 1, n);
+
+	} else if (format == 'F' && float_specifier == 'g') {
+
+		// simple:  we use %g directly
+		fprintf(mp.fp, format_string, float_digits, n);
 
 	} else if (format == 'F' && float_specifier == 'f') {
 		char buf[128];
@@ -1742,8 +1747,52 @@ print_floating(ldouble n, int format)
 		}
 		fputs(buf, mp.fp);
 
+	} else if (format == 'F' && float_specifier == 'e') {
+		char buf[256];
+		int exp, nexp, shift;
+		static char *whole, *frac, *w, *f;
+
+		/* we start with %e format, which is very easy to
+		 * dissect.  Then we do textual manipulation to move
+		 * the decimal point and adjust the exponent, to
+		 * renormalize.  */
+
+		if (!whole) whole = calloc(1, max_precision * 2);
+		if (!frac) frac = calloc(1, max_precision * 2);
+		if (!whole || !frac)
+			memory_failure();
+
+		snprintf(buf, sizeof(buf), format_string, float_digits-1, n);
+
+		sscanf(buf, "%[0-9-].%[0-9]e%d",
+			whole, frac, &exp);
+
+		if (exp >= 0)
+			nexp = (exp / 3) * 3;
+		else
+			nexp = ((exp-2) / 3) * 3;
+
+		shift = exp - nexp;
+		f = frac;
+		w = whole;
+		if (*w == '-' || *w == '+')
+			w +=2;
+		else
+			w +=1;
+		// w now points at decimal point
+		while (shift--) {
+			*w++ = *f++;
+			*w = '\0';
+		}
+		if (nexp)
+			snprintf(buf, sizeof(buf), "%s.%se%+.02d", whole, f, nexp);
+		else
+			snprintf(buf, sizeof(buf), "%s.%s", whole, f);
+
+		fputs(buf, mp.fp);
+
 	} else {
-		fprintf(mp.fp, format_string, float_digits, n);
+		error(" BUG: bad floating format in print_floating()\n");
 	}
 
 	m_file_finish();
@@ -1980,8 +2029,8 @@ printstate(void)
 	p_printf("\n");
 	p_printf(" In floating mode:\n");
 	p_printf("  max precision is %u decimal digits\n", max_precision);
-	p_printf("  current display mode is \"%d %s\"\n",
-		float_digits, float_specifier == 'f' ? "decimals" : "precision");
+	p_printf("  current float display mode is \"%c\", with %d digits\n",
+		float_specifier, float_digits );
 	p_printf("  format string is \"%s\"\n", format_string);
 	p_printf("  snapping/rounding is %s\n", do_rounding ? "on" : "off");
 	p_printf("\n");
@@ -2059,12 +2108,12 @@ showmode(void)
 	if (mode == 'F') {
 		char *msg;
 
-		if (float_specifier == 'g') {
-			/* float_digits == 7 gives:  123.4560  */
-			msg = "of total precision";
-		} else {	/* 'f' */
+		if (float_specifier == 'f') {
 			/* float_digits == 7 gives:  123.4560000  */
 			msg = "after the decimal";
+		} else {	/* 'g', 'e' */
+			/* float_digits == 7 gives:  123.4560  */
+			msg = "of total precision";
 		}
 		p_printf(" Displaying %u digits %s.\n", float_digits, msg);
 	} else if (mode == 'R') {
@@ -2152,15 +2201,20 @@ setup_format_string(void)
 	   So there are just four forms to deal with here.
 	 */
 
+	if (float_specifier == 'e') {
+		format_string = "%.*Le";
+		return;
+	}
+
 	if (digitseparators) {
 		if (float_specifier == 'f')
 			format_string = "%'.*Lf";
-		else
+		else if (float_specifier == 'g')
 			format_string = "%'.*Lg";
 	} else {
 		if (float_specifier == 'f')
 			format_string = "%.*Lf";
-		else
+		else if (float_specifier == 'g')
 			format_string = "%.*Lg";
 	}
 }
@@ -2185,7 +2239,7 @@ separators(void)
 }
 
 opreturn
-precision(void)
+general(void)
 {
 	ldouble digits;
 	char *limited = "";
@@ -2210,14 +2264,46 @@ precision(void)
 		float_digits, float_digits == 1 ? "" : "s");
 
 	if (mode != 'F')
-		p_printf(" Not in floating decimal mode, float precision"
+		p_printf(" Not in floating mode, preference"
 				" recorded but ignored.\n");
 
 	return GOODOP;
 }
 
 opreturn
-decimal_length(void)
+engineering(void)
+{
+	ldouble digits;
+	char *limited = "";
+
+	if (!pop(&digits))
+		return BADOP;
+
+	float_digits = abs((int)digits);
+	// this is total digits, so '0' doesn't make sense
+	if (float_digits < 1) {
+		float_digits = 1;
+	} else if (float_digits > max_precision) {
+		float_digits = max_precision;
+		limited = "the maximum of ";
+	}
+
+	float_specifier = 'e';
+
+	setup_format_string();
+
+	p_printf(" Will show %s%d significant digit%s.\n", limited,
+		float_digits, float_digits == 1 ? "" : "s");
+
+	if (mode != 'F')
+		p_printf(" Not in floating mode, preference"
+				" recorded but ignored.\n");
+
+	return GOODOP;
+}
+
+opreturn
+fixedpoint(void)
 {
 	ldouble digits;
 
@@ -2242,8 +2328,8 @@ decimal_length(void)
 			float_digits, float_digits == 1 ? "" : "s");
 
 	if (mode != 'F')
-		p_printf(" Not in floating decimal mode, decimal"
-				" length is recorded but ignored.\n");
+		p_printf(" Not in floating mode, preference"
+				" recorded but ignored.\n");
 
 
 	return GOODOP;
@@ -4165,14 +4251,16 @@ struct oper opers[] = {
 	{"H", modehex,		0 },
 	{"O", modeoct,		0 },
 	{"B", modebin,		"Switch to floating, decimal, hex, octal, binary modes" },
-	{"precision", precision, 0, Auto },
-	{"k", precision,	"Float format: number of significant digits (%g)", Auto },
-	{"decimals", decimal_length, 0, Auto },
-	{"K", decimal_length,	"Float format: digits after decimal (%f)", Auto },
+	{"general", general, 0, Auto },
+	{"gen", general,	"General purpose floating point print format.", Auto },
+	{"fixed", fixedpoint, 0, Auto },
+	{"fix", fixedpoint,	"Fixed point floating point print format.", Auto },
+	{"engineering", engineering, 0, Auto },
+	{"eng", engineering,	"Engineering style floating point print format.", Auto },
 	{"width", width,	0, Auto },
 	{"w", width,		"Set effective word size for integer modes", Auto },
 	{"zerofill", zerof,	0, Auto },
-	{"z", zerof,		"Toggle left-filling with zeros in H, O, and B modes", Auto },
+	{"z", zerof,		"Toggle left-fill with zeros in H, O, and B modes", Auto },
 	{"rightalign", rightalign, 0, Auto },
 	{"right", rightalign,	"Toggle right alignment of numbers", Auto },
 	{"degrees", use_degrees, "Toggle trig functions: degrees (1) or radians (0)" },
@@ -4203,6 +4291,12 @@ struct oper opers[] = {
 	{"license", license,	"Display the rca copyright and license." },
 	{"version", version,	"Show program version" },
 	{"#", help,		"Comment. The rest of the line will be ignored." },
+	{""},
+    {"Deprecated:"},
+	{"k", general,		0, Auto },
+	{"precision", general,"Same as \"general\".", Auto },
+	{"K", fixedpoint,	0, Auto },
+	{"decimals", fixedpoint,  "Same as \"fixed\".", Auto },
 	{NULL, NULL, 0},
 };
 // *INDENT-ON*.
