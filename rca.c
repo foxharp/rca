@@ -230,7 +230,6 @@ boolean digitseparators = PRINTF_SEPARATORS;
 int float_digits = 6;
 int max_precision = 18;
 int float_specifier = 'g';  // 'g', 'f', or 'e'
-char *format_string;
 
 /* zerofill controls whether digits to the left of a value are
  * left blank, or shown as zero.  useful for smaller word widths
@@ -1706,14 +1705,26 @@ print_floating(ldouble n, int format)
 		fprintf(mp.fp, "%.*La\n", (LDBL_MANT_DIG + 3)/4 - 1, n);
 
 	} else if (format == 'F' && float_specifier == 'g') {
+		char *printfmt;
 
 		// simple:  we use %g directly
-		fprintf(mp.fp, format_string, float_digits, n);
+		if (digitseparators)
+			printfmt = "%'.*Lg";
+		else
+			printfmt = "%.*Lg";
+
+		fprintf(mp.fp, printfmt, float_digits, n);
 
 	} else if (format == 'F' && float_specifier == 'f') {
+		char *printfmt;
 		char buf[128];
 		char *p;
 		int decimals, leadingdigits = 0;
+
+		if (digitseparators)
+			printfmt = "%'.*Lf";
+		else
+			printfmt = "%.*Lf";
 
 		/* The goal is to reduce the number of non-significant
 		 * digits shown.  If decimals is set to 6, then 123e12
@@ -1727,7 +1738,7 @@ print_floating(ldouble n, int format)
 		 * and we're back to showing more than we should.  (At that
 		 * point the user should be switching to %g mode.)
 		 */
-		snprintf(buf, sizeof(buf), format_string, float_digits, n);
+		snprintf(buf, sizeof(buf), printfmt, float_digits, n);
 
 		for (p = buf; *p && !match_dp(p); p++) {
 			if (isdigit(*p))
@@ -1743,7 +1754,7 @@ print_floating(ldouble n, int format)
 			decimals = min(float_digits, max_precision - leadingdigits);
 			if (decimals <= 0) decimals = 0;
 
-			snprintf(buf, sizeof(buf), format_string, decimals, n);
+			snprintf(buf, sizeof(buf), printfmt, decimals, n);
 		}
 		fputs(buf, mp.fp);
 
@@ -1762,10 +1773,9 @@ print_floating(ldouble n, int format)
 		if (!whole || !frac)
 			memory_failure();
 
-		snprintf(buf, sizeof(buf), format_string, float_digits-1, n);
+		snprintf(buf, sizeof(buf), "%.*Le", float_digits-1, n);
 
-		sscanf(buf, "%[0-9-].%[0-9]e%d",
-			whole, frac, &exp);
+		sscanf(buf, "%[0-9-].%[0-9]e%d", whole, frac, &exp);
 
 		if (exp >= 0)
 			nexp = (exp / 3) * 3;
@@ -2031,7 +2041,6 @@ printstate(void)
 	p_printf("  max precision is %u decimal digits\n", max_precision);
 	p_printf("  current float display mode is \"%c\", with %d digits\n",
 		float_specifier, float_digits );
-	p_printf("  format string is \"%s\"\n", format_string);
 	p_printf("  snapping/rounding is %s\n", do_rounding ? "on" : "off");
 	p_printf("\n");
 
@@ -2185,40 +2194,6 @@ modefloat(void)
 	return GOODOP;
 }
 
-void
-setup_format_string(void)
-{
-	/* The floating print options include
-	   - commas or not
-	   - %f or %g
-	   - we used to use alternate form ('%#') with %f, but not %g, but I
-		don't recall why.  so we don't anymore.  this lets '0 K'
-		cause an integral value to print without decimal point.
-	   Also:
-	   - precision
-	   but happily that's provided via the '*' specifier at printf time.
-
-	   So there are just four forms to deal with here.
-	 */
-
-	if (float_specifier == 'e') {
-		format_string = "%.*Le";
-		return;
-	}
-
-	if (digitseparators) {
-		if (float_specifier == 'f')
-			format_string = "%'.*Lf";
-		else if (float_specifier == 'g')
-			format_string = "%'.*Lg";
-	} else {
-		if (float_specifier == 'f')
-			format_string = "%.*Lf";
-		else if (float_specifier == 'g')
-			format_string = "%.*Lg";
-	}
-}
-
 opreturn
 separators(void)
 {
@@ -2231,8 +2206,6 @@ separators(void)
 
 	if (!toggler(&digitseparators, "Numeric separators now", "on", "off"))
 		return BADOP;
-
-	setup_format_string();
 
 	return GOODOP;
 
@@ -2257,8 +2230,6 @@ general(void)
 	}
 
 	float_specifier = 'g';
-
-	setup_format_string();
 
 	p_printf(" Will show %s%d significant digit%s.\n", limited,
 		float_digits, float_digits == 1 ? "" : "s");
@@ -2290,8 +2261,6 @@ engineering(void)
 
 	float_specifier = 'e';
 
-	setup_format_string();
-
 	p_printf(" Will show %s%d significant digit%s.\n", limited,
 		float_digits, float_digits == 1 ? "" : "s");
 
@@ -2318,8 +2287,6 @@ fixedpoint(void)
 		float_digits = max_precision;
 
 	float_specifier = 'f';
-
-	setup_format_string();
 
 	if (float_digits == 0)
 		p_printf(" Will show no digits after the decimal.\n");
@@ -4357,7 +4324,6 @@ main(int argc, char *argv[])
 	locale_init();
 
 	setup_width(0);
-	setup_format_string();
 	detect_epsilon();
 
 	create_infix_support_tokens();
