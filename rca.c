@@ -4109,7 +4109,7 @@ struct oper opers[] = {
 	{"lx", repush,		"Push previous value of x", Sym },
 	{"_<name>", nop,	"Push variable" },
 	{"=", assignment,	"Assign variable.  RPN: \"3 = _v\"   infix: \"(_v = 3)\"", 2, 6 },
-	{"varables", showvars, 0 },
+	{"variables", showvars, 0 },
 	{"vars", showvars, "Show the current list of variables" },
 	{""},
     {"Unit conversions (one operand):"},
