@@ -236,7 +236,7 @@ With
 .BR gen ),
 display is more flexible:  exponential notation (e.g., 1e09) will be used
 when the exponent is less than -4, or greater than the chosen number of
-significant digits.  Otherwise the display will resemble that of
+digits.  Otherwise the display will resemble that of
 .BR fixed .
 .P
 .B engineering
@@ -246,7 +246,7 @@ is suited to engineering and science:  exponential notation is
 always used, but only with exponents which are a multiple of 3.  This
 allows direct reading of values that might be in units with prefixes
 like kilo, mega, nano, pico, etc.  The argument is the desired number
-of significant digits.
+of digits.
 .P
 .B rca
 will try to prevent you from printing with more than the available
@@ -438,7 +438,7 @@ choose float or integer, and the default output base. (Startup:
 (or
 .BR gen )
 chooses a flexible display mode that adjusts with the magnitude of the
-number being shown.  The argument is the number of significant digits
+number being shown.  The argument is the number of digits
 to show.  Exponential notation will be used when needed to limit the
 display to just significant digits, and to control the total number of
 characters printed.  (Startup:  6)
@@ -461,7 +461,7 @@ chooses a mode suited to engineering and science.  Exponential notation
 is always used, but only with exponents which are a multiple of 3.
 This allows more direct reading of values that might be in units with
 metric prefixes (e.g., kilo, mega, nano, pico).  The argument is the
-number of significant digits to show.
+number of digits to show.
 .P
 .B width
 (or
@@ -652,9 +652,8 @@ Bitwise operations
 .BR setb )
 convert their operands to integer first, regardless of mode.  As might
 be expected, these operations will discard fractional parts, and
-may discard significant digits, including the sign of the value.  Bitwise
-operations will not execute, and will cause an error, if either operand
-will not fit in a
+may discard digits.  Bitwise operations will not execute, and will
+cause an error, if either operand will not fit in a
 .I long
 .IR long .
 .P
