@@ -67,6 +67,7 @@ char *ccprogversion = "built " __DATE__ " " __TIME__;
 
 #include <stdlib.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -113,7 +114,7 @@ usage(void)
 int tracing;
 #define trace(a)  do {if (tracing > 1) printf a ;} while(0)
 
-typedef int boolean;
+typedef bool boolean;
 
 #define TRUE 1
 #define FALSE 0
@@ -234,11 +235,11 @@ int float_specifier = 'g';  // 'g', 'f', or 'e'
 /* zerofill controls whether digits to the left of a value are
  * left blank, or shown as zero.  useful for smaller word widths
  * in hex, octal, and binary modes. */
-int zerofill = 0;
+boolean zerofill = 0;
 
 /* rightalign controls whether, when printing, we line up least
  * significant digits (right) or most significant digits (left).  */
-int rightalignment = 1;
+boolean rightalignment = 1;
 
 /* I tried making these alignment columns dynamic, adjusting to the
  * max width of a float, or an integer in whichever particular base,
@@ -271,7 +272,7 @@ boolean do_rounding = 1;
 /* the most recent top-of-stack */
 ldouble lastx;
 
-/* state variable used to allow variables to be read/write */
+/* counting state variable used to allow variables to be read/write */
 int variable_write_enable;
 
 /* where program input is coming from currently */
@@ -439,7 +440,7 @@ pop(ldouble *f)
 }
 
 opreturn
-toggler(int *control, char *descrip, char *yes, char *no)
+toggler(boolean *control, char *descrip, char *yes, char *no)
 {
 	ldouble n;
 
@@ -475,7 +476,7 @@ assignment(void)
 	return GOODOP;
 }
 
-int
+boolean
 are_finite(ldouble a, ldouble b)
 {
 	if (isfinite(a) && isfinite(b))
@@ -631,7 +632,7 @@ e_to_the_x(void)
  * arguments are both finite (i.e., useful) to an operation, and if
  * not, to propagate the either nan, or inf, in that order, as the
  * result of the operation.  */
-int
+boolean
 bothfinite(ldouble a, ldouble b)
 {
 	if (isfinite(a) && isfinite(b))
@@ -654,7 +655,7 @@ bothfinite(ldouble a, ldouble b)
 	return 1;
 }
 
-opreturn
+boolean
 bitwise_operands_too_big(ldouble a, ldouble b)
 {
 	if (a < LLONG_MIN || a > LLONG_MAX ||
@@ -667,7 +668,7 @@ bitwise_operands_too_big(ldouble a, ldouble b)
 	return 0;
 }
 
-opreturn
+boolean
 bitwise_operand_too_big(ldouble a)
 {
 	if (a < LLONG_MIN || a > LLONG_MAX) {
@@ -981,7 +982,7 @@ trig_no_sense(void)
 	return BADOP;
 }
 
-int trig_degrees = 1;  // work in degrees by default
+boolean trig_degrees = 1;  // work in degrees by default
 
 opreturn
 use_degrees(void)
@@ -1673,7 +1674,7 @@ show_int_truncation(boolean changed, ldouble old_n)
 
 }
 
-int
+boolean
 match_dp(char *p)
 {
 	return (strncmp(p, decimal_pt, decimal_pt_len) == 0);
