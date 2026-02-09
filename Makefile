@@ -116,8 +116,12 @@ uninstall:
 # before feeding what's left (i.e., the input) to rca, and comparing
 # the result, which should match exactly.
 
-tests:  gentest optest tweaktest
+tests:  gentest optest tweaktest pi_approximations
+
+pi_approximations:  # with and without rca_float
+	test $$(bash -c "source ./rca_float; fe '22 / 7 - pi'") = 0.001
 	test $$(./rca "10 digits fixed ((355 / 113) - pi) q") = 0.0000002668
+	@echo Tests succeeded
 
 gentest:
 	egrep -v '^ ' tests/gentests.txt | \
@@ -140,6 +144,6 @@ tweaktest:
 	@ echo test succeeded
 
 .PHONY: clean all gentest optest tweaktest html htmldiff htmlmv \
-	release tag versioncheck
+	release tag versioncheck pi_approximations
 
 FORCE:
