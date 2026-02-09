@@ -209,62 +209,81 @@ floating point representation are reached.  See also the DATA TYPES,
 OVERFLOW, ACCURACY section, below.
 .P
 Floating point printing can be controlled by the
+.BR automatic ,
+.BR engineering ,
 .BR fixed ,
-.BR general ,
 and
-.B engineering
+.B digits
 commands.
 .P
 With
-.B fixed
+.B automatic
 (or
-.BR fix ),
-.B rca
-never uses exponential notation, always presenting numbers as just a
-whole and fractional part.  This works well for values with small
-numbers of digits near decimal point, but gets awkward with very large
-or very small numbers.  Also, when using
-.BR fix ,
-.B rca
-can't prevent non-significant digits from being shown to the right of
-very large values.  The argument is the desired number of digits after
-the decimal point.
-.P
-With
-.B general
-(or
-.BR gen ),
-display is more flexible:  exponential notation (e.g., 1e09) will be used
-when the exponent is less than -4, or greater than the chosen number of
-digits.  Otherwise the display will resemble that of
-.BR fixed .
+.BR auto ),
+output is flexible:  scientific notation (e.g., 1e09) will be used
+when the exponent would be less than -4, or greater than the chosen
+number of digits.  Otherwise the output will be a simple decimal number.
 .P
 .B engineering
 (or
 .BR eng )
-is suited to engineering and science:  exponential notation is
+is suited to engineering and science:  scientific notation is
 always used, but only with exponents which are a multiple of 3.  This
 allows direct reading of values that might be in units with prefixes
-like kilo, mega, nano, pico, etc.  The argument is the desired number
-of digits.
+like kilo, mega, nano, pico, etc.
 .P
+With
+.BR fixed ,
 .B rca
-will try to prevent you from printing with more than the available
-significant digits on the system:  the maximum argument to any of
-the three display methods
-is set based on this limit (18 digits for most modern PC
-architectures), and can't be raised above it.  However, as noted
-above, if using
+never uses scientific notation, always presenting numbers as just a
+whole and fractional part.  This works well for values with small
+numbers of digits near decimal point, but gets awkward with extremely large
+or extremely small numbers.  Also, when using
+.BR fixed ,
+.B rca
+can't prevent non-significant digits from being shown to the right of
+very large values.
+.P
+The
+.B digits
+command affects the number of digits displayed by any of the above
+formats.  (Only display is affected:  the actual number of digits/bits
+stored and used in computation is unaffected.)
+For
+.B auto
+and
+.B eng
+formats, the number configured with
+.B digits
+is simply the number of digits either format will show.  For
 .B fixed
-output
-it's easy to start seeing "unclean" bits if the magnitude of
+format, it's the number of digits shown after the decimal point.
+.P
+.B digits
+will allow setting a value as low as 0, since this can be useful with
+.B fixed
+format (to print no fractional part whatever).  The
+.B auto
+and
+.B eng
+formats have their own minimums (1, and 3, respectively) which they will
+enforce silently.
+.P
+The maximum allowed
+.B digits
+value is based on the number of significant digits the
+system can support.  (That's 18 digits for most modern PC
+architectures.)  However, as noted above, if using
+.B fixed
+format it's easy to start seeing "unclean" bits if the magnitude of
 the number grows beyond the number of significant digits.  The numbers
 are really big at that point:  over 1e19 on a modern system.  At that
 point it's wise to choose
-.B general
+.B automatic
 or
 .BR engineering ,
 which will hide insignificant digits.
+
 
 .SS Integer
 Integer mode is selected with any of the following commands, which
@@ -374,7 +393,7 @@ disturbing the stack).
 .B rcl
 ("recall")
 fetches that value, pushing it onto the stack.  These commands are
-largely superceded by
+largely superseded by
 .B rca
 variables.
 
@@ -391,7 +410,7 @@ stack.  To write to a variable in RPN, the "assign to" operator
 .RB ( = )
 must be used immediately before naming the variable.  If
 .B =
-is not follwed by a variable name, it's a no-op.  (This is the only
+is not followed by a variable name, it's a no-op.  (This is the only
 "stateful" RPN operation.)
 .P
 The following two sequences are equivalent.
@@ -434,34 +453,29 @@ and
 choose float or integer, and the default output base. (Startup:
 .BR F )
 .P
-.B general
+.B automatic
 (or
-.BR gen )
-chooses a flexible display mode that adjusts with the magnitude of the
-number being shown.  The argument is the number of digits
-to show.  Exponential notation will be used when needed to limit the
-display to just significant digits, and to control the total number of
-characters printed.  (Startup:  6)
-.P
-.B fixed
-(or
-.BR fix )
-will never use
-exponential notation.  The argument is the number of decimal
-places to show.  The number of decimals will be reduced in order
-to hide non-significant digits if the magnitude of the number grows
-too large.  If it grows large enough, no decimals will be shown, and
-zeros will start appearing to the left of the decimal.  Those zeros
-are not significant digits.
+.BR auto )
+chooses a floating point format that switches between
+scientific notation and simple decimal based on the
+magnitude of the number being shown.  (Startup:
+.B auto
+is selected.)
 .P
 .B engineering
 (or
 .BR eng )
-chooses a mode suited to engineering and science.  Exponential notation
-is always used, but only with exponents which are a multiple of 3.
-This allows more direct reading of values that might be in units with
-metric prefixes (e.g., kilo, mega, nano, pico).  The argument is the
-number of digits to show.
+chooses a floating point format which uses scientific notation, but
+only with exponents which are a multiple of 3.
+.P
+.B fixed
+chooses a floating point format that will never use
+scientific notation.
+.P
+.B digits
+chooses the number of digits used by the floating point formats.  The
+maximum is the number of significant digits supported by the
+system.  (Startup:  6)
 .P
 .B width
 (or
@@ -517,11 +531,11 @@ If $PAGER is set in the environment, the shell command it names will
 be used to display the help text.  (The command must read the text
 from standard input.)  Otherwise the text will be sent directly to stdout.
 
-The
-.B state
-command will print a verbose summary of
-.BR rca 's
-current state.
+\" The
+\" .B state
+\" command will print a verbose summary of
+\" .BR rca 's
+\" current state.
 
 .SH OPERATOR PRECEDENCE
 Infix evaluation depends on operator precedence and associativity.
@@ -572,7 +586,7 @@ So
 is the same as
 .B ((_a & _b) ==
 .BR 5) .
-Even Dennis Ritchie thought C got that one wrong.
+\" Even Dennis Ritchie thought C got that one wrong.
 
 .SH OPERATOR NOTES
 Most operators behave as they are commonly understood to.  A few need
@@ -832,7 +846,7 @@ into the shell is straightforward:
 # Use RCA_INIT to set common initial conditions.  Defaults are
 # provided here, but values set externally will override.
 
-export RCA_INIT="3fixed 0separators 1errorexit ${RCA_INIT:-}"
+export RCA_INIT="3digits fixed 0separators 1errorexit ${RCA_INIT:-}"
 
 _rca_run()    # support routine
 {

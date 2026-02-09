@@ -230,7 +230,7 @@ boolean digitseparators = PRINTF_SEPARATORS;
  * value is calculated at startup.  */
 int float_digits = 6;
 int max_precision = 18;
-int float_specifier = 'g';  // 'g', 'f', or 'e'
+char *float_specifier = "automatic"; // or "engineering" or "fixed decimal"
 
 /* zerofill controls whether digits to the left of a value are
  * left blank, or shown as zero.  useful for smaller word widths
@@ -1771,6 +1771,10 @@ convert_eng_format(char *buf)
 char *
 print_floating(ldouble n, int format)
 {
+	/* 3 bits per decimal digit is just 21 digits in a long long,
+	 * and 256 >>> 21 */
+	char buf[256];
+
 	m_file_start();
 	fputc(' ', mp.fp);
 	if (format == 'R') {
@@ -1787,20 +1791,20 @@ print_floating(ldouble n, int format)
 		// 1 digit per 4 bits, and 1 of them is before the decimal
 		fprintf(mp.fp, "%.*La\n", (LDBL_MANT_DIG + 3)/4 - 1, n);
 
-	} else if (format == 'F' && float_specifier == 'g') {
+	} else if (format == 'F' && float_specifier[0] == 'a') {
 		char *printfmt;
 
-		// simple:  we use %g directly
+		// simple:  "auto" uses %g directly
 		if (digitseparators)
 			printfmt = "%'.*Lg";
 		else
 			printfmt = "%.*Lg";
 
-		fprintf(mp.fp, printfmt, float_digits, n);
+		int fd = (float_digits < 1) ? 1 : float_digits;
+		fprintf(mp.fp, printfmt, fd, n);
 
-	} else if (format == 'F' && float_specifier == 'f') {
+	} else if (format == 'F' && float_specifier[0] == 'f') {
 		char *printfmt;
-		char buf[128];
 		char *p;
 		int decimals, leadingdigits = 0;
 
@@ -1841,32 +1845,25 @@ print_floating(ldouble n, int format)
 		}
 		fputs(buf, mp.fp);
 
-	} else if (format == 'F' && float_specifier == 'e') {
-		int bsize = max_precision * 2;  // heuristic
-		static char *buf;
+	} else if (format == 'F' && float_specifier[0] == 'e') { // "eng"
 
-		if (!buf)
-			buf = calloc(1, bsize);
-		if (!buf)
-			memory_failure();
+		int fd = (float_digits < 3) ? 3 : float_digits;
 
-		/* %e format is easy to dissect, so we start there */
-		int l = snprintf(buf, bsize, "%.*Le", float_digits-1, n);
-		if (l >= bsize) {
-			error(" BUG: buffer overflow using engineering format\n");
-			goto error;
-		}
+		/* %e format is easy to dissect, so we start there.
+		 * our float_digits is a count of all the digits.  but
+		 * the %e "precision" value is just the number of
+		 * decimals.  there's exactly one non-fraction digit,
+		 * so subtract 1 to specify the %e fraction length */
+		snprintf(buf, sizeof(buf), "%.*Le", fd-1, n);
 
 		/* Do text manipulation to renormalize.  */
-		if (!convert_eng_format(buf)) {
+		if (!convert_eng_format(buf))
 			error(" BUG: parse error in engineering format\n");
-			goto error;
-		}
+		else
+			fputs(buf, mp.fp);
 
-		fputs(buf, mp.fp);
 	}
 
-    error:
 	m_file_finish();
 
 	return mp.bufp;
@@ -2101,7 +2098,7 @@ printstate(void)
 	p_printf("\n");
 	p_printf(" In floating mode:\n");
 	p_printf("  max precision is %u decimal digits\n", max_precision);
-	p_printf("  current float display mode is \"%c\", with %d digits\n",
+	p_printf("  current float display mode is \"%s\", with %d digits\n",
 		float_specifier, float_digits );
 	p_printf("  snapping/rounding is %s\n", do_rounding ? "on" : "off");
 	p_printf("\n");
@@ -2177,18 +2174,19 @@ showmode(void)
 	p_printf(" Mode is %s (%c). ", mode2name(), mode);
 
 	if (mode == 'F') {
-		char *msg;
-
-		if (float_specifier == 'f') {
+		if (float_specifier[0] == 'f') {
 			/* float_digits == 7 gives:  123.4560000  */
-			msg = "after the decimal";
+			p_printf(" Showing %u digits after the decimal"
+				" in %s format.\n",
+				float_digits, float_specifier);
 		} else {	/* 'g', 'e' */
 			/* float_digits == 7 gives:  123.4560  */
-			msg = "of total precision";
+			p_printf(" Showing %u digits of total precision"
+				" in %s format.\n",
+				float_digits, float_specifier);
 		}
-		p_printf(" Displaying %u digits %s.\n", float_digits, msg);
 	} else if (mode == 'R') {
-		p_printf(" Displaying using floating hexadecimal.\n");
+		p_printf(" Showing using floating hexadecimal.\n");
 	} else {
 		p_printf(" Integer math with %d bits.\n", int_width);
 	}
@@ -2270,35 +2268,24 @@ separators(void)
 		return BADOP;
 
 	return GOODOP;
-
 }
 
-opreturn
-general(void)
+void
+float_mode_messages(int both)
 {
-	ldouble digits;
-	char *limited = "";
-
-	if (!pop(&digits))
-		return BADOP;
-
-	float_digits = abs((int)digits);
-	// this is total digits, so '0' doesn't make sense
-	if (float_digits < 1) {
-		float_digits = 1;
-	} else if (float_digits > max_precision) {
-		float_digits = max_precision;
-		limited = "the maximum of ";
-	}
-
-	float_specifier = 'g';
-
-	p_printf(" Will show %s%d significant digit%s.\n", limited,
-		float_digits, float_digits == 1 ? "" : "s");
+	if (both)
+		p_printf(" Will show floating point in %s format\n", float_specifier);
 
 	if (mode != 'F')
 		p_printf(" Not in floating mode, preference"
 				" recorded but ignored.\n");
+}
+
+opreturn
+automatic(void)
+{
+	float_specifier = "automatic";
+	float_mode_messages(1);
 
 	return GOODOP;
 }
@@ -2306,31 +2293,8 @@ general(void)
 opreturn
 engineering(void)
 {
-	ldouble digits;
-	char *limited = "";
-
-	if (!pop(&digits))
-		return BADOP;
-
-	float_digits = abs((int)digits);
-	/* the conversion from %e to our format doesn't work with
-	 * fewer than 3 digits */
-	if (float_digits < 3) {
-		float_digits = 3;
-		limited = "the minimum of ";
-	} else if (float_digits > max_precision) {
-		float_digits = max_precision;
-		limited = "the maximum of ";
-	}
-
-	float_specifier = 'e';
-
-	p_printf(" Will show %s%d significant digit%s.\n", limited,
-		float_digits, float_digits == 1 ? "" : "s");
-
-	if (mode != 'F')
-		p_printf(" Not in floating mode, preference"
-				" recorded but ignored.\n");
+	float_specifier = "engineering";
+	float_mode_messages(1);
 
 	return GOODOP;
 }
@@ -2338,30 +2302,35 @@ engineering(void)
 opreturn
 fixedpoint(void)
 {
+	float_specifier = "fixed decimal";
+	float_mode_messages(1);
+
+	return GOODOP;
+}
+
+opreturn
+digits(void)
+{
 	ldouble digits;
+	char *limited = "";
 
 	if (!pop(&digits))
 		return BADOP;
 
-	// this is digits after decimal, so '0' is okay
 	float_digits = abs((int)digits);
 
 	// but it can't be greater than our maximum precision
-	if (float_digits > max_precision)
+	if (float_digits > max_precision) {
 		float_digits = max_precision;
+		limited = "the maximum of ";
+	} else if (float_digits < 0) {
+		float_digits = 0;
+	}
 
-	float_specifier = 'f';
+	p_printf(" Floating formats configured for %s%d digit%s.\n", limited,
+		float_digits, float_digits == 1 ? "" : "s");
 
-	if (float_digits == 0)
-		p_printf(" Will show no digits after the decimal.\n");
-	else
-		p_printf(" Will show at most %d digit%s after the decimal.\n",
-			float_digits, float_digits == 1 ? "" : "s");
-
-	if (mode != 'F')
-		p_printf(" Not in floating mode, preference"
-				" recorded but ignored.\n");
-
+	float_mode_messages(0);
 
 	return GOODOP;
 }
@@ -4275,6 +4244,12 @@ struct oper opers[] = {
 	{"h", printhex,		0 },
 	{"o", printoct,		0 },
 	{"b", printbin,		"     hex, octal, or binary" },
+	{"automatic", automatic, 0, Auto },
+	{"auto", automatic,	"Select general purpose floating display format", Auto },
+	{"engineering", engineering, 0, Auto },
+	{"eng", engineering,	"Select engineering style floating display format", Auto },
+	{"fixed", fixedpoint,	"Select fixed decimal floating display format", Auto },
+	{"digits", digits,	"Number of digits for floating formats", Auto },
 	{""},
     {"Modes:"},
 	{"F", modefloat,	0 },
@@ -4282,12 +4257,6 @@ struct oper opers[] = {
 	{"H", modehex,		0 },
 	{"O", modeoct,		0 },
 	{"B", modebin,		"Switch to floating, decimal, hex, octal, binary modes" },
-	{"general", general, 0, Auto },
-	{"gen", general,	"General purpose floating point print format.", Auto },
-	{"fixed", fixedpoint, 0, Auto },
-	{"fix", fixedpoint,	"Fixed point floating point print format.", Auto },
-	{"engineering", engineering, 0, Auto },
-	{"eng", engineering,	"Engineering style floating point print format.", Auto },
 	{"width", width,	0, Auto },
 	{"w", width,		"Set effective word size for integer modes", Auto },
 	{"zerofill", zerof,	0, Auto },
@@ -4323,11 +4292,6 @@ struct oper opers[] = {
 	{"version", version,	"Show program version" },
 	{"#", help,		"Comment. The rest of the line will be ignored." },
 	{""},
-    {"Deprecated:"},
-	{"k", general,		0, Auto },
-	{"precision", general,"Same as \"general\".", Auto },
-	{"K", fixedpoint,	0, Auto },
-	{"decimals", fixedpoint,  "Same as \"fixed\".", Auto },
 	{NULL, NULL, 0},
 };
 // *INDENT-ON*.

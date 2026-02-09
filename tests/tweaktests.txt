@@ -164,8 +164,11 @@ e 5 ln ^ 5 ==
 # Large integers and +/-0 behavior
 # =============================
 
-18 general
- Will show 18 significant digits.
+18 digits
+ Floating formats configured for 18 digits.
+ 0
+automatic
+ Will show floating point in automatic format
  0
 
 0 separators

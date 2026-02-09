@@ -78,7 +78,7 @@ d
  4,113
 clear
 F
- Mode is float (F).  Displaying 6 digits of total precision.
+ Mode is float (F).  Showing 6 digits of total precision in automatic format.
 3
 recip
  0.333333
@@ -116,8 +116,11 @@ sto
  25.4
 km2mi
  15.7828
-15k
- Will show 15 significant digits.
+15digits
+ Floating formats configured for 15 digits.
+ 15.78282848
+automatic
+ Will show floating point in automatic format
  15.78282848
 oz2g
  447.43529599376
@@ -235,7 +238,7 @@ h
  -2,023,424,000
 
 F
- Mode is float (F).  Displaying 15 digits of total precision.
+ Mode is float (F).  Showing 15 digits of total precision in automatic format.
  0
  -2,023,424,000
 pi 100,000 *
@@ -306,9 +309,11 @@ exch
  0o0
 clear
 F
- Mode is float (F).  Displaying 15 digits of total precision.
-32k
- Will show the maximum of 18 significant digits.
+ Mode is float (F).  Showing 15 digits of total precision in automatic format.
+32 digits
+ Floating formats configured for the maximum of 18 digits.
+auto
+ Will show floating point in automatic format
 pi
  3.14159265358979324
 frac
@@ -331,33 +336,33 @@ int
  -3
 pi
  3.14159265358979324
-15k
- Will show 15 significant digits.
+15 digits
+ Floating formats configured for 15 digits.
+ 3.14159265358979
+auto
+ Will show floating point in automatic format
  3.14159265358979
 pi
  3.14159265358979
 10 15 ^ *
  3.14159265358979e+15
-15K
- Will show at most 15 digits after the decimal.
- 3,141,592,653,589,793.24
-5K
- Will show at most 5 digits after the decimal.
- 3,141,592,653,589,793.24
-1K
- Will show at most 1 digit after the decimal.
- 3,141,592,653,589,793.2
-0K
- Will show no digits after the decimal.
- 3,141,592,653,589,793
-15k
- Will show 15 significant digits.
+15 digits
+ Floating formats configured for 15 digits.
  3.14159265358979e+15
-1k
- Will show 1 significant digit.
+automatic
+ Will show floating point in automatic format
+ 3.14159265358979e+15
+1 digits
+ Floating formats configured for 1 digit.
  3e+15
-10k
- Will show 10 significant digits.
+automatic
+ Will show floating point in automatic format
+ 3e+15
+10 digits
+ Floating formats configured for 10 digits.
+ 3.141592654e+15
+auto
+ Will show floating point in automatic format
  3.141592654e+15
 d
  3,141,592,653,589,793     # warning: display format loses accuracy
@@ -505,73 +510,79 @@ pop
 ( 4 & (0xff == 255) )
  0
 
-3K
- Will show at most 3 digits after the decimal.
- 0.000
+3 digits
+ Floating formats configured for 3 digits.
+ 0
+auto
+ Will show floating point in automatic format
+ 0
 
 25 tan
  0.466
 atan
- 25.000
+ 25
 
 -25 tan
  -0.466
 atan
- -25.000
+ -25
 
-115 tan
- -2.145
+115.1234 tan
+ -2.13
 atan
- -65.000
+ -64.9
 
--115 tan
- 2.145
+-115.1234 tan
+ 2.13
 atan
- 65.000
+ 64.9
 
 
 25 tan
  0.466
 10 * 10 atan2
- 25.000
-
--25 tan
- -0.466
-10 x 10 atan2
- -25.000
-
-115 tan
- -2.145
-10 * 10 atan2
- -65.000
-
--115 tan
- 2.145
-10 * 10 atan2
- 65.000
-
-
-25 tan
- 0.466
-10 * 10 atan2
- 25.000
+ 25
 
 -25 tan
  -0.466
 10 x 10 atan2
- -25.000
+ -25
 
 115 tan
- -2.145
-10 chs * 10 chs atan2
- 115.000
+ -2.14
+10 * 10 atan2
+ -65
 
 -115 tan
- 2.145
+ 2.14
+10 * 10 atan2
+ 65
+
+
+25 tan
+ 0.466
+10 * 10 atan2
+ 25
+
+-25 tan
+ -0.466
+10 x 10 atan2
+ -25
+
+115 tan
+ -2.14
 10 chs * 10 chs atan2
- -115.000
-7k
- Will show 7 significant digits.
+ 115
+
+-115 tan
+ 2.14
+10 chs * 10 chs atan2
+ -115
+7 digits
+ Floating formats configured for 7 digits.
+ -115
+auto
+ Will show floating point in automatic format
  -115
 ( i2mm -.75 )
  -19.05
@@ -579,9 +590,12 @@ atan
  1,016
 0 s
  Numeric separators now off
-3K
- Will show at most 3 digits after the decimal.
- 1016.000
+3 digits
+ Floating formats configured for 3 digits.
+ 1.02e+03
+auto
+ Will show floating point in automatic format
+ 1.02e+03
 1 s
  Numeric separators now on
 clear
@@ -640,8 +654,10 @@ u
 ~
  0x3
 clear
-F 6k
- Will show 6 significant digits.
+F 6 digits
+ Floating formats configured for 6 digits.
+auto
+ Will show floating point in automatic format
 10 10000 ^
  inf
 10 -10000 ^
@@ -1072,8 +1088,11 @@ clear (exp 5 chs 3)
  Right alignment of integer modes is now on
 pi
                                3.14159
-6 eng
- Will show 6 significant digits.
+6 digits
+ Floating formats configured for 6 digits.
+                               3.14159
+eng
+ Will show floating point in engineering format
                                3.14159
 100 /
                               31.4159e-03

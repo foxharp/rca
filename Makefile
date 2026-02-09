@@ -117,7 +117,7 @@ uninstall:
 # the result, which should match exactly.
 
 tests:  gentest optest tweaktest
-	test $$(./rca "10K ((355 / 113) - pi) q") = 0.0000002668
+	test $$(./rca "10 digits fixed ((355 / 113) - pi) q") = 0.0000002668
 
 gentest:
 	egrep -v '^ ' tests/gentests.txt | \
