@@ -3210,7 +3210,6 @@ open_paren(void)
 		default:
 		case UNKNOWN:
 		cleanup:
-			error(" error: unrecognized input '%s'\n", t->val.str);
 			input_ptr = NULL;
 			return BADOP;
 		}
@@ -3547,6 +3546,8 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 		}
 		if (!op->name) {
 		unknown:
+			error(" error: unrecognized input '%s'\n",
+				strtok(p, " \t\n"));
 			t->val.str = p;
 			t->type = UNKNOWN;
 			return 0;
@@ -3807,7 +3808,6 @@ gettoken(struct token *t)
 	fflush(stdin);
 
 	if (!parse_tok(input_ptr, t, &next_input_ptr, 1)) {
-		error(" error: unrecognized input '%s'\n", input_ptr);
 		input_ptr = NULL;
 		return 0;
 	}
@@ -4402,6 +4402,7 @@ main(int argc, char *argv[])
 			break;
 		default:
 		case UNKNOWN:
+			// I think this is unreachable
 			error(" error: unrecognized input '%s'\n", t->val.str);
 			break;
 		}

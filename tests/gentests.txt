@@ -42,9 +42,9 @@ P
 .
  error: unrecognized input '.'
 . mode
- error: unrecognized input '. mode'
+ error: unrecognized input '.'
 foobar 12
- error: unrecognized input 'foobar 12'
+ error: unrecognized input 'foobar'
 2 ..3
  error: unrecognized input '..3'
 pop
