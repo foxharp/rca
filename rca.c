@@ -246,7 +246,7 @@ boolean rightalignment = 1;
  * but it added complexity for not a lot of value.  So now there are
  * just two choices, which just fit 64 bit octal and binary output. */
 #define ALIGN_COL        32
-#define ALIGN_COL_BINARY 71
+#define ALIGN_COL_BINARY 75
 
 #define LONGLONG_BITS (sizeof(long long) * 8)
 
@@ -1978,7 +1978,7 @@ calc_align(int bpd /* bits/digit */, int dps /* digits/separator */)
 
 	return seps + digits + 3;  /* +3 for prefix:  " 0x" */
 #else
-	if (bpd == 8)
+	if (bpd == 1)
 		return ALIGN_COL_BINARY;
 	else
 		return ALIGN_COL;
