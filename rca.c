@@ -651,7 +651,7 @@ e_to_the_x(void)
  * not, to propagate the either nan, or inf, in that order, as the
  * result of the operation.  */
 boolean
-bothfinite(ldouble a, ldouble b)
+bitwise_bothfinite(ldouble a, ldouble b)
 {
 	if (isfinite(a) && isfinite(b))
 		return 1;
@@ -687,7 +687,7 @@ bitwise_operands_too_big(ldouble a, ldouble b)
 }
 
 boolean
-second_operand_negative(char *which, ldouble a, ldouble b)
+bitwise_distance_negative(char *which, ldouble a, ldouble b)
 {
 	if (b < 0) {
 		push(a);
@@ -719,13 +719,13 @@ rshift(void)
 			unsigned long long i;
 			long long j;
 
-			if (!bothfinite(a, b))
+			if (!bitwise_bothfinite(a, b))
 				return GOODOP;
 
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			if (second_operand_negative("shift", a, b))
+			if (bitwise_distance_negative("shift", a, b))
 				return BADOP;
 
 			i = (unsigned long long)a;
@@ -753,13 +753,13 @@ lshift(void)
 		if (pop(&a)) {
 			long long i, j;
 
-			if (!bothfinite(a, b))
+			if (!bitwise_bothfinite(a, b))
 				return GOODOP;
 
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			if (second_operand_negative("shift", a, b))
+			if (bitwise_distance_negative("shift", a, b))
 				return BADOP;
 
 			i = (long long)a;
@@ -788,13 +788,13 @@ rotateright(void)
 			unsigned long long i, rbit;
 			long long j;
 
-			if (!bothfinite(a, b))
+			if (!bitwise_bothfinite(a, b))
 				return GOODOP;
 
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			if (second_operand_negative("rotate", a, b))
+			if (bitwise_distance_negative("rotate", a, b))
 				return BADOP;
 
 			i = (unsigned long long)a;
@@ -825,13 +825,13 @@ rotateleft(void)
 			unsigned long long i, rbit;
 			long long j;
 
-			if (!bothfinite(a, b))
+			if (!bitwise_bothfinite(a, b))
 				return GOODOP;
 
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			if (second_operand_negative("rotate", a, b))
+			if (bitwise_distance_negative("rotate", a, b))
 				return BADOP;
 
 			i = (unsigned long long)a;
@@ -860,7 +860,7 @@ bitwise_and(void)
 		if (pop(&a)) {
 			long long i, j;
 
-			if (!bothfinite(a, b))
+			if (!bitwise_bothfinite(a, b))
 				return GOODOP;
 
 			if (bitwise_operands_too_big(a, b))
@@ -886,7 +886,7 @@ bitwise_or(void)
 		if (pop(&a)) {
 			long long i, j;
 
-			if (!bothfinite(a, b))
+			if (!bitwise_bothfinite(a, b))
 				return GOODOP;
 
 			if (bitwise_operands_too_big(a, b))
@@ -912,7 +912,7 @@ bitwise_xor(void)
 		if (pop(&a)) {
 			long long i, j;
 
-			if (!bothfinite(a, b))
+			if (!bitwise_bothfinite(a, b))
 				return GOODOP;
 
 			if (bitwise_operands_too_big(a, b))
@@ -938,13 +938,13 @@ setbit(void)
 		if (pop(&a)) {
 			long long i, j;
 
-			if (!bothfinite(a, b))
+			if (!bitwise_bothfinite(a, b))
 				return GOODOP;
 
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			if (second_operand_negative("set bit", a, b))
+			if (bitwise_distance_negative("set bit", a, b))
 				return BADOP;
 
 			i = (long long)a;
@@ -969,13 +969,13 @@ clearbit(void)
 		if (pop(&a)) {
 			long long i, j;
 
-			if (!bothfinite(a, b))
+			if (!bitwise_bothfinite(a, b))
 				return GOODOP;
 
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			if (second_operand_negative("clear bit", a, b))
+			if (bitwise_distance_negative("clear bit", a, b))
 				return BADOP;
 
 			i = (long long)a;
