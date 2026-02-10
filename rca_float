@@ -10,12 +10,15 @@
 # Use RCA_INIT to set common initial conditions.  Defaults are
 # provided here, but values set externally will override.
 
-export RCA_INIT="3digits fixed 0separators 1errorexit ${RCA_INIT:-}"
+export RCA_INIT_DEFAULTS="3digits fixed 0separators 1errorexit"
 
 _rca_run()    # support routine
 {
     local output exitcode
-    output=$(rca "$*" q)
+
+    export RCA_INIT="$RCA_INIT_DEFAULTS ${RCA_INIT:-}"
+
+    output=$(rca "$*" q 2>&1)
     exitcode=$?
 
     case $exitcode in
