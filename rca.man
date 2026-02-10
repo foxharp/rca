@@ -222,7 +222,8 @@ With
 .BR auto ),
 output is flexible:  scientific notation (e.g., 1e09) will be used
 when the exponent would be less than -4, or greater than the chosen
-number of digits.  Otherwise the output will be a simple decimal number.
+number of digits (see below).  Otherwise the output will be a simple
+decimal number.
 .P
 .B engineering
 (or
@@ -237,7 +238,8 @@ With
 .B rca
 never uses scientific notation, always presenting numbers as just a
 whole and fractional part.  This works well for values with small
-numbers of digits near decimal point, but gets awkward with extremely large
+numbers of digits near decimal point, and is convenient for using
+the output in scripts, but gets awkward with extremely large
 or extremely small numbers.  Also, when using
 .BR fixed ,
 .B rca
@@ -246,7 +248,7 @@ very large values.
 .P
 The
 .B digits
-command affects the number of digits displayed by any of the above
+command controls the number of digits displayed by any of the above
 formats.  (Only display is affected:  the actual number of digits/bits
 stored and used in computation is unaffected.)
 For
@@ -266,7 +268,7 @@ format (to print no fractional part whatever).  The
 .B auto
 and
 .B eng
-formats have their own minimums (1, and 3, respectively) which they will
+formats have their own minimums (1, and 3, respectively) which they
 enforce silently.
 .P
 The maximum allowed
@@ -485,8 +487,9 @@ chooses the size of integers, in bits. (Startup: system maximum, likely 64).
 .B rightalign
 (or
 .BR right )
-toggles whether values should be vertically aligned at the left margin by their
-first digit, or to the right, by their decimal point. (Startup: enabled)
+toggles whether displayed values should be vertically aligned at the
+left margin by their first digit, or to the right, by their decimal
+point.  (Startup:  enabled)
 .P
 .B zerofill
 (or
@@ -495,7 +498,7 @@ toggles whether or not hex, octal, and binary integers will be
 left-padded out to the chosen word width with zeros.  (Startup: disabled)
 .P
 .B degrees
-toggles whether degrees are used by the trig functions, instead of
+toggles whether degrees are used by the trig functions, rather than
 radians.  (Startup:  enabled)
 .P
 .B separators
@@ -517,7 +520,7 @@ to exit on any subsequent error.  Normally errors which result from
 user input are reported, but operation continues.  (Startup: disabled)
 .RE
 
-All of the listed commands will print a confirmation message, but to
+All of the above commands will print a confirmation message, but to
 avoid confusion, that message will only print if the command is the
 last on its line of input.
 
@@ -566,7 +569,6 @@ left to right.  (This list has no meaning for RPN.)
  \fR 16   \fB  ;
  \fR
 
-There's some personal preference in there.
 Like C, Java, JavaScript, and Rust (but unlike Python and bc),
 the
 .\" troff thinks the '!' is end of sentence, and adds an extra space.
@@ -579,7 +581,7 @@ is the same as
 .B ((!_a) ==
 .BR _b) .
 
-But unlike C, Java, and JavaScript (but like Ruby, Python, Rust, and
+Unlike C, Java, and JavaScript (but like Ruby, Python, Rust, and
 bc), the bitwise operators bind more tightly than comparison operators.
 So
 .B (_a & _b == 5)
@@ -708,8 +710,8 @@ command.
 .B restore
 will push the snapshot on top of the current stack.
 .B mark
-can be used, as above, to limit the range of the snapshot.  An exact
-copy of the stack is ensured by
+can be used, as described above, to limit the range of the snapshot.
+An exact copy of the stack is ensured by
 .B -1 mark snapshot
 followed by
 .B clear
