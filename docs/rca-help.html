@@ -51,7 +51,7 @@
          lastx, or lx     Push previous value of x
               _&lt;name&gt;     Push variable
                     =     Assign variable.  RPN: &quot;3 = _v&quot;   infix: &quot;(_v = 3)&quot;
-    varables, or vars     Show the current list of variables
+   variables, or vars     Show the current list of variables
 
  Unit conversions (one operand):
            i2mm, mm2i     inches / millimeters
@@ -67,8 +67,9 @@
  Other:
                  (, )     Infix grouping
                     ;     Infix separator (in RPN, discards y)
-             sum, avg     Sum or average stack, stop at &quot;mark&quot; if set
-                 mark     Mark stack to limit later summing/averaging
+   snapshot, sum, avg     Snapshot, sum or average stack, stop at &quot;mark&quot; if set
+                 mark     Mark stack to limit later snap/sum/average
+              restore     Push the snapshot onto current stack
 
  Stack manipulation:
                 clear     Clear stack
@@ -81,14 +82,15 @@
                     p     Print x according to mode
               f, d, u     Print x as float, decimal, unsigned decimal,
               h, o, b          hex, octal, or binary
-                state     Show calculator state
+   automatic, or auto     Select general purpose floating display format
+  engineering, or eng     Select engineering style floating display format
+                fixed     Select fixed decimal floating display format
+               digits     Number of digits for floating formats
 
  Modes:
         F, D, H, O, B     Switch to floating, decimal, hex, octal, binary modes
-      precision, or k     Float format: number of significant digits (%g)
-       decimals, or K     Float format: digits after decimal (%f)
           width, or w     Set effective word size for integer modes
-       zerofill, or z     Toggle left-filling with zeros in H, O, and B modes
+       zerofill, or z     Toggle left-fill with zeros in H, O, and B modes
  rightalign, or right     Toggle right alignment of numbers
               degrees     Toggle trig functions: degrees (1) or radians (0)
       autoprint, or a     Toggle autoprinting on/off with 0/1
@@ -96,8 +98,9 @@
                  mode     Display current mode parameters
 
  Debug support:
-                    r     Print x as raw floating hex
-                    R     Switch to raw floating hex mode
+                state     Show calculator state
+                  raw     Print x as raw floating hex
+                  Raw     Switch to raw floating hex mode
              rounding     Toggle snapping and rounding of floats
               tracing     Set tracing level
 
@@ -110,7 +113,8 @@
               version     Show program version
                     #     Comment. The rest of the line will be ignored.
 
-                                                                   version v16
+
+                                                                   version v17
 
  Tip:	Use &quot;rca help q | less&quot; to view this help
 </pre>

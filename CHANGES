@@ -1,0 +1,71 @@
+
+
+v17 changes
+    new "engineering" display format, new "digits" command, and
+    renaming of existing display formats result in UI breakage:
+    "precision", "decimals", "k", and "K" commands are gone, replaced
+    by new no-argument commands:  "automatic/auto", "fixed", and
+    "engineering/eng".  a new "digits" command specifies the number of
+    floating point display digits.
+
+    new snapshot/restore commands, for saving/restoring the entire stack
+
+    rca_float: fixed handling of RCA_INIT, and rca's stderr
+
+    improved rca's handing of input parsing errors.
+
+    added Makefile install/uninstall targets (default to /usr/local)
+
+v16 changes   (2/5/2026)
+    removed unsigned math, and unsigned display mode.  neither make
+    sense in the context of a practical calculator.
+
+    improved help, and the way version numbers are maintained.
+
+v14 change   (2/2/2026)
+    implement option of right alignment for output values
+
+    refactored how command output is managed.  commands are now
+    silent unless they were entered last on a line.
+
+v13 changes   (1/30/2026)
+    octal input/output now use the "0o" prefix instead of just "0"
+
+    added "zerofill", for left-filling in hex, binary, octal modes
+
+    added unit conversion for mpg to l/100km
+
+    some churn for deploying on github
+
+v12 changes   (1/28/2026
+    lots of work on precedence and associativity
+
+    introduced the ";" operator to allow multiple expressions in (...)
+
+    added dynamic variables (e.g., "_myvar"), eliminated r1-r5, s1-s5
+
+    more rigorous about catching infix syntax errors
+
+    better tracing support
+
+    added "exp" operator
+
+    "lastx" now works in infix
+
+v10 changes   (1/13/2026)
+    added "avg" command (similar to "sum")
+
+v9 changes   (1/9/2026)
+    "groups" command renamed to "separators"
+
+v8 changes   (1/1/2026)
+    no more hidden commands
+    readline command completion
+    tests/verification of poles/nan/inf for tan, powl
+
+v7 changes   (12/30/25)
+    standardize error messages
+    add raw floating hex support
+    improve "mark" command
+
+.....
