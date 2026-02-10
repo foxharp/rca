@@ -557,7 +557,7 @@ left to right.  (This list has no meaning for RPN.)
  \fR 4    \fB  atan2
  \fR 5    \fB  * x / %
  \fR 6    \fB  + -
- \fR 7    \fB  >> <<
+ \fR 7    \fB  >> << ror rol
  \fR 8    \fB  & clearb
  \fR 9    \fB  xor
  \fR 10   \fB  | setb

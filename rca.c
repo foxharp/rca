@@ -393,6 +393,24 @@ push(ldouble n)
 }
 
 void
+lpush(long long l)
+{
+	struct num *p;
+
+	p = (struct num *)calloc(1, sizeof(struct num));
+	if (!p)
+		memory_failure();
+
+	p->val = sign_extend(l & int_mask);
+	trace((" pushed masked/extended long long %lld/0x%llx\n",
+		(long long)(p->val), (long long)(p->val)));
+
+	p->next = stack;
+	stack = p;
+	stack_count++;
+}
+
+void
 result_push(ldouble n)
 {
 	if (isfinite(n))
@@ -669,6 +687,18 @@ bitwise_operands_too_big(ldouble a, ldouble b)
 }
 
 boolean
+second_operand_negative(char *which, ldouble a, ldouble b)
+{
+	if (b < 0) {
+		push(a);
+		push(b);
+		error(" error: %s by negative not allowed\n", which);
+		return 1;
+	}
+	return 0;
+}
+
+boolean
 bitwise_operand_too_big(ldouble a)
 {
 	if (a < LLONG_MIN || a > LLONG_MAX) {
@@ -695,18 +725,16 @@ rshift(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			// use unsigned for a logical, not arithmetic, shift
+			if (second_operand_negative("shift", a, b))
+				return BADOP;
+
 			i = (unsigned long long)a;
 			j = (long long)b;
-			if (j < 0) {
-				error(" error: shift by negative not allowed\n");
-				push(a);
-				push(b);
-				return BADOP;
-			} else if (b >= sizeof(a) * CHAR_BIT) {
-				push(0);
+
+			if (b >= sizeof(a) * CHAR_BIT) {
+				lpush(0);
 			} else {
-				push(i >> j);
+				lpush((i >> j) & int_mask);
 			}
 			lastx = b;
 			return GOODOP;
@@ -731,18 +759,90 @@ lshift(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
+			if (second_operand_negative("shift", a, b))
+				return BADOP;
+
 			i = (long long)a;
 			j = (long long)b;
-			if (j < 0) {
-				error(" error: shift by negative not allowed\n");
-				push(a);
-				push(b);
-				return BADOP;
-			} else if (b >= sizeof(a) * CHAR_BIT) {
-				push(0);
+
+			if (b >= sizeof(a) * CHAR_BIT) {
+				lpush(0);
 			} else {
-				push(i << j);
+				lpush((i << j) & int_mask);
 			}
+			lastx = b;
+			return GOODOP;
+		}
+		push(b);
+	}
+	return BADOP;
+}
+
+opreturn
+rotateright(void)
+{
+	ldouble a, b;
+
+	if (pop(&b)) {
+		if (pop(&a)) {
+			unsigned long long i, rbit;
+			long long j;
+
+			if (!bothfinite(a, b))
+				return GOODOP;
+
+			if (bitwise_operands_too_big(a, b))
+				return BADOP;
+
+			if (second_operand_negative("rotate", a, b))
+				return BADOP;
+
+			i = (unsigned long long)a;
+			j = (long long)b;
+
+			while (j--) {
+				rbit = (i & 1);
+				i = (((i >> 1) & ~int_sign_bit) |
+					(rbit << (int_width - 1)));
+			}
+			lpush(i & int_mask);
+
+			lastx = b;
+			return GOODOP;
+		}
+		push(b);
+	}
+	return BADOP;
+}
+
+opreturn
+rotateleft(void)
+{
+	ldouble a, b;
+
+	if (pop(&b)) {
+		if (pop(&a)) {
+			unsigned long long i, rbit;
+			long long j;
+
+			if (!bothfinite(a, b))
+				return GOODOP;
+
+			if (bitwise_operands_too_big(a, b))
+				return BADOP;
+
+			if (second_operand_negative("rotate", a, b))
+				return BADOP;
+
+			i = (unsigned long long)a;
+			j = (long long)b;
+
+			while (j--) {
+				rbit = (i & int_sign_bit);
+				i = (((i << 1) & ~1) | (rbit != 0));
+			}
+			lpush(i & int_mask);
+
 			lastx = b;
 			return GOODOP;
 		}
@@ -768,7 +868,7 @@ bitwise_and(void)
 
 			i = (long long)a;
 			j = (long long)b;
-			push(i & j);
+			lpush((i & j) & int_mask);
 			lastx = b;
 			return GOODOP;
 		}
@@ -794,7 +894,7 @@ bitwise_or(void)
 
 			i = (long long)a;
 			j = (long long)b;
-			push(i | j);
+			lpush((i | j) & int_mask);
 			lastx = b;
 			return GOODOP;
 		}
@@ -820,7 +920,7 @@ bitwise_xor(void)
 
 			i = (long long)a;
 			j = (long long)b;
-			push(i ^ j);
+			lpush((i ^ j) & int_mask);
 			lastx = b;
 			return GOODOP;
 		}
@@ -844,17 +944,14 @@ setbit(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			if (b < 0) {
-				error(" error: negative bit number not allowed\n");
-				push(a);
-				push(b);
+			if (second_operand_negative("set bit", a, b))
 				return BADOP;
-			}
+
 			i = (long long)a;
 			j = (long long)b;
 			if (b < sizeof(i) * CHAR_BIT)
 				i |= (1LL << j);
-			push(i);
+			lpush(i & int_mask);
 			lastx = b;
 			return GOODOP;
 		}
@@ -878,18 +975,15 @@ clearbit(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			if (b < 0) {
-				error(" error: negative bit number not allowed\n");
-				push(a);
-				push(b);
+			if (second_operand_negative("clear bit", a, b))
 				return BADOP;
-			}
+
 			i = (long long)a;
 			j = (long long)b;
 			if (b < sizeof(i) * CHAR_BIT)
 				i &= ~(1LL << j);
 
-			push(i);
+			lpush(i & int_mask);
 			lastx = b;
 			return GOODOP;
 		}
@@ -912,7 +1006,8 @@ bitwise_not(void)
 		if (bitwise_operand_too_big(a))
 			return BADOP;
 
-		push(~(long long)a);
+		long long i = (long long)a;
+		lpush(~i);
 		lastx = a;
 		return GOODOP;
 	}
@@ -4146,6 +4241,8 @@ struct oper opers[] = {
 	{"**", y_to_the_x,	"Raise y to the x'th power", 2, 28, 'R'},
 	{">>", rshift,		0, 2, 22 },
 	{"<<", lshift,		"Right/left logical shift of y by x bits", 2, 22 },
+	{"ror", rotateright,	0, 2, 22 },
+	{"rol", rotateleft,	"Rotate y right/left by x bits", 2, 22 },
 	{"&", bitwise_and,	0, 2, 20 },
 	{"|", bitwise_or,	0, 2, 16 },
 	{"xor", bitwise_xor,	"Bitwise AND, OR, and XOR of y and x", 2, 18 },
