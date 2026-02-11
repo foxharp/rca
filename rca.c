@@ -4051,7 +4051,7 @@ precedence(void)
 	char *prefix[NUM_PRECEDENCE] = {0};
 	int prec, i;
 
-	p_printf(" Precedence for operators in infix expressions, from \n"
+	p_printf(" Precedence for operators in infix expressions, from\n"
 	       "  top to bottom in order of descending precedence.\n"
 	       " All operators are left-associative, except for those\n"
 	       "  in rows marked 'R', which associate right to left.\n");
@@ -4090,7 +4090,9 @@ precedence(void)
 				linelen[op->prec] = 12;
 			}
 			if (strcmp(op->name, "chs") == 0) {
-				strcat(prec_ops[op->prec], "+ - ");
+				if (*prec_ops[op->prec])
+					strcat(prec_ops[op->prec], " ");
+				strcat(prec_ops[op->prec], "+ -");
 				linelen[op->prec] += 4;
 			}
 			if (!assoc[op->prec]) {
@@ -4099,12 +4101,13 @@ precedence(void)
 				if (assoc[op->prec] != op->assoc)
 					error(" error: associativity bug, op %s\n", op->name);
 			}
+			if (*prec_ops[op->prec])
+				strcat(prec_ops[op->prec], " ");
 			strcat(prec_ops[op->prec], op->name);
-			strcat(prec_ops[op->prec], " ");
 			linelen[op->prec] += strlen(op->name) + 1;
 			if (linelen[op->prec] > precedence_width) {
 				linelen[op->prec] = 12;
-				prefix[op->prec] = "\n               ";
+				prefix[op->prec] = "\n              ";
 			} else {
 				strcat(prec_ops[op->prec], prefix[op->prec]);
 				prefix[op->prec] = "";

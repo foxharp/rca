@@ -1,6 +1,29 @@
 
 0 rightalign
  Right alignment of integer modes is now off
+precedence
+ Precedence for operators in infix expressions, from
+  top to bottom in order of descending precedence.
+ All operators are left-associative, except for those
+  in rows marked 'R', which associate right to left.
+ 1         ( )
+ 2   R     ~ ! + - chs negate nop recip sqrt sin cos tan asin acos atan exp
+               ln log2 log10 abs frac int i2mm mm2i ft2m m2ft mi2km km2mi f2c
+               c2f oz2g g2oz oz2ml ml2oz q2l l2q d2r r2d mpg2l100km
+ 3   R     ^ **
+ 4         atan2
+ 5         * x / %
+ 6         + -
+ 7         >> << ror rol
+ 8         & clearb
+ 9         xor
+ 10        | setb
+ 11        < > <= >=
+ 12        == !=
+ 13        &&
+ 14        ||
+ 15        =
+ 16        ;
 # ============================================
 # Unary + and - versus binary
 # ============================================
