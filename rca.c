@@ -114,7 +114,7 @@ usage(void)
 int tracing;
 #define trace(a)  do {if (tracing > 1) printf a ;} while(0)
 
-typedef bool boolean;
+typedef int boolean;
 
 #define TRUE 1
 #define FALSE 0
@@ -1566,6 +1566,15 @@ memfile_open(struct memfile *mfp)
 	}
 }
 
+void
+memfile_close(struct memfile *mfp)
+{
+	fflush(mfp->fp);
+	fclose(mfp->fp);
+	free(mfp->bufp);
+	mfp->fp = 0;
+}
+
 struct memfile pp;
 
 void
@@ -2397,7 +2406,7 @@ engineering(void)
 opreturn
 fixedpoint(void)
 {
-	float_specifier = "fixed decimal";
+	float_specifier = "fixed";
 	float_mode_messages(1);
 
 	return GOODOP;
@@ -3911,6 +3920,121 @@ gettoken(struct token *t)
 	return 1;
 }
 
+/* the opers[] and config[] tables don't initialize everything explicitly */
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+
+#define c_int 0
+#define c_chr 1
+#define c_str 2
+#define c_none -1
+struct config {
+	char *command;
+	int format;
+	int *intstate;
+	char **stringstate;
+	int default_intstate;
+	char *default_stringstate;
+} config_table[] = {
+	{ "F,D,H,O,B",		c_chr, &mode },
+	{ "auto,eng,fixed",	c_str, 0, &float_specifier },
+	{ "digits",		c_int, &float_digits },
+	{ "width",		c_int, &int_width },
+	{ "separators",		c_int, &digitseparators },
+	{ "rightalign",		c_int, &rightalignment },
+	{ "zerofill",		c_int, &zerofill },
+	{ "autoprint",		c_int, &autoprint },
+	{ "degrees",		c_int, &trig_degrees },
+	{ "errorexit",		c_int, &exit_on_error },
+	// { "Debug:", c_none },
+	{ "rounding",		c_int, &do_rounding },
+	{ "tracing",		c_int, &tracing },
+	{ 0 }
+};
+
+void
+config_read_defaults(void)
+{
+	struct config *cptr = config_table;
+
+	while (cptr->command) {
+		if (cptr->format < 0) {
+			cptr++;
+			continue;
+		}
+		switch (cptr->format) {
+		case c_int:
+		case c_chr:
+			cptr->default_intstate = *(int *)(cptr->intstate);
+			break;
+		case c_str:
+			cptr->default_stringstate  = *cptr->stringstate;
+			break;
+		}
+		cptr++;
+	}
+}
+
+opreturn
+config(void)
+{
+	struct config *cptr = config_table;
+	int nondefault = 0;
+	char *starred;
+	struct memfile rp;
+
+	memfile_open(&rp);
+
+	while (cptr->command) {
+		if (cptr->format < 0)
+			p_printf(" %-20s   ", cptr->command);
+		else
+			p_printf(" %20s   ", cptr->command);
+
+		starred = "    ";
+
+		switch (cptr->format) {
+		case c_int:
+			int *ip = (int *)(cptr->intstate);
+			if (*ip != cptr->default_intstate) {
+				starred = "  * ";
+				fprintf(rp.fp, "  %d %s", *ip, cptr->command);
+				nondefault++;
+			}
+			p_printf("%s%d", starred, *ip);
+			break;
+		case c_chr:
+			char *cp = (char *)(cptr->intstate);
+			if (*cp != cptr->default_intstate) {
+				starred = "  * ";
+				fprintf(rp.fp, "  %c", *cp);
+				nondefault++;
+			}
+			p_printf("%s%c", starred, *cp);
+			break;
+		case c_str:
+			char *s = *cptr->stringstate;
+			if (strcmp(s, cptr->default_stringstate) != 0) {
+				starred = "  * ";
+				fprintf(rp.fp, "  %s", s);
+				nondefault++;
+			}
+			p_printf("%s%s", starred, s);
+			break;
+		}
+		p_printf("\n");
+		cptr++;
+	}
+
+	if (nondefault) {
+	    p_printf(" Starting from defaults, recreate with:\n");
+	    fflush(rp.fp);
+	    p_printf("  %s\n", rp.bufp);
+	}
+	memfile_close(&rp);
+
+	return GOODOP;
+}
+
 /* useful for resetting width from debugger, to generate the
  * (narrower) man page copy of the precedence table. */
 int precedence_width = 70;
@@ -4213,9 +4337,6 @@ locale_init(void)
 
 }
 
-/* the opers[] table doesn't initialize everything explicitly */
-#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-
 // *INDENT-OFF*.
 struct oper opers[] = {
 //       +-------------------------------- section header if no function ptr
@@ -4380,6 +4501,7 @@ struct oper opers[] = {
     {"Housekeeping:"},
 	{"?", help,		0 },
 	{"help", help,		"Show this list (using $PAGER, if set)" },
+	{"config", config,	"Show current configuration settings" },
 	{"precedence", precedence, "List infix operator precedence" },
 	{"quit", quit,		0 },
 	{"q", quit,		0 },
@@ -4452,6 +4574,8 @@ main(int argc, char *argv[])
 	detect_epsilon();
 
 	create_infix_support_tokens();
+
+	config_read_defaults();
 
 	/* we simply loop forever, either pushing operands or
 	 * executing operators.  the special end-of-line token lets us

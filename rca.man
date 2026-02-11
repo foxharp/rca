@@ -431,18 +431,25 @@ Variables can be listed with
 or
 .BR vars .
 .SH CONFIGURATION
+The
+.B config
+command shows a summary of the current settings in
+.BR rca ,
+along with the commands needed to recreate those settings.
 .B rca
 doesn't read a configuration file on startup.  Instead,
 commands are read from the environment variable
 .BR RCA_INIT ,
-and from any command line arguments.  Initial conditions can be
-established by either method.  Printed output from
-commands run from $RCA_INIT is suppressed.
+and then from any command line arguments.  Initial conditions can be
+established by either method.  Any output from commands run via
+.B $RCA_INIT
+is discarded.
 
 Many of the commands that control
 .BR rca 's
 operation and appearance have been described elsewhere, but a concise
 list may be useful:
+
 .RS
 .P
 
@@ -484,6 +491,12 @@ system.  (Startup:  6)
 .BR w )
 chooses the size of integers, in bits. (Startup: system maximum, likely 64).
 .P
+.B separators
+(or
+.BR s )
+toggles whether output will include separators (usually ',', but
+see the LOCALE section) for readability.  (Startup: enabled)
+.P
 .B rightalign
 (or
 .BR right )
@@ -497,21 +510,15 @@ point.  (Startup:  enabled)
 toggles whether or not hex, octal, and binary integers will be
 left-padded out to the chosen word width with zeros.  (Startup: disabled)
 .P
-.B degrees
-toggles whether degrees are used by the trig functions, rather than
-radians.  (Startup:  enabled)
-.P
-.B separators
-(or
-.BR s )
-toggles whether output will include separators (usually ',', but
-see the LOCALE section) for readability.  (Startup: enabled)
-.P
 .B autoprint
 (or
 .BR a )
 toggles printing of the top of stack after newlines.  (Startup:
 enabled)
+.P
+.B degrees
+toggles whether degrees are used by the trig functions, rather than
+radians.  (Startup:  enabled)
 .P
 .B errorexit
 forces
@@ -722,6 +729,12 @@ followed by
 and
 .B snapshot
 are the only operators to consume more than 2 stack elements.
+.P
+.B nop
+does nothing.  It exists only to satisfy an internal
+.B rca
+need, but might be useful at the end of a line, or the command line,
+to suppress the normal output from the last command.
 .RE
 
 .SH LOCALE
