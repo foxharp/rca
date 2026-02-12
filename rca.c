@@ -28,34 +28,33 @@ char *progversion = "v17";
  *
  */
 
-char *licensetext[] = {
-"",
-" RCA License                  (SPDX-License-Identifier: BSD-2-Clause) ",
-" ------------ ",
-" Copyright (C) 1993-2026  Paul Fox ",
-" ",
-" Redistribution and use in source and binary forms, with or without ",
-" modification, are permitted provided that the following conditions ",
-" are met: ",
-" 1. Redistributions of source code must retain the above copyright ",
-"    notice, this list of conditions and the following disclaimer. ",
-" 2. Redistributions in binary form must reproduce the above copyright ",
-"    notice in the documentation and/or other materials provided with ",
-"    the distribution. ",
-"",
-" This software is provided by the author ``as is'' and any ",
-" express or implied warranties, including, but not limited to, the ",
-" implied warranties of merchantability and fitness for a particular ",
-" purpose, are disclaimed.  In no event shall the author be liable ",
-" for any direct, indirect, incidental, special, exemplary, or ",
-" consequential damages (including, but not limited to, procurement ",
-" of substitute goods or services; loss of use, data, or profits; or ",
-" business interruption) however caused and on any theory of liability, ",
-" whether in contract, strict liability, or tort (including negligence ",
-" or otherwise) arising in any way out of the use of this software, even ",
-" if advised of the possibility of such damage. ",
-"",
-  0 };
+char licensetext[] = \
+"\
+ RCA License                  (SPDX-License-Identifier: BSD-2-Clause)\n\
+ ------------\n\
+ Copyright (C) 1993-2026  Paul Fox\n\
+\n\
+ Redistribution and use in source and binary forms, with or without\n\
+ modification, are permitted provided that the following conditions\n\
+ are met:\n\
+ 1. Redistributions of source code must retain the above copyright\n\
+    notice, this list of conditions and the following disclaimer.\n\
+ 2. Redistributions in binary form must reproduce the above copyright\n\
+    notice in the documentation and/or other materials provided with\n\
+    the distribution.\n\
+\n\
+ This software is provided by the author ``as is'' and any\n\
+ express or implied warranties, including, but not limited to, the\n\
+ implied warranties of merchantability and fitness for a particular\n\
+ purpose, are disclaimed.  In no event shall the author be liable\n\
+ for any direct, indirect, incidental, special, exemplary, or\n\
+ consequential damages (including, but not limited to, procurement\n\
+ of substitute goods or services; loss of use, data, or profits; or\n\
+ business interruption) however caused and on any theory of liability,\n\
+ whether in contract, strict liability, or tort (including negligence\n\
+ or otherwise) arising in any way out of the use of this software, even\n\
+ if advised of the possibility of such damage.\n\
+";
 
 /* in addition to progversion, above, Makefile may pass in a
  * definition of CCVERSION */
@@ -4166,11 +4165,7 @@ commands(void)
 opreturn
 license(void)
 {
-	int i = 0;
-
-	while (licensetext[i])
-		p_printf("%s\n", licensetext[i++]);
-
+	p_printf("%s\n", licensetext);
 	return GOODOP;
 }
 
