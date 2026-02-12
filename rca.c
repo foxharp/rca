@@ -3985,8 +3985,8 @@ config(void)
 	memfile_open(&rp);
 
 	while (cptr->command) {
-		if (cptr->format < 0)
-			p_printf(" %-20s   ", cptr->command);
+		if (cptr->format == c_none) // Heading: only
+			p_printf(" %s", cptr->command);
 		else
 			p_printf(" %20s   ", cptr->command);
 
@@ -4255,8 +4255,12 @@ help(void)
 				}
 				strcat(cbuf, op->name);
 				if (op->help) {
-					fprintf(fout, "%21s     %s\n",
-						cbuf, op->help);
+					if (op->help[0])
+						fprintf(fout, "%21s     %s\n",
+							cbuf, op->help);
+					else
+						fprintf(fout, "%21s\n", cbuf);
+
 					cbuf[0] = '\0';
 				}
 			}
