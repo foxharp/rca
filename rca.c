@@ -216,9 +216,9 @@ boolean autoprint = TRUE;
 
 /* informative feedback, which is only printed if the command generating
  * it is followed by a newline */
+int pending_enabled = 1;
 void pending_printf(const char *fmt, ...);
 #define p_printf pending_printf    // shorthand
-
 
 /* if true, will decorate numbers, like "1,333,444".  */
 boolean digitseparators = PRINTF_SEPARATORS;
@@ -1577,6 +1577,18 @@ memfile_close(struct memfile *mfp)
 struct memfile pp;
 
 void
+pending_suppress(void)
+{
+	pending_enabled = 0;
+}
+
+void
+pending_allow(void)
+{
+	pending_enabled = 1;
+}
+
+void
 pending_clear(void)
 {
 	if (pp.fp) {
@@ -1589,7 +1601,7 @@ pending_clear(void)
 void
 pending_show(void)
 {
-	if (pp.fp) {
+	if (pp.fp && pending_enabled) {
 		fflush(pp.fp);
 		printf("%s", pp.bufp);
 		pending_clear();
@@ -3746,36 +3758,6 @@ command_completion(const char* prefix, int start, int end)
 }
 #endif
 
-static int o_stdout_fd = -1;
-
-void
-suppress_stdout(void)
-{
-	fflush(stdout);
-
-	o_stdout_fd = dup(STDOUT_FILENO);
-
-	int null_fd = open("/dev/null", O_WRONLY);
-	if (null_fd == -1) {
-		o_stdout_fd = -1;
-		return;
-	}
-
-	dup2(null_fd, STDOUT_FILENO);	// Redirect stdout to /dev/null
-	close(null_fd);		// Close the /dev/null file descriptor
-}
-
-void
-restore_stdout(void)
-{
-	if (o_stdout_fd == -1)
-		return;
-	fflush(stdout);
-	dup2(o_stdout_fd, STDOUT_FILENO);	// Restore original stdout
-	close(o_stdout_fd);
-	o_stdout_fd = -1;
-}
-
 /* on return from fetch_line(), the global input_ptr is a string
  * containing commands to be executed */
 int
@@ -3791,18 +3773,19 @@ fetch_line(void)
 		tried_rca_init = TRUE;
 		rca_init = getenv("RCA_INIT");
 		if (rca_init) {
-			suppress_stdout();
 			blen = strlen(rca_init) + 1;
 			input_buf = malloc(blen);
 			if (!input_buf)
 				memory_failure();
 			strcpy(input_buf, rca_init);
+			no_comments(input_buf);
 			input_ptr = input_buf;
+			pending_suppress();
 			return 1;
 		}
 	}
 
-	restore_stdout();
+	pending_allow();
 
 	/* if there are args on the command line, they're taken as
 	 * initial commands.  since only numbers can start with '-',
@@ -3830,7 +3813,6 @@ fetch_line(void)
 		}
 
 		no_comments(input_buf);
-
 		input_ptr = input_buf;
 		return 1;
 	}
