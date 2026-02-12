@@ -1120,3 +1120,39 @@ chs
                             -318.310e-03
 recip
                               -3.14159
+clear
+0w 1s 0right
+ Right alignment of integer modes is now off
+config
+            F,D,H,O,B       F
+       auto,eng,fixed     * engineering
+               digits       6
+                width       64
+           separators       1
+           rightalign     * 0
+             zerofill       0
+            autoprint       1
+              degrees     * 0
+            errorexit       0
+             rounding       1
+              tracing       0
+ Starting from defaults, recreate with:
+    engineering  0 rightalign  0 degrees
+
+H
+ Mode is hex (H).  Integer math with 64 bits.
+5 2 ror
+ 0x4000,0000,0000,0001
+3 rol
+ 0xa
+0xa ==
+ 0x1
+24w
+ Integers are now 24 bits wide.
+ 0x1
+5 2 ror
+ 0x40,0001
+3 rol
+ 0xa
+0xa ==
+ 0x1
