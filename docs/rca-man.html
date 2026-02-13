@@ -256,11 +256,13 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        Variables can be listed with <span style="font-weight:bold;">variables </span>or <span style="font-weight:bold;">vars</span>.
 
 <span style="font-weight:bold;">CONFIGURATION</span>
-       <span style="font-weight:bold;">rca </span>doesn't read a configuration file on startup.  Instead,
-       commands are read from the environment variable <span style="font-weight:bold;">RCA_INIT</span>, and from
-       any command line arguments.  Initial conditions can be established
-       by either method.  Printed output from commands run from $RCA_INIT
-       is suppressed.
+       The <span style="font-weight:bold;">config </span>command shows a summary of the current settings in <span style="font-weight:bold;">rca</span>,
+       along with the commands needed to recreate those settings.  <span style="font-weight:bold;">rca</span>
+       doesn't read a configuration file on startup.  Instead, commands
+       are read from the environment variable <span style="font-weight:bold;">RCA_INIT</span>, and then from any
+       command line arguments.  Initial conditions can be established by
+       either method.  Any output from commands run via <span style="font-weight:bold;">$RCA_INIT </span>is
+       discarded.
 
        Many of the commands that control <span style="font-weight:bold;">rca</span>'s operation and appearance
        have been described elsewhere, but a concise list may be useful:
@@ -287,6 +289,10 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
               <span style="font-weight:bold;">width </span>(or <span style="font-weight:bold;">w</span>) chooses the size of integers, in bits.
               (Startup: system maximum, likely 64).
 
+              <span style="font-weight:bold;">separators </span>(or <span style="font-weight:bold;">s</span>) toggles whether output will include
+              separators (usually ',', but see the LOCALE section) for
+              readability.  (Startup: enabled)
+
               <span style="font-weight:bold;">rightalign </span>(or <span style="font-weight:bold;">right</span>) toggles whether displayed values
               should be vertically aligned at the left margin by their
               first digit, or to the right, by their decimal point.
@@ -296,15 +302,11 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
               binary integers will be left-padded out to the chosen word
               width with zeros.  (Startup: disabled)
 
-              <span style="font-weight:bold;">degrees </span>toggles whether degrees are used by the trig
-              functions, rather than radians.  (Startup:  enabled)
-
-              <span style="font-weight:bold;">separators </span>(or <span style="font-weight:bold;">s</span>) toggles whether output will include
-              separators (usually ',', but see the LOCALE section) for
-              readability.  (Startup: enabled)
-
               <span style="font-weight:bold;">autoprint </span>(or <span style="font-weight:bold;">a</span>) toggles printing of the top of stack after
               newlines.  (Startup: enabled)
+
+              <span style="font-weight:bold;">degrees </span>toggles whether degrees are used by the trig
+              functions, rather than radians.  (Startup:  enabled)
 
               <span style="font-weight:bold;">errorexit </span>forces <span style="font-weight:bold;">rca </span>to exit on any subsequent error.
               Normally errors which result from user input are reported,
@@ -337,7 +339,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
          4      <span style="font-weight:bold;">atan2</span>
          5      <span style="font-weight:bold;">* x / %</span>
          6      <span style="font-weight:bold;">+ -</span>
-         7      <span style="font-weight:bold;">&gt;&gt; &lt;&lt;</span>
+         7      <span style="font-weight:bold;">&gt;&gt; &lt;&lt; ror rol</span>
          8      <span style="font-weight:bold;">&amp; clearb</span>
          9      <span style="font-weight:bold;">xor</span>
          10     <span style="font-weight:bold;">| setb</span>
@@ -417,6 +419,11 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
 
               <span style="font-weight:bold;">sum</span>, <span style="font-weight:bold;">avg</span>, and <span style="font-weight:bold;">snapshot </span>are the only operators to consume
               more than 2 stack elements.
+
+              <span style="font-weight:bold;">nop </span>does nothing.  It exists only to satisfy an internal
+              <span style="font-weight:bold;">rca </span>need, but might be useful at the end of a line, or the
+              command line, to suppress the normal output from the last
+              command.
 
 <span style="font-weight:bold;">LOCALE</span>
        The locale is consulted for just three things.
@@ -535,7 +542,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        Paul Fox created <span style="font-weight:bold;">rca </span>(formerly called &quot;ca&quot;) very slowly over a
        span of decades, starting in 1993.
 
-                                version v17                        <span style="font-style:italic;">rca</span>(1)
+                                version v18                        <span style="font-style:italic;">rca</span>(1)
 </pre>
 </body>
 </html>

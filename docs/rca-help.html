@@ -25,6 +25,7 @@
                  /, %     Divide and modulo of y by x
              ^, or **     Raise y to the x'th power
                &gt;&gt;, &lt;&lt;     Right/left logical shift of y by x bits
+             ror, rol     Rotate y right/left by x bits
             &amp;, |, xor     Bitwise AND, OR, and XOR of y and x
          setb, clearb     Set and clear bit x in y
 
@@ -33,7 +34,7 @@
        chs, or negate     Change sign of x (2's complement)
                   nop     Does nothing
           recip, sqrt     Reciprocal and square root of x
-        sin, cos, tan     
+        sin, cos, tan
      asin, acos, atan     Trig functions
                 atan2     Arctan of y/x (2 operands)
                   exp     Raise e to the x'th power
@@ -106,6 +107,7 @@
 
  Housekeeping:
            ?, or help     Show this list (using $PAGER, if set)
+               config     Show current configuration settings
            precedence     List infix operator precedence
      quit, q, or exit     Leave the calculator
             errorexit     Toggle exiting on error and warning
@@ -114,7 +116,7 @@
                     #     Comment. The rest of the line will be ignored.
 
 
-                                                                   version v17
+                                                                   version v18
 
  Tip:	Use &quot;rca help q | less&quot; to view this help
 </pre>
