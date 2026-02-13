@@ -38,7 +38,8 @@ copyrightcheck:
 html: docs/index.html.new docs/rca-man.html.new docs/rca-help.html.new
 
 docs/index.html.new: README.md
-	python3 -m markdown README.md >docs/index.html.new
+	echo '<div style="max-width: 700px; width: 100%;">' >docs/index.html.new
+	python3 -m markdown README.md >>docs/index.html.new
 
 docs/rca-man.html.new: rca.1
 	MAN_KEEP_FORMATTING=1 MANWIDTH=75 \
