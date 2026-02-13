@@ -1,6 +1,18 @@
+v18 changes   (2/12/2026)
+    added rotate right, rotate left bitwise operators
 
+    added "config" command, to summarize current settings
 
-v17 changes
+    fixed right alignment of binary format output
+
+    eliminated trailing whitespace created by precedence,
+    help, config, and license commands.  it was problematic for
+    checking the output into git (for tests), and for possibly for
+    the tests themselves.
+
+    simplified code for suppressing early output from RCA_INIT
+
+v17 changes   (2/10/2026)
     new "engineering" display format, new "digits" command, and
     renaming of existing display formats result in UI breakage:
     "precision", "decimals", "k", and "K" commands are gone, replaced
