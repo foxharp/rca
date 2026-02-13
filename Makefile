@@ -59,6 +59,7 @@ docs/rca-help.html.new: rca
 #   make tag clean all versioncheck
 #   make htmldiff   # check html files
 #   make htmlmv
+#   update CHANGES file
 #   git commit      # "new man/help html files for vNN"
 
 release: tag clean all versioncheck
