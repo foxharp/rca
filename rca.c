@@ -1904,7 +1904,7 @@ print_floating(ldouble n, int format)
 		 * canonicalize the mantissa differently.  */
 
 		// 1 digit per 4 bits, and 1 of them is before the decimal
-		fprintf(mp.fp, "%.*La\n", (LDBL_MANT_DIG + 3)/4 - 1, n);
+		fprintf(mp.fp, "%.*La", (LDBL_MANT_DIG + 3)/4 - 1, n);
 
 	} else if (format == 'F' && float_specifier[0] == 'a') {
 		char *printfmt;
@@ -3546,7 +3546,6 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 	if (*p == '0' && (*(p + 1) == 'x' || *(p + 1) == 'X')) {
 		// hex, leading "0x"
 		long double dd;
-		p += 2;
 		if (raw_hex_input_ok) {
 			// will accept floating hex like 0xc.90fdaa22168c23cp-2
 			dd = strtold(p, nextp);
