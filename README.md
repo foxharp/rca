@@ -11,7 +11,7 @@ _rca_ is simple yet versatile
 
  - It has the trig and math functions of a scientific calculator
 
- - It has the word width selection and bitwise operators of a<br>
+ - It has the word width selection and bitwise operators of a
    programmer's calculator
 
  - It supports variables
@@ -20,8 +20,8 @@ _rca_ is simple yet versatile
 
  - It's written in C, and maintained in a single source file
 
- - _rca_ isn't an an arbitrary precision calculator like __dc__ or __bc__.<br>
-   It's a convenient, non-programmable, desktop calculator, for<br>
+ - _rca_ isn't an an arbitrary precision calculator like __dc__ or __bc__.
+   It's a convenient, non-programmable, desktop calculator, for
    typical one-off, everyday problems.
 
 The
@@ -32,5 +32,5 @@ have all the details.
 
 _rca_ is hosted at [github](https://github.com/foxharp/rca).
 
-The license can be found in the source or viewed with _rca_'s<br>
+The license can be found in the source or viewed with _rca_'s
 "license" command.  (It's BSD-2-Clause.)
