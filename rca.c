@@ -313,6 +313,21 @@ detect_epsilon(void)
 }
 
 
+ldouble
+round_using_printf(ldouble x)
+{
+    if (!isfinite(x) || x == 0.0L)
+        return x;
+
+    char buf[128];
+
+    /* Round to max_precision significant digits. */
+    snprintf(buf, sizeof buf, "%.*Lg", max_precision, x);
+
+    /* Convert back */
+    return strtold(buf, NULL);
+}
+
 /* try and take care of small floating point detritus, by snapping
  * numbers that are very close to integers and zero, and by rounding
  * to our max precision.
@@ -321,7 +336,7 @@ ldouble
 tweak_float(ldouble x)
 {
 
-	ldouble r, abs_x, tolerance, factor;
+	ldouble r, abs_x, tolerance;
 
 	if (!do_rounding)
 		return x;
@@ -348,12 +363,14 @@ tweak_float(ldouble x)
 		return r;
 	}
 
-	/* round to max_precision digits */
-	factor = powl(10L, max_precision - ceill(log10l(fabsl(x))));
-	r = roundl(x * factor) / factor;
-	if (x != r)
-		trace(("round %La (%.20Lg)\n"
-			"   to %La (%.20Lg)\n", x, x, r, r));
+	/* round to max_precision */
+	r = round_using_printf(x);
+	if (x != r) {
+		trace(( " rounded %La (%.*Lg)\n"
+			"      to %La (%.*Lg)\n",
+			x, max_precision+1, x,
+			r, max_precision+1, r));
+	}
 
 	return r;
 

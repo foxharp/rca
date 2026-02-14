@@ -109,9 +109,9 @@ cos
 lastx +
  90.9825
 frac
- 0.982548
+ 0.982547
 sto
- 0.982548
+ 0.982547
 1 i2mm
  25.4
 km2mi
@@ -138,7 +138,7 @@ h
  302.019602647756
 H
  Mode is hex (H).  Integer math with 20 bits.
- 0x0     # warning: accuracy lost, was 0.982547593562716898
+ 0x0     # warning: accuracy lost, was 0.982547456090956298
  0x12e     # warning: accuracy lost, was 302.019602647756157
 0xf00 |
  0xf2e
