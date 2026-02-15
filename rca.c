@@ -2591,6 +2591,30 @@ push_e(void)
 }
 
 opreturn
+push_epsilon(void)
+{
+	push(epsilon);
+	return GOODOP;
+}
+
+opreturn
+tweak(void)
+{
+	ldouble a;
+
+	if (!pop(&a))
+		return BADOP;
+
+	boolean r = do_rounding;
+	do_rounding = 1;
+
+	result_push(a);
+
+	do_rounding = r;
+	return GOODOP;
+}
+
+opreturn
 mark(void)
 {
 	ldouble n;
@@ -4494,6 +4518,8 @@ struct oper opers[] = {
 	{"state", printstate,	"Show calculator state" },
 	{"raw", printrawhex,	"Print x as raw floating hex" },
 	{"Raw", moderawhex,	"Switch to raw floating hex mode"},
+	{"epsilon", push_epsilon,"Push constant epsilon", Sym },
+	{"tweak", tweak,	"Push snapped/rounded value", 1, 30, 'R' },
 	{"rounding", rounding,	"Toggle snapping and rounding of floats" },
 	{"tracing", tracetoggle,"Set tracing level" },
 //	{"commands", commands,	"Dump raw command table" }, # use "11 tracing"
