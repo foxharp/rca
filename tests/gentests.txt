@@ -1,5 +1,5 @@
 
-0 rounding
+1 debug 0 rounding
  Float snapping/rounding is now off
 epsilon 10 * = _10eps
                                1.0842e-18
@@ -1146,8 +1146,23 @@ config
             autoprint       1
               degrees     * 0
             errorexit       0
+                debug     * 1
              rounding       1
               tracing       0
+ Starting from defaults, recreate with:
+    engineering  0 rightalign  0 degrees  1 debug
+
+0 debug config
+            F,D,H,O,B       F
+       auto,eng,fixed     * engineering
+               digits       6
+                width       64
+           separators       1
+           rightalign     * 0
+             zerofill       0
+            autoprint       1
+              degrees     * 0
+            errorexit       0
  Starting from defaults, recreate with:
     engineering  0 rightalign  0 degrees
 

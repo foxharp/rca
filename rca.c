@@ -496,7 +496,16 @@ toggler(boolean *control, char *descrip, char *yes, char *no)
 opreturn
 enable_errexit(void)
 {
-	return toggler(&exit_on_error,  "Exiting on errors and warnings ",
+	return toggler(&exit_on_error,  "Exiting on errors and warnings",
+		"enabled", "disabled");
+}
+
+int debug_enabled;
+
+opreturn
+debug(void)
+{
+	return toggler(&debug_enabled,  "Debug commands",
 		"enabled", "disabled");
 }
 
@@ -3419,11 +3428,6 @@ tracetoggle(void)
 	if (!pop(&wanttracing))
 		return BADOP;
 
-	if (wanttracing == 11) {
-		opreturn commands(void);
-		return commands();
-	}
-
 	// two levels currently, mostly for infix processing.
 	// 1 is just logs input and rpn tokens
 	// 2 is full shunting algorithm logging, plus also snapping/rounding
@@ -3684,6 +3688,10 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 			int matchlen;
 
 			if (!op->func) {
+				op++;
+				continue;
+			}
+			if (!debug_enabled && op->assoc == 'D') {
 				op++;
 				continue;
 			}
@@ -3966,7 +3974,8 @@ struct config {
 	{ "autoprint",		c_int, &autoprint },
 	{ "degrees",		c_int, &trig_degrees },
 	{ "errorexit",		c_int, &exit_on_error },
-	// { "Debug:", c_none },
+	{ "", c_none },
+	{ "debug",		c_int, &debug_enabled },
 	{ "rounding",		c_int, &do_rounding },
 	{ "tracing",		c_int, &tracing },
 	{ 0 }
@@ -4006,6 +4015,14 @@ config(void)
 	memfile_open(&rp);
 
 	while (cptr->command) {
+		if (!cptr->command[0]) {
+			if (!debug_enabled) {
+				break;
+			} else {
+				cptr++;
+				continue;
+			}
+		}
 		if (cptr->format == c_none) // Heading: only
 			p_printf(" %s", cptr->command);
 		else
@@ -4065,6 +4082,7 @@ precedence(void)
 {
 	oper *op;
 #define NUM_PRECEDENCE 34
+	static int odebug;
 	static int pass = 0;
 	static char assoc[NUM_PRECEDENCE];
 	static char *prec_ops[NUM_PRECEDENCE];
@@ -4077,6 +4095,12 @@ precedence(void)
 	       " All operators are left-associative, except for those\n"
 	       "  in rows marked 'R', which associate right to left.\n");
 
+	if (odebug != debug_enabled) {
+		bzero(assoc, sizeof(assoc));
+		bzero(prec_ops, sizeof(prec_ops));
+		pass = 0;
+	}
+
 	/* do single char commands first, then the rest, then never
 	 * regenerate the table again.  */
 	for ( ; pass < 2; pass++) {
@@ -4087,6 +4111,11 @@ precedence(void)
 			/* skip anything in the table that doesn't have
 			 * a name, a function, or a precedence */
 			if (!op->name[0] || !op->func || op->prec == 0) {
+				op++;
+				continue;
+			}
+
+			if (!debug_enabled && op->assoc == 'D') {
 				op++;
 				continue;
 			}
@@ -4116,12 +4145,8 @@ precedence(void)
 				strcat(prec_ops[op->prec], "+ -");
 				linelen[op->prec] += 4;
 			}
-			if (!assoc[op->prec]) {
+			if (!assoc[op->prec])
 				assoc[op->prec] = op->assoc;
-			} else {
-				if (assoc[op->prec] != op->assoc)
-					error(" error: associativity bug, op %s\n", op->name);
-			}
 			if (*prec_ops[op->prec])
 				strcat(prec_ops[op->prec], " ");
 			strcat(prec_ops[op->prec], op->name);
@@ -4150,6 +4175,8 @@ precedence(void)
 		}
 	}
 
+	odebug = debug_enabled;
+
 	return GOODOP;
 }
 
@@ -4169,13 +4196,13 @@ commands(void)
 		if (op->func ) {
 			int name_fmt;
 			if (lastop && lastop->func == op->func )
-				name_fmt = 10;
+				name_fmt = 11;
 			else
-				name_fmt = -10;
+				name_fmt = -11;
 
 			p_printf("%*s  %2d    %2d  %c   %s\n", name_fmt,
 				op->name, op->operands, op->prec,
-				op->assoc ? 'R' : ' ',
+				op->assoc ? op->assoc : ' ',
 				op->help ? op->help : "");
 		}
 		lastop = op;
@@ -4255,6 +4282,10 @@ help(void)
 	prevfunc = 0;
 
 	while (op->name) {
+		if (!debug_enabled && op->assoc == 'D') {
+			op++;
+			continue;
+		}
 		if (!*op->name) {
 			fprintf(fout, "\n");
 		} else {
@@ -4514,16 +4545,16 @@ struct oper opers[] = {
 #endif
 	{"mode", modeinfo,	"Display current mode parameters" },
 	{""},
-    {"Debug support:"},
-	{"state", printstate,	"Show calculator state" },
-	{"raw", printrawhex,	"Print x as raw floating hex" },
-	{"Raw", moderawhex,	"Switch to raw floating hex mode"},
-	{"epsilon", push_epsilon,"Push constant epsilon", Sym },
-	{"tweak", tweak,	"Push snapped/rounded value", 1, 30, 'R' },
-	{"rounding", rounding,	"Toggle snapping and rounding of floats" },
-	{"tracing", tracetoggle,"Set tracing level" },
-//	{"commands", commands,	"Dump raw command table" }, # use "11 tracing"
-	{""},
+    {"Debug support:", 0, 0, 0, 0, 'D'},
+	{"state", printstate,	"Show calculator state", 0, 0, 'D' },
+	{"raw", printrawhex,	"Print x as raw floating hex", 0, 0, 'D'},
+	{"Raw", moderawhex,	"Switch to raw floating hex mode", 0, 0, 'D'},
+	{"epsilon", push_epsilon,"Push constant epsilon", Sym, 0, 'D'},
+	{"tweak", tweak,	"Push snapped/rounded value", 1, 30, 'D'},
+	{"rounding", rounding,	"Toggle snapping and rounding of floats", 0, 0, 'D'},
+	{"tracing", tracetoggle,"Set tracing level", 0, 0, 'D'},
+	{"commands", commands,	"Show raw command table", 0, 0, 'D'},
+	{"", 0, 0, 0, 0, 'D'},
     {"Housekeeping:"},
 	{"?", help,		0 },
 	{"help", help,		"Show this list (using $PAGER, if set)" },
@@ -4533,6 +4564,7 @@ struct oper opers[] = {
 	{"q", quit,		0 },
 	{"exit", quit,		"Leave the calculator" },
 	{"errorexit", enable_errexit,	"Toggle exiting on error and warning" },
+	{"debug", debug,	"Toggle enabling of debug commands" },
 	{"license", license,	"Display the rca copyright and license." },
 	{"version", version,	"Show program version" },
 	{"#", help,		"Comment. The rest of the line will be ignored." },

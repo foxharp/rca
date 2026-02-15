@@ -4,7 +4,7 @@
 # q2l, l2q, xor, clearb, setb, precision, separators, e, pi
 # RPN expressions used where convenient.  Infix-only tests are wrapped in ( ... ).
 
-0 rounding
+1 debug 0 rounding
  Float snapping/rounding is now off
 epsilon 10 * = _10eps
                                1.0842e-18

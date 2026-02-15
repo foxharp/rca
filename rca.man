@@ -799,17 +799,7 @@ attempts to help by adjusting values pushed on the stack.  First,
 values within about 2e-18 (system dependent) of an integer are forced
 to that integer.  Then, values are decimal-rounded to
 .BR rca 's
-maximum precision (again, usually 18 digits).  This rounding/snapping
-behavior can be disabled with the
-.B 0 rounding
-command, but be warned:  simple equalities, like
-.B (1.2 * 3 == 3.6)
-may no longer hold true.  Using the
-.B r
-and
-.B R
-commands to print and work in raw floating hex mode (printf's "%a"
-format) can help show what's going on.
+maximum precision (again, usually 18 digits).
 
 .SH EXIT STATUS
 .B rca
