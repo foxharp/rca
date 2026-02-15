@@ -1,4 +1,12 @@
 
+0 rounding
+ Float snapping/rounding is now off
+epsilon 10 * = _10eps
+                               1.0842e-18
+epsilon 100 * = _100eps
+                               1.0842e-17
+1 rounding clear
+
 0 rightalign
  Right alignment of integer modes is now off
 1 1 +
@@ -830,9 +838,13 @@ clear
  trig functions will now use radians
 (tan(pi/2))
  nan
-(tan(pi/2 + 1.0842e-19))
+(tan(pi/2 + epsilon))
  nan
-(tan(pi/2 - 1.0842e-19))
+(tan(pi/2 + _10eps))
+ nan
+(tan(pi/2 - epsilon))
+ nan
+(tan(pi/2 - _10eps))
  nan
 (ln(0))
  -inf
