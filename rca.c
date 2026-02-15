@@ -3901,7 +3901,7 @@ gettoken(struct token *t)
 
 	if (*input_ptr == '\0') {	/* out of input */
 		t->type = EOL;
-		if (tracing) show_tok(t);
+		// if (tracing) show_tok(t);
 		input_ptr = NULL;
 		return 1;
 	}
