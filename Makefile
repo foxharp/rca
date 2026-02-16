@@ -135,7 +135,10 @@ gentest:
 # precision FP, so only it works under valgrind.
 optest:
 	egrep -v '^ ' tests/optests.txt | \
-		valgrind -q --leak-check=full ./rca 2>&1 | \
+		( RUNVG="valgrind -q --leak-check=full"; \
+		  which valgrind >/dev/null || RUNVG=; \
+		  $$RUNVG ./rca 2>&1 \
+		) | \
 		tee .test | diff -u tests/optests.txt -
 	@ echo test succeeded
 
