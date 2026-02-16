@@ -2386,6 +2386,8 @@ opreturn
 separators(void)
 {
 	if (!thousands_sep[0]) {
+		ldouble discard;
+		pop(&discard);
 		p_printf(" No thousands separator found in the "
 			"current locale. so numeric separators are disabled\n");
 		digitseparators = 0;
@@ -4344,6 +4346,9 @@ locale_init(void)
 	if (!thousands_sep_input[0]) {
 		if (strcmp(decimal_pt, ".") == 0)
 			thousands_sep_input = ",";
+	}
+	if (!thousands_sep[0]) {
+		digitseparators = 0;
 	}
 
 	/* fetch the currency symbol.  default to '$' */
