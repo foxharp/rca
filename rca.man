@@ -795,11 +795,14 @@ to decimal conversions, to change values in obvious ways.  Something
 that should be 0 may instead have a very tiny value, or two numbers which
 should be equal may differ by an insignificant amount.
 .B rca
-attempts to help by adjusting values pushed on the stack.  First,
-values within about 2e-18 (system dependent) of an integer are forced
-to that integer.  Then, values are decimal-rounded to
+helps by adjusting displayed values:  first, values very close
+to an integer are forced to that integer.  Then,
+values are rounded to
 .BR rca 's
-maximum precision (again, usually 18 digits).
+maximum precision (again, usually 18 digits).  The internal representation
+of these values remains unchanged --
+.I only
+the printed output is affected.
 
 .SH EXIT STATUS
 .B rca

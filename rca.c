@@ -313,67 +313,61 @@ detect_epsilon(void)
 }
 
 
-ldouble
-round_using_printf(ldouble x)
+long double
+snap_integer(long double x)
 {
-    if (!isfinite(x) || x == 0.0L)
-        return x;
+	if (!isfinite(x))
+		return x;
 
-    char buf[128];
+	/* "unit in the last place" is the distance between
+	 * representable floats at at the magnitude of x.  we use this
+	 * to choose the "snapping region" (tolerance) when deciding
+	 * to turn x into the closest integer */
+	long double ulp = fabsl(x - nextafterl(x, INFINITY));
 
-    /* Round to max_precision significant digits. */
-    snprintf(buf, sizeof buf, "%.*Lg", max_precision, x);
+	long double r = roundl(x);
 
-    /* Convert back */
-    return strtold(buf, NULL);
+	/* is the closest integer within 2 x ULP ? */
+	if (fabsl(x - r) <= (2.0L * ulp))
+		return r;
+
+	return x;
 }
 
 /* try and take care of small floating point detritus, by snapping
- * numbers that are very close to integers and zero, and by rounding
+ * numbers that are very close to integers, and by rounding
  * to our max precision.
  */
 ldouble
-tweak_float(ldouble x)
+tweak(ldouble x)
 {
 
-	ldouble r, abs_x, tolerance;
-
-	if (!do_rounding)
+	if (!do_rounding || x == 0.0L || !isfinite(x))
 		return x;
 
-	if (x == 0.0L || x == -0.0)
-		return x;
+	ldouble s = snap_integer(x);
+	if (x != s)
+		return s;
 
-	if (!isfinite(x))
-		return x;	/* NaN, +Inf, -Inf pass through */
+	/* use printf to round to max_precision significant digits.
+	 * it's as good as any other method, and we don't particularly
+	 * care about speed.  */
+	char buf[128];
+	snprintf(buf, sizeof buf, "%.*Lg", max_precision, x);
 
-	abs_x = fabsl(x);
+	return strtold(buf, NULL);
+}
 
-	/* snap to integer */
-	/* scale tolerance by magnitude.  20 * epsilon is about 2e-18 */
-	tolerance = epsilon * 20L;
-	if (abs_x > 1.0L)
-		tolerance *= abs_x;
-
-	r = roundl(x);
-	if (fabsl(x - r) <= tolerance) {
-		if (x != r)
-			trace(("snap %La (%.20Lg)\n"
-				"   to %La (%.20Lg)\n", x, x, r, r));
-		return r;
-	}
-
-	/* round to max_precision */
-	r = round_using_printf(x);
-	if (x != r) {
-		trace(( " rounded %La (%.*Lg)\n"
-			"      to %La (%.*Lg)\n",
-			x, max_precision+1, x,
-			r, max_precision+1, r));
-	}
-
-	return r;
-
+/* we snap/round any display of a float, and the operands of any
+ * comparison between floats.  cmp_tweak() differs from tweak() only
+ * because we don't want tracing every time we display a number.  */
+ldouble
+cmp_tweak(ldouble x)
+{
+	trace(("cmp_tweak got %.*Lg (%La) ...\n", max_precision, x, x));
+	x = tweak(x);
+	trace(("     returned %.*Lg (%La)\n", max_precision, x, x));
+	return(x);
 }
 
 long long
@@ -396,7 +390,7 @@ push(ldouble n)
 
 	if (floating_mode(mode) || !isfinite(n)) {
 		p->val = n;
-		trace((" pushed %Lg\n", n));
+		trace((" pushed %La (%Lg)\n", n, n));
 	} else {
 		p->val = sign_extend((long long)n & int_mask);
 		trace((" pushed masked/extended %lld/0x%llx\n",
@@ -426,15 +420,6 @@ lpush(long long l)
 	stack_count++;
 }
 
-void
-result_push(ldouble n)
-{
-	if (isfinite(n))
-		n = tweak_float(n);
-	push(n);
-}
-
-
 boolean
 peek(ldouble *f)
 {
@@ -457,7 +442,7 @@ pop(ldouble *f)
 	}
 	*f = p->val;
 	stack = p->next;
-	trace((" popped  %Lg\n", p->val));
+	trace((" popped %La (%Lg)\n", *f, *f));
 	free(p);
 	stack_count--;
 
@@ -535,7 +520,7 @@ add(void)
 	if (pop(&b)) {
 		if (pop(&a)) {
 			if (floating_mode(mode) || !are_finite(a,b)) {
-				result_push(a + b);
+				push(a + b);
 			} else {
 				push((long long)a + (long long)b);
 			}
@@ -555,7 +540,7 @@ subtract(void)
 	if (pop(&b)) {
 		if (pop(&a)) {
 			if (floating_mode(mode) || !are_finite(a,b)) {
-				result_push(a - b);
+				push(a - b);
 			} else {
 				push((long long)a - (long long)b);
 			}
@@ -575,7 +560,7 @@ multiply(void)
 	if (pop(&b)) {
 		if (pop(&a)) {
 			if (floating_mode(mode) || !are_finite(a,b)) {
-				result_push(a * b);
+				push(a * b);
 			} else {
 				push((long long)a * (long long)b);
 			}
@@ -595,7 +580,7 @@ divide(void)
 	if (pop(&b)) {
 		if (pop(&a)) {
 			if (floating_mode(mode) || !are_finite(a,b)) {
-				result_push(a / b);
+				push(a / b);
 			} else {
 				push((long long)a / (long long)b);
 			}
@@ -615,7 +600,7 @@ modulo(void)
 	if (pop(&b)) {
 		if (pop(&a)) {
 			if (floating_mode(mode) || !are_finite(a,b)) {
-				result_push(fmodl(a,b));
+				push(fmodl(a,b));
 			} else {
 				push((long long)a % (long long)b);
 			}
@@ -646,7 +631,7 @@ y_to_the_x(void)
 	if (pop(&b)) {
 		if (pop(&a)) {
 			if (floating_mode(mode) || !are_finite(a,b)) {
-				result_push(powl(a, b));
+				push(powl(a, b));
 			} else {
 				push(int_pow((long long)a, (long long)b));
 			}
@@ -664,7 +649,7 @@ e_to_the_x(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		result_push(expl(a));
+		push(expl(a));
 		lastx = a;
 		return GOODOP;
 	}
@@ -1077,7 +1062,7 @@ recip(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		result_push(1.0 / a);
+		push(1.0 / a);
 		return GOODOP;
 	}
 	return BADOP;
@@ -1089,7 +1074,7 @@ squarert(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		result_push(sqrtl(a));
+		push(sqrtl(a));
 		return GOODOP;
 	}
 	return BADOP;
@@ -1159,7 +1144,7 @@ sine(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		result_push(sinl(user_angle_to_radians(a)));
+		push(sinl(user_angle_to_radians(a)));
 		lastx = a;
 		return GOODOP;
 	}
@@ -1175,7 +1160,7 @@ asine(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		result_push(radians_to_user_angle(asinl(a)));
+		push(radians_to_user_angle(asinl(a)));
 		lastx = a;
 		return GOODOP;
 	}
@@ -1191,7 +1176,7 @@ cosine(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		result_push(cosl(user_angle_to_radians(a)));
+		push(cosl(user_angle_to_radians(a)));
 		lastx = a;
 		return GOODOP;
 	}
@@ -1207,7 +1192,7 @@ acosine(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		result_push(radians_to_user_angle(acosl(a)));
+		push(radians_to_user_angle(acosl(a)));
 		lastx = a;
 		return GOODOP;
 	}
@@ -1223,11 +1208,11 @@ tangent(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		// tan() goes undefined at +/-90
-		if (fmodl(tweak_float(user_angle_to_degrees(a)) - 90, 180) == 0)
-			result_push(NAN);
+		// tan() goes undefined at +/-90,
+		if (fmodl((user_angle_to_degrees(a)) - 90, 180) == 0)
+			push(NAN);
 		else
-			result_push(tanl(user_angle_to_radians(a)));
+			push(tanl(user_angle_to_radians(a)));
 		lastx = a;
 		return GOODOP;
 	}
@@ -1244,7 +1229,7 @@ atangent(void)
 		return trig_no_sense();
 
 	if (pop(&a)) {
-		result_push(radians_to_user_angle(atanl(a)));
+		push(radians_to_user_angle(atanl(a)));
 		lastx = a;
 		return GOODOP;
 	}
@@ -1261,7 +1246,7 @@ atangent2(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			result_push(radians_to_user_angle(atan2l(a,b)));
+			push(radians_to_user_angle(atan2l(a,b)));
 			lastx = b;
 			return GOODOP;
 		}
@@ -1282,7 +1267,7 @@ log_worker(int which)
 		case 2: l = log2l(n); break;
 		case 10:l = log10l(n); break;
 		}
-		result_push(l);
+		push(l);
 		lastx = n;
 		return GOODOP;
 	}
@@ -1318,9 +1303,9 @@ fraction(void)
 			return GOODOP;
 		}
 		if (a > 0)
-			result_push(a - floorl(a));
+			push(a - floorl(a));
 		else
-			result_push(a - ceill(a));
+			push(a - ceill(a));
 		lastx = a;
 		return GOODOP;
 	}
@@ -1338,9 +1323,9 @@ integer(void)
 			return GOODOP;
 		}
 		if (a > 0)
-			result_push(floorl(a));
+			push(floorl(a));
 		else
-			result_push(ceill(a));
+			push(ceill(a));
 		lastx = a;
 		return GOODOP;
 	}
@@ -1354,7 +1339,7 @@ logical_and(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			push(a && b);
+			push(cmp_tweak(a) && cmp_tweak(b));
 			lastx = b;
 			return GOODOP;
 		}
@@ -1370,7 +1355,7 @@ logical_or(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			push(a || b);
+			push(cmp_tweak(a) || cmp_tweak(b));
 			lastx = b;
 			return GOODOP;
 		}
@@ -1386,7 +1371,7 @@ is_eq(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			push(a == b);
+			push(cmp_tweak(a) == cmp_tweak(b));
 			lastx = b;
 			return GOODOP;
 		}
@@ -1402,7 +1387,7 @@ is_neq(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			push(a != b);
+			push(cmp_tweak(a) != cmp_tweak(b));
 			lastx = b;
 			return GOODOP;
 		}
@@ -1418,7 +1403,7 @@ is_lt(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			push(a < b);
+			push(cmp_tweak(a) < cmp_tweak(b));
 			lastx = b;
 			return GOODOP;
 		}
@@ -1434,7 +1419,7 @@ is_le(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			push(a <= b);
+			push(cmp_tweak(a) <= cmp_tweak(b));
 			lastx = b;
 			return GOODOP;
 		}
@@ -1450,7 +1435,7 @@ is_gt(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			push(a > b);
+			push(cmp_tweak(a) > cmp_tweak(b));
 			lastx = b;
 			return GOODOP;
 		}
@@ -1466,7 +1451,7 @@ is_ge(void)
 
 	if (pop(&b)) {
 		if (pop(&a)) {
-			push(a >= b);
+			push(cmp_tweak(a) >= cmp_tweak(b));
 			lastx = b;
 			return GOODOP;
 		}
@@ -1481,7 +1466,7 @@ logical_not(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		push((a == 0) ? 1 : 0);
+		push((cmp_tweak(a) == 0) ? 1 : 0);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2044,6 +2029,7 @@ print_n(ldouble *np, int format, boolean conv)
 
 	if (floating_mode(format) || !isfinite(n)) {
 		char *pf;
+		n = tweak(n);
 		pf = print_floating(n, format);
 		align = 0;
 		if (rightalignment) {
@@ -2275,6 +2261,7 @@ printstate(void)
 	p_printf("   LDBL_MANT_DIG: %u\n", LDBL_MANT_DIG);
 	p_printf("   LDBL_MAX: %.20Lg\n", LDBL_MAX);
 	p_printf("   LDBL_EPSILON is %Lg (%La)\n", LDBL_EPSILON, LDBL_EPSILON);
+	p_printf("   LDBL_DIG: %u\n", LDBL_DIG);
 	p_printf("  Calculated:\n");
 	p_printf("   detected epsilon is %Lg (%La)\n", epsilon, epsilon);
 	p_printf("\n");
@@ -2588,14 +2575,14 @@ recall(void)
 opreturn
 push_pi(void)
 {
-	result_push(pi);
+	push(pi);
 	return GOODOP;
 }
 
 opreturn
 push_e(void)
 {
-	result_push(e);
+	push(e);
 	return GOODOP;
 }
 
@@ -2607,7 +2594,7 @@ push_epsilon(void)
 }
 
 opreturn
-tweak(void)
+tweakit(void)
 {
 	ldouble a;
 
@@ -2617,9 +2604,10 @@ tweak(void)
 	boolean r = do_rounding;
 	do_rounding = 1;
 
-	result_push(a);
+	push(cmp_tweak(a));  // use cmp_tweak -- it does tracing
 
 	do_rounding = r;
+
 	return GOODOP;
 }
 
@@ -2722,10 +2710,7 @@ sum_worker(boolean do_sum)
 
 	stack_mark = 0;
 
-	if (floating_mode(mode))
-		result_push(do_sum ? tot : tot/n );
-	else
-		push(do_sum ? tot : (tot/n) );
+	push(do_sum ? tot : (tot/n) );
 
 	return r;
 }
@@ -2749,7 +2734,7 @@ units_in_mm(void)
 
 	if (pop(&a)) {
 		a *= 25.4;
-		result_push(a);
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2763,7 +2748,7 @@ units_mm_in(void)
 
 	if (pop(&a)) {
 		a /= 25.4;
-		result_push(a);
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2777,7 +2762,7 @@ units_ft_m(void)
 
 	if (pop(&a)) {
 		a /= 3.28084;
-		result_push(a);
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2791,7 +2776,7 @@ units_m_ft(void)
 
 	if (pop(&a)) {
 		a *= 3.28084;
-		result_push(a);
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2806,7 +2791,7 @@ units_F_C(void)
 	if (pop(&a)) {
 		a -= 32.0;
 		a /= 1.8;
-		result_push(a);
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2821,7 +2806,7 @@ units_C_F(void)
 	if (pop(&a)) {
 		a *= 1.8;
 		a += 32.0;
-		result_push(a);
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2835,7 +2820,7 @@ units_l_qt(void)
 
 	if (pop(&a)) {
 		a *= 1.05669;
-		result_push(a);
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2849,7 +2834,7 @@ units_qt_l(void)
 
 	if (pop(&a)) {
 		a /= 1.05669;
-		result_push(a);
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2863,7 +2848,7 @@ units_oz_g(void)
 
 	if (pop(&a)) {
 		a *= 28.3495;
-		result_push(a);
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2877,7 +2862,7 @@ units_g_oz(void)
 
 	if (pop(&a)) {
 		a /= 28.3495;
-		result_push(a);
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2891,7 +2876,7 @@ units_oz_ml(void)
 
 	if (pop(&a)) {
 		a *= 29.5735;
-		result_push(a);
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2905,7 +2890,7 @@ units_ml_oz(void)
 
 	if (pop(&a)) {
 		a /= 29.5735;
-		result_push(a);
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2919,7 +2904,7 @@ units_mi_km(void)
 
 	if (pop(&a)) {
 		a /= 0.6213712;
-		result_push(a);
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2933,7 +2918,7 @@ units_km_mi(void)
 
 	if (pop(&a)) {
 		a *= 0.6213712;
-		result_push(a);
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2947,7 +2932,7 @@ units_deg_rad(void)
 
 	if (pop(&a)) {
 		a = to_radians(a);
-		result_push(a);
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2961,7 +2946,7 @@ units_rad_deg(void)
 
 	if (pop(&a)) {
 		a = to_degrees(a);
-		result_push(a);
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -2978,7 +2963,7 @@ units_mpg_l100km(void)
 
 	if (pop(&a)) {
 		a = 235.214583 / a;
-		result_push(a);
+		push(a);
 		lastx = a;
 		return GOODOP;
 	}
@@ -4550,7 +4535,7 @@ struct oper opers[] = {
 	{"raw", printrawhex,	"Print x as raw floating hex", 0, 0, 'D'},
 	{"Raw", moderawhex,	"Switch to raw floating hex mode", 0, 0, 'D'},
 	{"epsilon", push_epsilon,"Push constant epsilon", Sym, 0, 'D'},
-	{"tweak", tweak,	"Push snapped/rounded value", 1, 30, 'D'},
+	{"tweak", tweakit,	"Push snapped/rounded value", 1, 30, 'D'},
 	{"rounding", rounding,	"Toggle snapping and rounding of floats", 0, 0, 'D'},
 	{"tracing", tracetoggle,"Set tracing level", 0, 0, 'D'},
 	{"commands", commands,	"Show raw command table", 0, 0, 'D'},
@@ -4661,7 +4646,7 @@ main(int argc, char *argv[])
 
 		switch (t->type) {
 		case NUMERIC:
-			result_push(t->val.val);
+			push(t->val.val);
 			break;
 		case VARIABLE:
 			dynamic_var(t);

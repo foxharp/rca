@@ -1,11 +1,11 @@
 
-1 debug 0 rounding
- Float snapping/rounding is now off
+1 debug
+ Debug commands enabled
 epsilon 10 * = _10eps
                                1.0842e-18
 epsilon 100 * = _100eps
                                1.0842e-17
-1 rounding clear
+clear
 
 0 rightalign
  Right alignment of integer modes is now off
@@ -117,9 +117,9 @@ cos
 lastx +
  90.9825
 frac
- 0.982547
+ 0.982548
 sto
- 0.982547
+ 0.982548
 1 i2mm
  25.4
 km2mi
@@ -146,7 +146,7 @@ h
  302.019602647756
 H
  Mode is hex (H).  Integer math with 20 bits.
- 0x0     # warning: accuracy lost, was 0.982547456090956298
+ 0x0     # warning: accuracy lost, was 0.982547593562716488
  0x12e     # warning: accuracy lost, was 302.019602647756157
 0xf00 |
  0xf2e
@@ -325,13 +325,13 @@ auto
 pi
  3.14159265358979324
 frac
- 0.14159265358979324
+ 0.141592653589793239
 pi
  3.14159265358979324
 chs
  -3.14159265358979324
 frac
- -0.14159265358979324
+ -0.141592653589793239
 pi
  3.14159265358979324
 int
@@ -839,13 +839,13 @@ clear
 (tan(pi/2))
  nan
 (tan(pi/2 + epsilon))
- nan
+ -7.49047e+18
 (tan(pi/2 + _10eps))
- nan
+ -9.01482e+17
 (tan(pi/2 - epsilon))
  nan
 (tan(pi/2 - _10eps))
- nan
+ 9.44181e+17
 (ln(0))
  -inf
 (ln(-1))
