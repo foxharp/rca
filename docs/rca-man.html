@@ -160,14 +160,15 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        of the above formats.  (Only display is affected:  the actual
        number of digits/bits stored and used in computation is
        unaffected.)  For <span style="font-weight:bold;">auto </span>and <span style="font-weight:bold;">eng </span>formats, the number configured with
-       <span style="font-weight:bold;">digits </span>is simply the number of digits either format will show.
+       <span style="font-weight:bold;">digits </span>is simply the number of digits either format will display.
        For <span style="font-weight:bold;">fixed </span>format, it's the number of digits shown after the
        decimal point.
 
        <span style="font-weight:bold;">digits </span>will allow setting a value as low as 0, since this can be
        useful with <span style="font-weight:bold;">fixed </span>format (to print no fractional part whatever).
        The <span style="font-weight:bold;">auto </span>and <span style="font-weight:bold;">eng </span>formats have their own minimums (1, and 3,
-       respectively) which they enforce silently.
+       respectively) which they enforce silently.  Requesting -1 digits
+       will choose the system maximum.
 
        The maximum allowed <span style="font-weight:bold;">digits </span>value is based on the number of
        significant digits the system can support.  (That's 18 digits for
@@ -191,7 +192,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
 
        By default the width of <span style="font-weight:bold;">rca</span>'s integers is the maximum supported,
        but it can be configured to as few as 2 bits using the <span style="font-weight:bold;">width </span>(or
-       <span style="font-weight:bold;">w</span>) command.  Requesting a width of 0 will choose the maximum
+       <span style="font-weight:bold;">w</span>) command.  Requesting a width of -1 will choose the maximum
        width.  The maximum supported width will be either the width of
        the <span style="font-style:italic;">long</span> <span style="font-style:italic;">long</span> data type, or of the <span style="font-style:italic;">long</span> <span style="font-style:italic;">double</span> mantissa, whichever
        is smaller.  This results in 64 bits on most PC architectures in
@@ -284,9 +285,11 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
 
               <span style="font-weight:bold;">digits </span>chooses the number of digits used by the floating
               point formats.  The maximum is the number of significant
-              digits supported by the system.  (Startup:  6)
+              digits supported by the system.  Selecting a count of -1
+              will select the system maxiumum.  (Startup:  6)
 
               <span style="font-weight:bold;">width </span>(or <span style="font-weight:bold;">w</span>) chooses the size of integers, in bits.
+              Selecting a size of -1 will select the system maxiumum.
               (Startup: system maximum, likely 64).
 
               <span style="font-weight:bold;">separators </span>(or <span style="font-weight:bold;">s</span>) toggles whether output will include
@@ -469,15 +472,11 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        binary to decimal conversions, to change values in obvious ways.
        Something that should be 0 may instead have a very tiny value, or
        two numbers which should be equal may differ by an insignificant
-       amount.  <span style="font-weight:bold;">rca </span>attempts to help by adjusting values pushed on the
-       stack.  First, values within about 2e-18 (system dependent) of an
-       integer are forced to that integer.  Then, values are decimal-
-       rounded to <span style="font-weight:bold;">rca</span>'s maximum precision (again, usually 18 digits).
-       This rounding/snapping behavior can be disabled with the <span style="font-weight:bold;">0</span>
-       <span style="font-weight:bold;">rounding </span>command, but be warned:  simple equalities, like <span style="font-weight:bold;">(1.2 * 3</span>
-       <span style="font-weight:bold;">== 3.6) </span>may no longer hold true.  Using the <span style="font-weight:bold;">r </span>and <span style="font-weight:bold;">R </span>commands to
-       print and work in raw floating hex mode (printf's &quot;%a&quot; format) can
-       help show what's going on.
+       amount.  <span style="font-weight:bold;">rca </span>helps by adjusting displayed values:  first, values
+       very close to an integer are forced to that integer.  Then, values
+       are rounded to <span style="font-weight:bold;">rca</span>'s maximum precision (again, usually 18 digits).
+       The internal representation of these values remains unchanged --
+       <span style="font-style:italic;">only</span> the printed output is affected.
 
 <span style="font-weight:bold;">EXIT STATUS</span>
        <span style="font-weight:bold;">rca </span>will normally exit with status 0 or 1.  To satisfy normal
@@ -542,7 +541,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        Paul Fox created <span style="font-weight:bold;">rca </span>(formerly called &quot;ca&quot;) very slowly over a
        span of decades, starting in 1993.
 
-                                version v18                        <span style="font-style:italic;">rca</span>(1)
+                                version v19                        <span style="font-style:italic;">rca</span>(1)
 </pre>
 </body>
 </html>
