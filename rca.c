@@ -109,9 +109,13 @@ usage(void)
 	exit(1);
 }
 
-/* debugging support, runtime controllable */
+/* debug logging support, runtime controllable */
 int tracing;
-#define trace(a)  do {if (tracing > 1) printf a ;} while(0)
+#define trace(lev,a)  do {if (tracing & (lev)) printf a ;} while(0)
+#define TOK 1
+#define EXEC 2
+#define SHUNT 4
+char *tracenames[] = {"tokens", "execution", "shunting", 0};
 
 typedef int boolean;
 
@@ -364,9 +368,9 @@ tweak(ldouble x)
 ldouble
 cmp_tweak(ldouble x)
 {
-	trace(("cmp_tweak got %.*Lg (%La) ...\n", max_precision, x, x));
+	trace(EXEC,(" tweaking got %.*Lg (%La) ...\n", max_precision, x, x));
 	x = tweak(x);
-	trace(("     returned %.*Lg (%La)\n", max_precision, x, x));
+	trace(EXEC,("     returned %.*Lg (%La)\n", max_precision, x, x));
 	return(x);
 }
 
@@ -390,10 +394,10 @@ push(ldouble n)
 
 	if (floating_mode(mode) || !isfinite(n)) {
 		p->val = n;
-		trace((" pushed %La (%Lg)\n", n, n));
+		trace(EXEC,(" pushed %La (%Lg)\n", n, n));
 	} else {
 		p->val = sign_extend((long long)n & int_mask);
-		trace((" pushed masked/extended %lld/0x%llx\n",
+		trace(EXEC,(" pushed masked/extended %lld/0x%llx\n",
 			(long long)(p->val), (long long)(p->val)));
 	}
 
@@ -412,7 +416,7 @@ lpush(long long l)
 		memory_failure();
 
 	p->val = sign_extend(l & int_mask);
-	trace((" pushed masked/extended long long %lld/0x%llx\n",
+	trace(EXEC,(" pushed masked/extended long long %lld/0x%llx\n",
 		(long long)(p->val), (long long)(p->val)));
 
 	p->next = stack;
@@ -442,7 +446,7 @@ pop(ldouble *f)
 	}
 	*f = p->val;
 	stack = p->next;
-	trace((" popped %La (%Lg)\n", *f, *f));
+	trace(EXEC,(" popped %La (%Lg)\n", *f, *f));
 	free(p);
 	stack_count--;
 
@@ -500,6 +504,7 @@ assignment(void)
 	/* This gets decremented with every RPN token executed.  If a
 	 * variable is the very next token, we'll do a write to it
 	 * instead of a read. */
+	trace(EXEC,( " enabling assignment\n"));
 	variable_write_enable = 2;
 	return GOODOP;
 }
@@ -3078,8 +3083,11 @@ sprint_token(char *s, int slen, token *t)
 }
 
 void
-show_tok(token *t)
+trace_show_tok(int lev, token *t)
 {
+	if ((tracing & lev) == 0)
+		return;
+
 	static char buf[128];
 
 	sprint_token(buf, sizeof(buf), t);
@@ -3087,8 +3095,11 @@ show_tok(token *t)
 }
 
 void
-stack_dump(token **tstackp)
+trace_stack_dump(int lev, token **tstackp)
 {
+	if ((tracing & lev) == 0)
+		return;
+
 	token *t = *tstackp;
 
 	printf("%s: ", stackname(tstackp));
@@ -3096,17 +3107,10 @@ stack_dump(token **tstackp)
 		printf("<empty>");
 	else
 		while (t) {
-			show_tok(t);
+			trace_show_tok(0xff, t);
 			t = t->next;
 		}
 	printf("\n");
-}
-
-void
-tdump(token **tstackp)
-{
-	if (tracing > 1)
-		stack_dump(tstackp);
 }
 
 token open_paren_token, chsign_token, nop_token;
@@ -3206,8 +3210,7 @@ open_paren(void)
 	tclear(&out_stack);
 	tclear(&oper_stack);
 
-	if (tracing)
-		printf("infix tokens: ");
+	trace(TOK,("\n infix tokens: "));
 
 	// push the '(' token the user typed
 	tpush(&oper_stack, &open_paren_token);
@@ -3216,9 +3219,9 @@ open_paren(void)
 	pt = &prevtok;
 
 	while (1) {
-		trace(("\n"));
-		tdump(&oper_stack);
-		tdump(&out_stack);
+		trace(SHUNT,("\n"));
+		trace_stack_dump(SHUNT,&oper_stack);
+		trace_stack_dump(SHUNT,&out_stack);
 
 		while (isspace(*input_ptr))
 			input_ptr++;
@@ -3252,6 +3255,7 @@ open_paren(void)
 			}
 			/* do nothing now.  we need to know what comes
 			 * next:  "r1 = 3" is very different than "r1 + 3" */
+			trace(SHUNT, (" delaying push of %s\n", t->val.varname));
 			break;
 		case NUMERIC:
 		case SYMBOLIC:
@@ -3325,10 +3329,10 @@ open_paren(void)
 					!strchr(" \t\v\r\n)+-", *input_ptr)) {
 					if (t_op->func == subtract) {
 						t = &chsign_token;
-						trace((" subtract is now chs\n"));
+						trace(TOK,(" subtract is now chs\n"));
 					} else {  // add
 						t = &nop_token;
-						trace((" add is now nop\n"));
+						trace(TOK,(" add is now nop\n"));
 					}
 					goto unary;
 				}
@@ -3372,7 +3376,7 @@ open_paren(void)
 		prevtok = *t;
 
 	}
-	trace(("\nfinished reading expression\n"));
+	trace(EXEC,("\n finished reading expression\n"));
 
 	if (paren_count) {
 		error(" error: missing parentheses\n");
@@ -3387,11 +3391,9 @@ open_paren(void)
 		tpush(&infix_rpn_queue, t);
 	}
 
-	if (tracing) {
-		trace(("\nmerged and reversed:\n"));
-		printf("\n");
-		stack_dump(&infix_rpn_queue);
-	}
+	trace(SHUNT,("\n merged and reversed:\n"));
+	trace(TOK|SHUNT,("\n"));
+	trace_stack_dump(TOK|SHUNT,&infix_rpn_queue);
 
 	return GOODOP;
 
@@ -3415,12 +3417,16 @@ tracetoggle(void)
 	if (!pop(&wanttracing))
 		return BADOP;
 
-	// two levels currently, mostly for infix processing.
-	// 1 is just logs input and rpn tokens
-	// 2 is full shunting algorithm logging, plus also snapping/rounding
+	// tracing is a bitmap of desired "feature" trace
 	tracing = wanttracing;
 
-	p_printf(" internal tracing is now level %d\n", tracing);
+	p_printf(" internal tracing now set to %d", tracing);
+	for (int i = 0; tracenames[i]; i++) {
+		if (tracing & (1 << i))
+			p_printf("  %s(%d)", tracenames[i], (1 << i));
+	}
+	p_printf("\n");
+
 	return GOODOP;
 }
 
@@ -3530,8 +3536,11 @@ dynamic_var(token *t)
 	/* if we were preceded by '=', set our value */
 	if (variable_write_enable) {
 		ldouble a;
-		if (!peek(&a))
+		if (!peek(&a)) {
+			trace(EXEC,( " nothing to assign\n"));
 			return 0;
+		}
+		trace(EXEC,( " assigning %Lg to %s\n", a, v->name));
 		v->value = a;
 	} else {
 		push(v->value);
@@ -3703,7 +3712,7 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 			return 0;
 		}
 	}
-	if (tracing) show_tok(t);
+	trace_show_tok(TOK, t);
 	return 1;
 }
 
@@ -3920,7 +3929,7 @@ gettoken(struct token *t)
 
 	if (*input_ptr == '\0') {	/* out of input */
 		t->type = EOL;
-		// if (tracing) show_tok(t);
+		// trace_show_tok(TOK, t);  // disabled:  too chatty
 		input_ptr = NULL;
 		return 1;
 	}
@@ -4596,7 +4605,7 @@ do_autoprint(token *pt)
 		return;
 	}
 
-	if (tracing)  // try not to mix our output with debug lines
+	if (tracing)  // separate any debug output from "real" output
 		putchar('\n');
 
 	print_top(mode);
@@ -4651,14 +4660,16 @@ main(int argc, char *argv[])
 
 		switch (t->type) {
 		case NUMERIC:
+			trace(EXEC,( " numeric %Lg\n", t->val.val));
 			push(t->val.val);
 			break;
 		case VARIABLE:
+			trace(EXEC,( " variable %s\n", t->val.varname));
 			dynamic_var(t);
 			break;
 		case SYMBOLIC:
 		case OP:
-			trace(( "invoking %s\n", t->val.oper->name));
+			trace(EXEC,( " invoking %s\n", t->val.oper->name));
 			if (t->val.oper->func == quit)
 				pending_show();
 			else
