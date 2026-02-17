@@ -257,7 +257,7 @@ and
 .B eng
 formats, the number configured with
 .B digits
-is simply the number of digits either format will show.  For
+is simply the number of digits either format will display.  For
 .B fixed
 format, it's the number of digits shown after the decimal point.
 .P
@@ -269,7 +269,7 @@ format (to print no fractional part whatever).  The
 and
 .B eng
 formats have their own minimums (1, and 3, respectively) which they
-enforce silently.
+enforce silently.  Requesting -1 digits will choose the system maximum.
 .P
 The maximum allowed
 .B digits
@@ -329,7 +329,7 @@ few as 2 bits using the
 .B width
 (or
 .BR w )
-command.  Requesting a width of 0 will choose the maximum width.  The
+command.  Requesting a width of -1 will choose the maximum width.  The
 maximum supported width will be either the width of the
 .I long long
 data type, or of the
@@ -483,13 +483,16 @@ scientific notation.
 .P
 .B digits
 chooses the number of digits used by the floating point formats.  The
-maximum is the number of significant digits supported by the
-system.  (Startup:  6)
+maximum is the number of significant digits supported by the system.
+Selecting a count of -1 will select the system maxiumum.
+(Startup:  6)
 .P
 .B width
 (or
 .BR w )
-chooses the size of integers, in bits. (Startup: system maximum, likely 64).
+chooses the size of integers, in bits.
+Selecting a size of -1 will select the system maxiumum.
+(Startup: system maximum, likely 64).
 .P
 .B separators
 (or

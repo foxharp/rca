@@ -1133,7 +1133,7 @@ chs
 recip
                               -3.14159
 clear
-0w 1s 0right
+-1w 1s 0right
  Right alignment of integer modes is now off
 config
             F,D,H,O,B       F

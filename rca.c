@@ -2452,15 +2452,14 @@ digits(void)
 	if (!pop(&digits))
 		return BADOP;
 
-	float_digits = abs((int)digits);
-
 	// but it can't be greater than our maximum precision
-	if (float_digits > max_precision) {
-		float_digits = max_precision;
+	if (digits > max_precision || digits < 0) {
+		digits = max_precision;
 		limited = "the maximum of ";
-	} else if (float_digits < 0) {
-		float_digits = 0;
 	}
+
+	// the 3 formats (auto/fixed/eng) may set their own mimimums
+	float_digits = digits;
 
 	p_printf(" Floating formats configured for %s%d digit%s.\n", limited,
 		float_digits, float_digits == 1 ? "" : "s");
@@ -2520,7 +2519,7 @@ width(void)
 		return BADOP;
 
 	bits = n;
-	if (bits == 0) {
+	if (bits == -1) {
 		bits = max_int_width;
 	} else if (bits > max_int_width) {
 		bits = max_int_width;
