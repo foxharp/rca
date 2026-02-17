@@ -221,8 +221,7 @@ boolean autoprint = TRUE;
 /* informative feedback, which is only printed if the command generating
  * it is followed by a newline */
 int pending_enabled = 1;
-void pending_printf(const char *fmt, ...);
-#define p_printf pending_printf    // shorthand
+void p_printf(const char *fmt, ...);
 
 /* if true, will decorate numbers, like "1,333,444".  */
 boolean digitseparators = PRINTF_SEPARATORS;
@@ -339,8 +338,8 @@ snap_integer(long double x)
 }
 
 /* try and take care of small floating point detritus, by snapping
- * numbers that are very close to integers, and by rounding
- * to our max precision.
+ * numbers that are very close to integers, and by rounding to our max
+ * precision.
  */
 ldouble
 tweak(ldouble x)
@@ -502,10 +501,10 @@ opreturn
 assignment(void)
 {
 	/* This gets decremented with every RPN token executed.  If a
-	 * variable is the very next token, we'll do a write to it
-	 * instead of a read. */
-	trace(EXEC,( " enabling assignment\n"));
+	 * variable is the very next token, we'll write to it instead
+	 * of read.  */
 	variable_write_enable = 2;
+	trace(EXEC,( " enabling assignment\n"));
 	return GOODOP;
 }
 
@@ -662,9 +661,8 @@ e_to_the_x(void)
 }
 
 /* This is poorly named.  The goal it to report whether the two
- * arguments are both finite (i.e., useful) to an operation, and if
- * not, to propagate the either nan, or inf, in that order, as the
- * result of the operation.  */
+ * arguments are both finite (i.e., useful), and if not, to propagate
+ * the nan, or inf, in that order, as the final result of the operation.  */
 boolean
 bitwise_bothfinite(ldouble a, ldouble b)
 {
@@ -688,6 +686,7 @@ bitwise_bothfinite(ldouble a, ldouble b)
 	return 1;
 }
 
+/* check operands _and_ put them back on the stack if we can't proceed */
 boolean
 bitwise_operands_too_big(ldouble a, ldouble b)
 {
@@ -701,6 +700,7 @@ bitwise_operands_too_big(ldouble a, ldouble b)
 	return 0;
 }
 
+/* check operands _and_ put them back on the stack if we can't proceed */
 boolean
 bitwise_distance_negative(char *which, ldouble a, ldouble b)
 {
@@ -713,6 +713,7 @@ bitwise_distance_negative(char *which, ldouble a, ldouble b)
 	return 0;
 }
 
+/* check operand _and_ put it back on the stack if we can't proceed */
 boolean
 bitwise_operand_too_big(ldouble a)
 {
@@ -1625,7 +1626,7 @@ pending_show(void)
 }
 
 void
-pending_printf(const char *fmt, ...)
+p_printf(const char *fmt, ...)  // short for pending_printf()
 {
 	va_list ap;
 
@@ -2307,12 +2308,12 @@ showmode(void)
 	p_printf(" Mode is %s (%c). ", mode2name(), mode);
 
 	if (mode == 'F') {
-		if (float_specifier[0] == 'f') {
+		if (float_specifier[0] == 'f') { // 'f'ixed
 			/* float_digits == 7 gives:  123.4560000  */
 			p_printf(" Showing %u digits after the decimal"
 				" in %s format.\n",
 				float_digits, float_specifier);
-		} else {	/* 'g', 'e' */
+		} else {	/* 'a'uto..., 'e'ng... */
 			/* float_digits == 7 gives:  123.4560  */
 			p_printf(" Showing %u digits of total precision"
 				" in %s format.\n",
@@ -3254,7 +3255,8 @@ open_paren(void)
 			}
 			/* do nothing now.  we need to know what comes
 			 * next:  "r1 = 3" is very different than "r1 + 3" */
-			trace(SHUNT, (" delaying push of %s\n", t->val.varname));
+			trace(SHUNT, (" delaying classification of %s\n",
+					t->val.varname));
 			break;
 		case NUMERIC:
 		case SYMBOLIC:
@@ -3928,7 +3930,7 @@ gettoken(struct token *t)
 
 	if (*input_ptr == '\0') {	/* out of input */
 		t->type = EOL;
-		// trace_show_tok(TOK, t);  // disabled:  too chatty
+		// trace_show_tok(TOK, t);  // trace disabled:  too chatty
 		input_ptr = NULL;
 		return 1;
 	}
