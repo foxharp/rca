@@ -676,6 +676,28 @@ auto
  -inf
 -2 log10 = _nan
  nan
+1 0 /
+ inf
+-1 0 /
+ -inf
+1 0 %
+ -nan
+-1 0 %
+ -nan
+clear D
+ Mode is signed decimal (D).  Integer math with 2 bits.
+1 0 /
+ inf
+-1 0 /
+ -inf
+1 0 %
+ -nan
+-1 0 %
+ -nan
+clear F
+ Mode is float (F).  Showing 6 digits of total precision in automatic format.
+
+
 #
 # The comments below are taken directly from the powl() man page.
 # The x and y they refer to, i.e. powl(x, y), are expressed in the
@@ -1166,20 +1188,150 @@ config
  Starting from defaults, recreate with:
     engineering  0 rightalign  0 degrees
 
+# test rotate across the sign bit
 H
  Mode is hex (H).  Integer math with 64 bits.
-5 2 ror
+5 1 ror
+ 0x8000,0000,0000,0002
+1 ror
  0x4000,0000,0000,0001
-3 rol
+1 rol
+ 0x8000,0000,0000,0002
+1 rol
+ 0x5
+1 rol
  0xa
 0xa ==
  0x1
 24w
  Integers are now 24 bits wide.
  0x1
-5 2 ror
+5 1 ror
+ 0x80,0002
+1 ror
  0x40,0001
-3 rol
+1 rol
+ 0x80,0002
+1 rol
+ 0x5
+1 rol
  0xa
 0xa ==
  0x1
+clear
+0x2
+1 ror
+ 0x1
+1 ror
+ 0x80,0000
+1 ror
+ 0x40,0000
+1 rol
+ 0x80,0000
+1 rol
+ 0x1
+1 rol
+ 0x2
+
+# test rolling 1 across sign bit
+-1 width
+ Integers are now 64 bits wide.
+ 0x2
+1 ror
+ 0x1
+1 ror
+ 0x8000,0000,0000,0000
+1 ror
+ 0x4000,0000,0000,0000
+1 rol
+ 0x8000,0000,0000,0000
+1 rol
+ 0x1
+1 rol
+ 0x2
+
+# test adding/subtracting 1 across sign bit
+1 -
+ 0x1
+1 -
+ 0x0
+1 -
+ 0xffff,ffff,ffff,ffff
+1 -
+ 0xffff,ffff,ffff,fffe
+1 -
+ 0xffff,ffff,ffff,fffd
+1 +
+ 0xffff,ffff,ffff,fffe
+1 +
+ 0xffff,ffff,ffff,ffff
+1 +
+ 0x0
+1 +
+ 0x1
+
+clear
+0x7fff,ffff,ffff,fffd
+1 +
+ 0x7fff,ffff,ffff,fffe
+1 +
+ 0x7fff,ffff,ffff,ffff
+1 +
+ 0x8000,0000,0000,0000
+1 +
+ 0x8000,0000,0000,0001
+1 +
+ 0x8000,0000,0000,0002
+1 -
+ 0x8000,0000,0000,0001
+1 -
+ 0x8000,0000,0000,0000
+1 -
+ 0x7fff,ffff,ffff,ffff
+1 -
+ 0x7fff,ffff,ffff,fffe
+1 -
+ 0x7fff,ffff,ffff,fffd
+
+# test shifting
+clear
+0x4000,0000,0000,0000
+1 <<
+ 0x8000,0000,0000,0000
+1 >>
+ 0x4000,0000,0000,0000
+1 <<
+ 0x8000,0000,0000,0000
+1 <<
+ 0x0
+
+# test bit-setting
+0
+ 0x0
+0x8000000000000000 |
+ 0x8000,0000,0000,0000
+push ~ &
+ 0x0
+0x8000000000000000
+push xor
+ 0x0
+0x8000000000000000 0x7fff,ffff,ffff,ffff xor
+ 0xffff,ffff,ffff,ffff
+0
+ 0x0
+63 setb
+ 0x8000,0000,0000,0000
+0x7fff,ffff,ffff,ffff ~ ==
+ 0x1
+0x8000,0000,0000,0000 chs
+ 0x8000,0000,0000,0000
+~
+ 0x7fff,ffff,ffff,ffff
+chs
+ 0x8000,0000,0000,0001
+recip
+ 0x0
+17 sqrt
+ 0x4
+-17 sqrt
+ -nan
