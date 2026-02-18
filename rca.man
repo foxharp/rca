@@ -328,7 +328,7 @@ integers is the maximum supported, but it can be configured to as
 few as 2 bits using the
 .B width
 (or
-.BR w )
+.BR bits )
 command.  Requesting a width of -1 will choose the maximum width.  The
 maximum supported width will be either the width of the
 .I long long
@@ -489,7 +489,7 @@ Selecting a count of -1 will select the system maxiumum.
 .P
 .B width
 (or
-.BR w )
+.BR bits )
 chooses the size of integers, in bits.
 Selecting a size of -1 will select the system maxiumum.
 (Startup: system maximum, likely 64).

@@ -4229,7 +4229,7 @@ help(void)
   Operators replace either one or two stack values with their result.\n\
   Most whitespace is optional between numbers and operators.\n\
   Input can include locale currency%s symbols: %s12%s345%s67\n\
-  Always prefix hex (0x7f) or octal (0o177) input, even in hex or octal mode.\n\
+  Always prefix hex (\"0x7f\") or octal (\"0o177\"), even in hex or octal mode.\n\
   Infix expressions are entered using (...), as in: (sin(30)^2 + cos(30)^2)\n\
   Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
   rca's normal exit value reflects the logical value of the top of stack.\n\
@@ -4497,7 +4497,7 @@ struct oper opers[] = {
 	{"O", modeoct,		0 },
 	{"B", modebin,		"Switch to floating, decimal, hex, octal, binary modes" },
 	{"width", width,	0, Auto },
-	{"w", width,		"Set effective word size for integer modes", Auto },
+	{"bits", width,		"Set effective word size for integer modes", Auto },
 	{"zerofill", zerof,	0, Auto },
 	{"z", zerof,		"Toggle left-fill with zeros in H, O, and B modes", Auto },
 	{"rightalign", rightalign, 0, Auto },

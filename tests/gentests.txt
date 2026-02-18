@@ -67,7 +67,7 @@ H
  0x5,5555
 lastx |
  0xffff,ffff,fff5,5555
-20 width
+20 bits
  Integers are now 20 bits wide.
  0x5,5555
 clear
@@ -170,7 +170,7 @@ d
 200 +
  0x5c
 clear
-64w
+64bits
  Integers are now 64 bits wide.
 0x8765
 o
@@ -183,7 +183,7 @@ b
  0b10000111,01100101,00000000,00000000
 0 separators
  Numeric separators now off
-16w
+16bits
  Integers are now 16 bits wide.
  0x0
 h
@@ -231,13 +231,13 @@ pop
 0z
  Zero fill in hex/octal/binary modes is now off
  0b0
-16w
+16 bits
  Integers are now 16 bits wide.
  0b0
 D
  Mode is signed decimal (D).  Integer math with 16 bits.
  0
-32w
+32 bits
  Integers are now 32 bits wide.
  0
 h
@@ -609,14 +609,14 @@ auto
 clear
 H
  Mode is hex (H).  Integer math with 32 bits.
-16w
+16 bits
  Integers are now 16 bits wide.
 0xffff
 d
  -1
 u
  65,535
-32w
+32 bits
  Integers are now 32 bits wide.
  0xffff,ffff
 d
@@ -629,14 +629,14 @@ d
  65,535
 u
  65,535
-16w
+16 bits
  Integers are now 16 bits wide.
  0xffff
 d
  -1
 u
  65,535
-2w
+2bits
  Integers are now 2 bits wide.
  0x3
 p
@@ -1155,7 +1155,7 @@ chs
 recip
                               -3.14159
 clear
--1w 1s 0right
+-1 bits 1 s 0 right
  Right alignment of integer modes is now off
 config
             F,D,H,O,B       F
@@ -1203,7 +1203,7 @@ H
  0xa
 0xa ==
  0x1
-24w
+24bits
  Integers are now 24 bits wide.
  0x1
 5 1 ror
