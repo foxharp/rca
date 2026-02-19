@@ -282,6 +282,21 @@ static char *input_ptr = NULL;
 
 int parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn);
 
+long long
+ld_to_ll(long double n)
+{
+	long long ll;
+	unsigned long long ull;
+	if (n < 0) {
+		ll = n;
+		return ll;
+	} else {
+		ull = n;
+		ll = ull;
+		return ll;
+	}
+}
+
 
 void
 memory_failure(void)
@@ -374,15 +389,20 @@ cmp_tweak(ldouble x)
 	return(x);
 }
 
-long long
-sign_extend(long long b)
+/* in integer mode, a) long longs might be a different size than
+ * the float format we're using for storage, and b) we support varying
+ * word widths.  this routine takes care of both needs.  it runs for
+ * every long long operator result, and is also used to fully scrub
+ * the stack when switching from float mode to integer mode. */
+ldouble
+integer_adjust(long long b)
 {
+	b &= int_mask;
 	if (int_width == LONGLONG_BITS)
 		return b;
 	else
 		return b | (0 - (b & int_sign_bit));
 }
-
 
 void
 push(ldouble n)
@@ -397,14 +417,22 @@ push(ldouble n)
 		p->val = n;
 		trace(EXEC,(" pushed %La (%Lg)\n", n, n));
 	} else {
-		p->val = sign_extend((long long)n & int_mask);
-		trace(EXEC,(" pushed masked/extended %lld/0x%llx\n",
-			(long long)(p->val), (long long)(p->val)));
+		p->val = integer_adjust( ld_to_ll(n));
+		if (tracing) {
+			long long ll = ld_to_ll(p->val);
+			trace(EXEC,(" pushed masked/extended %lld/0x%llx\n", ll, ll));
+		}
 	}
 
 	p->next = stack;
 	stack = p;
 	stack_count++;
+}
+
+void
+lpush(long long l)
+{
+       push(integer_adjust(l));
 }
 
 boolean
@@ -510,8 +538,8 @@ add(void)
 			if (floating_mode(mode) || !are_finite(a,b)) {
 				push(a + b);
 			} else {
-				long long i = a, j = b;
-				push(i + j);
+				long long i = ld_to_ll(a), j = ld_to_ll(b);
+				lpush(i + j);
 			}
 			lastx = b;
 			return GOODOP;
@@ -531,8 +559,8 @@ subtract(void)
 			if (floating_mode(mode) || !are_finite(a,b)) {
 				push(a - b);
 			} else {
-				long long i = a, j = b;
-				push(i - j);
+				long long i = ld_to_ll(a), j = ld_to_ll(b);
+				lpush(i - j);
 			}
 			lastx = b;
 			return GOODOP;
@@ -552,8 +580,8 @@ multiply(void)
 			if (floating_mode(mode) || !are_finite(a,b)) {
 				push(a * b);
 			} else {
-				long long i = a, j = b;
-				push(i * j);
+				long long i = ld_to_ll(a), j = ld_to_ll(b);
+				lpush(i * j);
 			}
 			lastx = b;
 			return GOODOP;
@@ -573,11 +601,11 @@ divide(void)
 			if (floating_mode(mode) || !are_finite(a,b)) {
 				push(a / b);
 			} else {
-				long long i = a, j = b;
+				long long i = ld_to_ll(a), j = ld_to_ll(b);
 				if (j == 0)
 					push( (i < 0) ? -INFINITY : INFINITY);
 				else
-					push(i / j);
+					lpush(i / j);
 			}
 			lastx = b;
 			return GOODOP;
@@ -597,11 +625,11 @@ modulo(void)
 			if (floating_mode(mode) || !are_finite(a,b)) {
 				push(fmodl(a,b));
 			} else {
-				long long i = a, j = b;
+				long long i = ld_to_ll(a), j = ld_to_ll(b);
 				if (j == 0)
 					push(-NAN);
 				else
-					push(i % j);
+					lpush(i % j);
 			}
 			lastx = b;
 			return GOODOP;
@@ -621,8 +649,8 @@ y_to_the_x(void)
 			if (floating_mode(mode) || !are_finite(a,b)) {
 				push(powl(a, b));
 			} else {
-				long long i = a, j = b;
-				push(powl(i, j));
+				long long i = ld_to_ll(a), j = ld_to_ll(b);
+				lpush(powl(i, j));
 			}
 			lastx = b;
 			return GOODOP;
@@ -661,6 +689,7 @@ bitwise_bothfinite(ldouble a, ldouble b)
 		push(b);
 		return 0;
 	}
+
 	if (!isfinite(a)) {
 		push(a);
 		return 0;
@@ -729,8 +758,8 @@ rshift(void)
 			if (b >= sizeof(a) * CHAR_BIT) {
 				push(0);
 			} else {
-				unsigned long long i = a, j = b;
-				push((i >> j) & int_mask);
+				unsigned long long i = ld_to_ll(a), j = ld_to_ll(b);
+				lpush((i >> j) & int_mask);
 			}
 			lastx = b;
 			return GOODOP;
@@ -759,8 +788,8 @@ lshift(void)
 			if (b >= sizeof(a) * CHAR_BIT) {
 				push(0);
 			} else {
-				unsigned long long i = a, j = b;
-				push((i << j) & int_mask);
+				unsigned long long i = ld_to_ll(a), j = ld_to_ll(b);
+				lpush((i << j) & int_mask);
 			}
 			lastx = b;
 			return GOODOP;
@@ -786,14 +815,14 @@ rotateright(void)
 			if (bitwise_distance_negative("rotate", a, b))
 				return BADOP;
 
-			long long i = a, j = b;
+			long long i = ld_to_ll(a), j = ld_to_ll(b);
 
 			while (j--) {
 				long long rbit = (i & 1);
 				i = (((i >> 1) & ~int_sign_bit) |
 					(rbit << (int_width - 1)));
 			}
-			push(i & int_mask);
+			lpush(i & int_mask);
 
 			lastx = b;
 			return GOODOP;
@@ -819,13 +848,13 @@ rotateleft(void)
 			if (bitwise_distance_negative("rotate", a, b))
 				return BADOP;
 
-			long long i = a, j = b;
+			long long i = ld_to_ll(a), j = ld_to_ll(b);
 
 			while (j--) {
 				long long rbit = (i & int_sign_bit);
 				i = (((i << 1) & ~1) | (rbit != 0));
 			}
-			push(i & int_mask);
+			lpush(i & int_mask);
 
 			lastx = b;
 			return GOODOP;
@@ -848,9 +877,9 @@ bitwise_and(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			long long i = a, j = b;
+			unsigned long long i = ld_to_ll(a), j = ld_to_ll(b);
 
-			push((i & j) & int_mask);
+			lpush((i & j) & int_mask);
 			lastx = b;
 			return GOODOP;
 		}
@@ -872,9 +901,9 @@ bitwise_or(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			long long i = a, j = b;
+			unsigned long long i = ld_to_ll(a), j = ld_to_ll(b);
 
-			push((i | j) & int_mask);
+			lpush((i | j) & int_mask);
 			lastx = b;
 			return GOODOP;
 		}
@@ -897,9 +926,9 @@ bitwise_xor(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			long long i = a, j = b;
+			unsigned long long i = ld_to_ll(a), j = ld_to_ll(b);
 
-			push((i ^ j) & int_mask);
+			lpush((i ^ j) & int_mask);
 			lastx = b;
 			return GOODOP;
 		}
@@ -924,12 +953,12 @@ setbit(void)
 			if (bitwise_distance_negative("set bit", a, b))
 				return BADOP;
 
-			long long i = a, j = b;
+			unsigned long long i = ld_to_ll(a), j = ld_to_ll(b);
 
 			if (b < sizeof(i) * CHAR_BIT)
 				i |= (1LL << j);
 
-			push(i & int_mask);
+			lpush(i & int_mask);
 			lastx = b;
 			return GOODOP;
 		}
@@ -954,12 +983,12 @@ clearbit(void)
 			if (bitwise_distance_negative("clear bit", a, b))
 				return BADOP;
 
-			long long i = a, j = b;
+			unsigned long long i = ld_to_ll(a), j = ld_to_ll(b);
 
 			if (b < sizeof(i) * CHAR_BIT)
 				i &= ~(1LL << j);
 
-			push(i & int_mask);
+			lpush(i & int_mask);
 			lastx = b;
 			return GOODOP;
 		}
@@ -982,9 +1011,9 @@ bitwise_not(void)
 		if (bitwise_operand_too_big(a))
 			return BADOP;
 
-		long long i = a;
+		unsigned long long i = ld_to_ll(a);
 
-		push(~i);
+		lpush(~i);
 		lastx = a;
 		return GOODOP;
 	}
@@ -1684,7 +1713,7 @@ putoct(long long sn)
 	int i;
 	int triplets = ((int_width + 2) / 3);
 	int lz = zerofill; // leading_zeros;
-	unsigned long long n = (unsigned long long)sn;
+	unsigned long long n = ld_to_ll(sn);
 
 	n &= int_mask;
 
@@ -1740,8 +1769,8 @@ check_int_truncation(ldouble *np, boolean conv)
 
 	if (isnan(n) || !isfinite(n)) {
 		return 0;
-	} else if (n != sign_extend((long long)n & int_mask)) {
-		n = sign_extend((long long)n & int_mask);
+	} else if (n != integer_adjust( ld_to_ll(n))) {
+		n = integer_adjust( ld_to_ll(n));
 		changed = 1;
 	}
 
@@ -2036,17 +2065,17 @@ print_n(ldouble *np, int format, boolean conv)
 	 * format, etc */
 	switch (format) {
 	case 'H':
-		ln = (long long)n & mask;
+		ln = ld_to_ll(n) & mask;
 		align = calc_align(4, 4);
 		p_printf("%*s", align, puthex(ln));
 		break;
 	case 'O':
-		ln = (long long)n & mask;
+		ln = ld_to_ll(n) & mask;
 		align = calc_align(3, 3);
 		p_printf("%*s", align, putoct(ln));
 		break;
 	case 'B':
-		ln = (long long)n & mask;
+		ln = ld_to_ll(n) & mask;
 		align = calc_align(1, 8);
 		p_printf("%*s", align, putbinary(ln));
 		break;
@@ -2054,14 +2083,14 @@ print_n(ldouble *np, int format, boolean conv)
 		unsigned long long uln;
 		/* convert in two steps, to avoid possibly undefined
 		 * (by the language) negative double to unsigned conversion */
-		ln = (long long)n & mask;
+		ln = ld_to_ll(n) & mask;
 		uln = (unsigned long long)ln;
 		/* for decimal, worst case width is like octal's */
 		align = calc_align(3, 3);
 		p_printf("%*s", align, putunsigned(uln));
 		break;
 	case 'D':
-		ln = (long long)n;
+		ln = ld_to_ll(n);
 		if (!floating_mode(mode) && int_width != LONGLONG_BITS) {
 			/* shenanigans to make pos/neg numbers appear
 			 * properly.  our masked/shortened numbers
@@ -2183,7 +2212,7 @@ rawprintstack(int n, struct num *s)
 		rawprintstack(n-1, s->next);
 
 	p_printf(" %#20llx   %#20.20Lg    %La%s\n",
-		(long long)(s->val), s->val, s->val,
+		ld_to_ll(s->val), s->val, s->val,
 		(n == stack_mark) ? "   <-  mark":"");
 }
 
@@ -2362,7 +2391,6 @@ separators(void)
 		pop(&discard);
 		p_printf(" No thousands separator in "
 			"current locale. Numeric separators disabled.\n");
-
 		digitseparators = 0;
 		return GOODOP;
 	}
@@ -2454,14 +2482,14 @@ setup_width(int bits)
 		bits = max_int_width;
 
 	int_width = bits;
-	int_sign_bit = (1LL << (int_width - 1));
+	int_sign_bit = (1ULL << (int_width - 1));
 
 	if (int_width == LONGLONG_BITS) {
 		int_mask = ~0;
 		int_max = LLONG_MAX;
 		int_min = LLONG_MIN;
 	} else {
-		int_mask = (1LL << int_width) - 1;
+		int_mask = (1ULL << int_width) - 1;
 		int_max = int_mask >> 1;
 		int_min = int_sign_bit;
 	}
@@ -2473,7 +2501,7 @@ mask_stack(void)
 	struct num *s;
 	for (s = stack; s; s = s->next) {
 		if (isfinite(s->val))
-			s->val = sign_extend((long long)s->val & int_mask);
+			s->val = integer_adjust( ld_to_ll(s->val));
 	}
 }
 
@@ -3560,7 +3588,8 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 			dd = strtold(p, nextp);
 		} else {
 			// accept simple hex integers only
-			dd = strtoull(p, nextp, 16);
+			unsigned long long u = strtoull(p, nextp, 16);
+			dd = u;
 		}
 
 		/* be strict about what comes next */
