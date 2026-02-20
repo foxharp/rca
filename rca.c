@@ -2360,8 +2360,9 @@ separators(void)
 	if (!thousands_sep[0]) {
 		ldouble discard;
 		pop(&discard);
-		p_printf(" No thousands separator found in the "
-			"current locale. so numeric separators are disabled\n");
+		p_printf(" No thousands separator in "
+			"current locale. Numeric separators disabled.\n");
+
 		digitseparators = 0;
 		return GOODOP;
 	}
