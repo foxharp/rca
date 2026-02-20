@@ -93,7 +93,7 @@ char *ccprogversion = "built " __DATE__ " " __TIME__;
 /* these are filled in from the locale, if possible, otherwise
  * they'll default to period, comma, and dollar-sign */
 char *decimal_pt;   // locale decimal_point
-int decimal_pt_len;
+size_t decimal_pt_len;
 char *thousands_sep, *thousands_sep_input;   // locale thousands_sep
 char *currency ;   // locale currency_symbol
 
@@ -128,6 +128,8 @@ typedef int opreturn;
 #define BADOP 0
 
 typedef long double ldouble;
+typedef long long ll_t;
+typedef unsigned long long ull_t;
 
 /* global copies of main's argc/argv */
 int g_argc;
@@ -288,11 +290,11 @@ ld_to_ll(long double n)
 	long long ll;
 	unsigned long long ull;
 	if (n < 0) {
-		ll = n;
+		ll = (ll_t)n;
 		return ll;
 	} else {
-		ull = n;
-		ll = ull;
+		ull = (ull_t)n;
+		ll = (ll_t)ull;
 		return ll;
 	}
 }
@@ -399,9 +401,9 @@ integer_adjust(long long b)
 {
 	b &= int_mask;
 	if (int_width == LONGLONG_BITS)
-		return b;
+		return (ldouble)b;
 	else
-		return b | (0 - (b & int_sign_bit));
+		return (ldouble)(b | (0 - (b & int_sign_bit)));
 }
 
 void
@@ -487,7 +489,7 @@ toggler(boolean *control, char *descrip, char *yes, char *no)
 		return BADOP;
 	}
 
-	*control = n;
+	*control = (n != 0);
 
 	p_printf(" %s %s\n", descrip, n ? yes : no);
 	return GOODOP;
@@ -650,7 +652,7 @@ y_to_the_x(void)
 				push(powl(a, b));
 			} else {
 				long long i = ld_to_ll(a), j = ld_to_ll(b);
-				lpush(powl(i, j));
+				lpush((long long)powl((ldouble)i, (ldouble)j));
 			}
 			lastx = b;
 			return GOODOP;
@@ -758,8 +760,11 @@ rshift(void)
 			if (b >= sizeof(a) * CHAR_BIT) {
 				push(0);
 			} else {
-				unsigned long long i = ld_to_ll(a), j = ld_to_ll(b);
-				lpush((i >> j) & int_mask);
+				// so much casting.  the shift has to be
+				// unsigned, to prevent sign extension.
+				unsigned long long i = (ull_t)ld_to_ll(a),
+						    j = (ull_t)ld_to_ll(b);
+				lpush((ll_t)((i >> j) & (ull_t)int_mask));
 			}
 			lastx = b;
 			return GOODOP;
@@ -788,7 +793,7 @@ lshift(void)
 			if (b >= sizeof(a) * CHAR_BIT) {
 				push(0);
 			} else {
-				unsigned long long i = ld_to_ll(a), j = ld_to_ll(b);
+				long long i = ld_to_ll(a), j = ld_to_ll(b);
 				lpush((i << j) & int_mask);
 			}
 			lastx = b;
@@ -877,7 +882,8 @@ bitwise_and(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			unsigned long long i = ld_to_ll(a), j = ld_to_ll(b);
+			long long i = ld_to_ll(a),
+					j = ld_to_ll(b);
 
 			lpush((i & j) & int_mask);
 			lastx = b;
@@ -901,7 +907,7 @@ bitwise_or(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			unsigned long long i = ld_to_ll(a), j = ld_to_ll(b);
+			long long i = ld_to_ll(a), j = ld_to_ll(b);
 
 			lpush((i | j) & int_mask);
 			lastx = b;
@@ -926,7 +932,7 @@ bitwise_xor(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			unsigned long long i = ld_to_ll(a), j = ld_to_ll(b);
+			long long i = ld_to_ll(a), j = ld_to_ll(b);
 
 			lpush((i ^ j) & int_mask);
 			lastx = b;
@@ -953,7 +959,7 @@ setbit(void)
 			if (bitwise_distance_negative("set bit", a, b))
 				return BADOP;
 
-			unsigned long long i = ld_to_ll(a), j = ld_to_ll(b);
+			long long i = ld_to_ll(a), j = ld_to_ll(b);
 
 			if (b < sizeof(i) * CHAR_BIT)
 				i |= (1LL << j);
@@ -983,12 +989,13 @@ clearbit(void)
 			if (bitwise_distance_negative("clear bit", a, b))
 				return BADOP;
 
-			unsigned long long i = ld_to_ll(a), j = ld_to_ll(b);
+			unsigned long long i = (ull_t)ld_to_ll(a),
+						j = (ull_t)ld_to_ll(b);
 
 			if (b < sizeof(i) * CHAR_BIT)
-				i &= ~(1LL << j);
+				i &= ~(1ULL << j);
 
-			lpush(i & int_mask);
+			lpush((ll_t)i & int_mask);
 			lastx = b;
 			return GOODOP;
 		}
@@ -1011,7 +1018,7 @@ bitwise_not(void)
 		if (bitwise_operand_too_big(a))
 			return BADOP;
 
-		unsigned long long i = ld_to_ll(a);
+		long long i = ld_to_ll(a);
 
 		lpush(~i);
 		lastx = a;
@@ -1708,20 +1715,21 @@ puthex(long long n)
 }
 
 char *
-putoct(long long sn)
+putoct(long long l)
 {
 	int i;
 	int triplets = ((int_width + 2) / 3);
 	int lz = zerofill; // leading_zeros;
-	unsigned long long n = ld_to_ll(sn);
+	unsigned long long o;
 
-	n &= int_mask;
+	l &= int_mask;
+	o = (ull_t)l;
 
 	m_file_start();
 
 	fprintf(mp.fp," 0o");
 	for (i = triplets-1; i >= 0; i--) {
-		int triplet = (n >> (3 * i)) & 7;
+		int triplet = (o >> (3 * i)) & 7;
 		if (triplet || lz || i == 0) {
 		    fputc("01234567"[triplet], mp.fp);
 		    lz = 1;
@@ -1813,7 +1821,7 @@ int
 convert_eng_format(char *buf)
 {
 	char *p, *odp, *f, *ep, *dp;
-	int exp, nexp, shift;
+	long exp, nexp, shift;
 
 	/* The printf %e format looks like:
 	 *     [-]W.FFFFe[-]EE
@@ -1885,7 +1893,7 @@ convert_eng_format(char *buf)
 
 	// append the exponent's sign and value
 	*ep++ = (nexp < 0) ? '-' : '+';
-	sprintf(ep, "%02d", abs(nexp));
+	sprintf(ep, "%02ld", labs(nexp));
 
 	return 1;
 }
@@ -2455,7 +2463,7 @@ digits(void)
 	}
 
 	// the 3 formats (auto/fixed/eng) may set their own mimimums
-	float_digits = digits;
+	float_digits = (int)digits;
 
 	p_printf(" Floating formats configured for %s%d digit%s.\n", limited,
 		float_digits, float_digits == 1 ? "" : "s");
@@ -2482,14 +2490,14 @@ setup_width(int bits)
 		bits = max_int_width;
 
 	int_width = bits;
-	int_sign_bit = (1ULL << (int_width - 1));
+	int_sign_bit = (1LL << (int_width - 1));
 
 	if (int_width == LONGLONG_BITS) {
 		int_mask = ~0;
 		int_max = LLONG_MAX;
 		int_min = LLONG_MIN;
 	} else {
-		int_mask = (1ULL << int_width) - 1;
+		int_mask = (1LL << int_width) - 1;
 		int_max = int_mask >> 1;
 		int_min = int_sign_bit;
 	}
@@ -2509,12 +2517,12 @@ opreturn
 width(void)
 {
 	ldouble n;
-	long long bits;
+	int bits;
 
 	if (!pop(&n))
 		return BADOP;
 
-	bits = n;
+	bits = (int)n;
 	if (bits == -1) {
 		bits = max_int_width;
 	} else if (bits > max_int_width) {
@@ -2630,7 +2638,7 @@ mark(void)
 	if (n == -1)
 		stack_mark = 0; // special case:  clear the mark
 	else
-		stack_mark = stack_count - n;
+		stack_mark = stack_count - (int)n;
 	return GOODOP;
 }
 
@@ -3051,7 +3059,7 @@ tclear(token **tstackp)
 }
 
 void
-sprint_token(char *s, int slen, token *t)
+sprint_token(char *s, size_t slen, token *t)
 {
 	switch (t->type) {
 	case NUMERIC:
@@ -3414,7 +3422,7 @@ tracetoggle(void)
 		return BADOP;
 
 	// tracing is a bitmap of desired "feature" trace
-	tracing = wanttracing;
+	tracing = (wanttracing != 0);
 
 	p_printf(" internal tracing now set to %d", tracing);
 	for (int i = 0; tracenames[i]; i++) {
@@ -3487,7 +3495,7 @@ showvars(void)
 	for (v = variables; v->name; v++)
 		/* count the variables */;
 
-	qsort(variables, v - variables, sizeof(*v), comparevars);
+	qsort(variables, (size_t)(v - variables), sizeof(*v), comparevars);
 
 	int savealign = rightalignment;
 	rightalignment = 0;
@@ -3550,14 +3558,14 @@ size_t stralnum(char *s, char **endptr)
 	while (isalnum(*ns) || *ns == '_')
 		ns++;
 	*endptr = ns;
-	return ns - s;
+	return (size_t)(ns - s);
 }
 
 int
 parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 {
 	int sign = 1;
-	int n;
+	size_t n;
 
 	if (parsing_rpn && (*p == '+' || *p == '-')) {
 		/* In RPN, be sure + and - are bound closely to
@@ -3589,7 +3597,7 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 		} else {
 			// accept simple hex integers only
 			unsigned long long u = strtoull(p, nextp, 16);
-			dd = u;
+			dd = (ldouble)u;
 		}
 
 		/* be strict about what comes next */
@@ -3603,7 +3611,7 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 	} else if (*p == '0' && (*(p + 1) == 'b' || *(p + 1) == 'B')) {
 		// binary, leading "0b"
 		p += 2;
-		long long ln = strtoull(p, nextp, 2);
+		unsigned long long ln = strtoull(p, nextp, 2);
 
 		/* be strict about what comes next */
 		if (*nextp == p || isalnum(**nextp))
@@ -3611,12 +3619,12 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 
 		t->type = NUMERIC;
 		t->imode = 'B';
-		t->val.val = ln * sign;
+		t->val.val = (ldouble)ln * sign;
 
 	} else if (*p == '0' && (*(p + 1) == 'o' || *(p + 1) == 'O')) {
 		// octal, leading "0o"
 		p += 2;
-		long long ln = strtoull(p, nextp, 8);
+		unsigned long long ln = strtoull(p, nextp, 8);
 
 		/* be strict about what comes next */
 		if (*nextp == p || isalnum(**nextp))
@@ -3624,7 +3632,7 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 
 		t->type = NUMERIC;
 		t->imode = 'O';
-		t->val.val = ln * sign;
+		t->val.val = (ldouble)ln * sign;
 
 	} else if (isdigit(*p) || match_dp(p)) {
 		// decimal
@@ -3678,7 +3686,7 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 
 		op = opers;
 		while (op->name) {
-			int matchlen;
+			size_t matchlen;
 
 			if (!op->func) {
 				op++;
@@ -3763,7 +3771,7 @@ no_comments(char *cp)
 char *
 command_generator(const char *prefix, int state)
 {
-	static int len;
+	static size_t len;
 	static struct oper *op;
 
 	/* If this is the first time called, initialize our state. */
@@ -4068,7 +4076,7 @@ config(void)
 
 /* useful for resetting width from debugger, to generate the
  * (narrower) man page copy of the precedence table. */
-int precedence_width = 70;
+size_t precedence_width = 70;
 
 opreturn
 precedence(void)
@@ -4077,9 +4085,9 @@ precedence(void)
 #define NUM_PRECEDENCE 34
 	static int odebug;
 	static int pass = 0;
-	static char assoc[NUM_PRECEDENCE];
+	static int assoc[NUM_PRECEDENCE];
 	static char *prec_ops[NUM_PRECEDENCE];
-	int linelen[NUM_PRECEDENCE] = {0};
+	size_t linelen[NUM_PRECEDENCE] = {0};
 	char *prefix[NUM_PRECEDENCE] = {0};
 	int prec, i;
 
