@@ -318,7 +318,7 @@ exch
 clear
 F
  Mode is float (F).  Showing 15 digits of total precision in automatic format.
-32 digits
+40 digits
  Floating formats configured for the maximum of 18 digits.
 auto
  Will show floating point in automatic format
@@ -1243,6 +1243,8 @@ clear
  0x8000,0000,0000,0000
 1 ror
  0x4000,0000,0000,0000
+sto
+ 0x4000,0000,0000,0000
 1 rol
  0x8000,0000,0000,0000
 1 rol
@@ -1271,7 +1273,12 @@ clear
  0x1
 
 clear
-0x7fff,ffff,ffff,fffd
+1 1 ror
+ 0x8000,0000,0000,0000
+~
+ 0x7fff,ffff,ffff,ffff
+2 -
+ 0x7fff,ffff,ffff,fffd
 1 +
  0x7fff,ffff,ffff,fffe
 1 +
@@ -1295,7 +1302,8 @@ clear
 
 # test shifting
 clear
-0x4000,0000,0000,0000
+rcl
+ 0x4000,0000,0000,0000
 1 <<
  0x8000,0000,0000,0000
 1 >>
@@ -1308,22 +1316,25 @@ clear
 # test bit-setting
 0
  0x0
-0x8000000000000000 |
+rcl 1 << |
+ 0x8000,0000,0000,0000
+sto
  0x8000,0000,0000,0000
 push ~ &
  0x0
-0x8000000000000000
+rcl
+ 0x8000,0000,0000,0000
 push xor
  0x0
-0x8000000000000000 0x7fff,ffff,ffff,ffff xor
- 0xffff,ffff,ffff,ffff
-0
- 0x0
-63 setb
+rcl
  0x8000,0000,0000,0000
-0x7fff,ffff,ffff,ffff ~ ==
- 0x1
-0x8000,0000,0000,0000 chs
+push ~
+ 0x7fff,ffff,ffff,ffff
+xor
+ 0xffff,ffff,ffff,ffff
+rcl
+ 0x8000,0000,0000,0000
+chs
  0x8000,0000,0000,0000
 ~
  0x7fff,ffff,ffff,ffff

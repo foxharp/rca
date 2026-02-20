@@ -19,6 +19,8 @@ WARNINGS= -Wall -Wextra \
     -Wstrict-overflow=2
 
 
+# -fsanitize=undefined
+
 rca: rca.c
 	v="$$(git describe --dirty=+ 2>/dev/null)"; \
 	gcc -g -o rca -O \
@@ -132,7 +134,7 @@ uninstall:
 tests:  gentest optest tweaktest pi_approximations
 
 pi_approximations:  # with and without rca_float
-	test $$(bash -c "source ./rca_float; fe '22 / 7 - pi'") = 0.001
+	test $$(PATH=:$$PATH bash -c ". ./rca_float; fe '22 / 7 - pi'") = 0.001
 	test $$(./rca "10 digits fixed ((355 / 113) - pi) q") = 0.0000002668
 	@echo Tests succeeded
 

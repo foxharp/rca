@@ -287,6 +287,9 @@ int parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn);
 long long
 ld_to_ll(long double n)
 {
+	/* the ARM machines I have (RPi4 and RPi3) will cheerfully set
+	 * an unsigned to 0 if you assign it directly from a negative
+	 * long double.  So we go to some length to avoid that */
 	long long ll;
 	unsigned long long ull;
 	if (n < 0) {
@@ -397,13 +400,17 @@ cmp_tweak(ldouble x)
  * every long long operator result, and is also used to fully scrub
  * the stack when switching from float mode to integer mode. */
 ldouble
-integer_adjust(long long b)
+integer_adjust(long long n)
 {
-	b &= int_mask;
+	n &= int_mask;
+
 	if (int_width == LONGLONG_BITS)
-		return (ldouble)b;
-	else
-		return (ldouble)(b | (0 - (b & int_sign_bit)));
+		return (ldouble)n;
+
+	if (n & int_sign_bit)
+		n |= ~int_mask;
+
+	return (ldouble)n;
 }
 
 void
@@ -641,6 +648,17 @@ modulo(void)
 	return BADOP;
 }
 
+long long
+int_pow(long long base, long long exp)
+{
+	long long result = 1;
+
+	for (long long i = 0; i < exp; i++) {
+		result *= base;
+	}
+	return result;
+}
+
 opreturn
 y_to_the_x(void)
 {
@@ -652,7 +670,7 @@ y_to_the_x(void)
 				push(powl(a, b));
 			} else {
 				long long i = ld_to_ll(a), j = ld_to_ll(b);
-				lpush((long long)powl((ldouble)i, (ldouble)j));
+				lpush(int_pow(i, j));
 			}
 			lastx = b;
 			return GOODOP;
@@ -760,11 +778,19 @@ rshift(void)
 			if (b >= sizeof(a) * CHAR_BIT) {
 				push(0);
 			} else {
-				// so much casting.  the shift has to be
-				// unsigned, to prevent sign extension.
-				unsigned long long i = (ull_t)ld_to_ll(a),
-						    j = (ull_t)ld_to_ll(b);
-				lpush((ll_t)((i >> j) & (ull_t)int_mask));
+				long long i = ld_to_ll(a), j = ld_to_ll(b);
+
+				/* obviously I tried shifting directly,
+				 * but for some reason had trouble on
+				 * some platforms getting the casting
+				 * right to force an unsigned shift.
+				 * so a loop won out. */
+				if (j > int_width)
+					j = int_width;
+				while (j--) {
+					i = (i >> 1) & ~int_sign_bit;
+				}
+				lpush(i);
 			}
 			lastx = b;
 			return GOODOP;
@@ -794,7 +820,7 @@ lshift(void)
 				push(0);
 			} else {
 				long long i = ld_to_ll(a), j = ld_to_ll(b);
-				lpush((i << j) & int_mask);
+				lpush(i << j);
 			}
 			lastx = b;
 			return GOODOP;
@@ -822,12 +848,13 @@ rotateright(void)
 
 			long long i = ld_to_ll(a), j = ld_to_ll(b);
 
+			j %= int_width;
 			while (j--) {
 				long long rbit = (i & 1);
 				i = (((i >> 1) & ~int_sign_bit) |
 					(rbit << (int_width - 1)));
 			}
-			lpush(i & int_mask);
+			lpush(i);
 
 			lastx = b;
 			return GOODOP;
@@ -855,11 +882,12 @@ rotateleft(void)
 
 			long long i = ld_to_ll(a), j = ld_to_ll(b);
 
+			j %= int_width;
 			while (j--) {
 				long long rbit = (i & int_sign_bit);
 				i = (((i << 1) & ~1) | (rbit != 0));
 			}
-			lpush(i & int_mask);
+			lpush(i);
 
 			lastx = b;
 			return GOODOP;
@@ -882,10 +910,9 @@ bitwise_and(void)
 			if (bitwise_operands_too_big(a, b))
 				return BADOP;
 
-			long long i = ld_to_ll(a),
-					j = ld_to_ll(b);
+			long long i = ld_to_ll(a), j = ld_to_ll(b);
 
-			lpush((i & j) & int_mask);
+			lpush((i & j));
 			lastx = b;
 			return GOODOP;
 		}
@@ -909,7 +936,7 @@ bitwise_or(void)
 
 			long long i = ld_to_ll(a), j = ld_to_ll(b);
 
-			lpush((i | j) & int_mask);
+			lpush(i | j);
 			lastx = b;
 			return GOODOP;
 		}
@@ -934,7 +961,7 @@ bitwise_xor(void)
 
 			long long i = ld_to_ll(a), j = ld_to_ll(b);
 
-			lpush((i ^ j) & int_mask);
+			lpush(i ^ j);
 			lastx = b;
 			return GOODOP;
 		}
@@ -964,7 +991,7 @@ setbit(void)
 			if (b < sizeof(i) * CHAR_BIT)
 				i |= (1LL << j);
 
-			lpush(i & int_mask);
+			lpush(i);
 			lastx = b;
 			return GOODOP;
 		}
@@ -989,13 +1016,12 @@ clearbit(void)
 			if (bitwise_distance_negative("clear bit", a, b))
 				return BADOP;
 
-			unsigned long long i = (ull_t)ld_to_ll(a),
-						j = (ull_t)ld_to_ll(b);
+			long long i = ld_to_ll(a), j = ld_to_ll(b);
 
 			if (b < sizeof(i) * CHAR_BIT)
-				i &= ~(1ULL << j);
+				i &= ~(1LL << j);
 
-			lpush((ll_t)i & int_mask);
+			lpush(i);
 			lastx = b;
 			return GOODOP;
 		}
@@ -1657,25 +1683,25 @@ m_file_finish(void)
 }
 
 char *
-putbinary(long long n)
+putbinary(long long l)
 {
 	int i;
-	int lz = zerofill; // leading_zeros;
+	int zf = zerofill; // leading_zeros;
 
-	n &= int_mask;
+	l &= int_mask;
 
 	m_file_start();
 
 	fprintf(mp.fp, " 0b");
 	for (i = int_width-1; i >= 0; i--) {
-		if (n & (1L << i)) {
+		if (l & (1L << i)) {
 			fputc('1', mp.fp);
-			lz = 1;
-		} else if (lz || i == 0) {
+			zf = 1;
+		} else if (zf || i == 0) {
 			fputc('0', mp.fp);
 		}
 		if (i && (i % 8 == 0)) {
-			if (digitseparators && lz)
+			if (digitseparators && zf)
 				fputs(thousands_sep, mp.fp);
 		}
 	}
@@ -1686,25 +1712,27 @@ putbinary(long long n)
 }
 
 char *
-puthex(long long n)
+puthex(long long l)
 {
 	int i;
 	int nibbles = ((int_width + 3) / 4);
-	int lz = zerofill; // leading_zeros;
+	int zf = zerofill; // leading_zeros;
+	unsigned long long u;
 
-	n &= int_mask;
+	l &= int_mask;
+	u = (ull_t)l;
 
 	m_file_start();
 
 	fprintf(mp.fp," 0x");
 	for (i = nibbles-1; i >= 0; i--) {
-		int nibble = (n >> (4 * i)) & 0xf;
-		if (nibble || lz || i == 0) {
+		int nibble = (u >> (4 * i)) & 0xf;
+		if (nibble || zf || i == 0) {
 		    fputc("0123456789abcdef"[nibble], mp.fp);
-		    lz = 1;
+		    zf = 1;
 		}
 		if (i && (i % 4 == 0)) {
-		    if (digitseparators && lz)
+		    if (digitseparators && zf)
 			    fputs(thousands_sep, mp.fp);
 		}
 	}
@@ -1719,23 +1747,23 @@ putoct(long long l)
 {
 	int i;
 	int triplets = ((int_width + 2) / 3);
-	int lz = zerofill; // leading_zeros;
-	unsigned long long o;
+	int zf = zerofill; // leading_zeros;
+	unsigned long long u;
 
 	l &= int_mask;
-	o = (ull_t)l;
+	u = (ull_t)l;
 
 	m_file_start();
 
 	fprintf(mp.fp," 0o");
 	for (i = triplets-1; i >= 0; i--) {
-		int triplet = (o >> (3 * i)) & 7;
-		if (triplet || lz || i == 0) {
+		int triplet = (u >> (3 * i)) & 7;
+		if (triplet || zf || i == 0) {
 		    fputc("01234567"[triplet], mp.fp);
-		    lz = 1;
+		    zf = 1;
 		}
 		if (i && (i % 3 == 0)) {
-		    if (digitseparators && lz)
+		    if (digitseparators && zf)
 			    fputs(thousands_sep, mp.fp);
 		}
 	}
@@ -2527,10 +2555,10 @@ width(void)
 		bits = max_int_width;
 	} else if (bits > max_int_width) {
 		bits = max_int_width;
-		p_printf(" Width out of range, set to max (%lld)\n", bits);
+		p_printf(" Width out of range, set to max (%d)\n", bits);
 	} else if (bits < 2) {
 		bits = 2;
-		p_printf(" Width out of range, set to min (%lld)\n", bits);
+		p_printf(" Width out of range, set to min (%d)\n", bits);
 	}
 
 	setup_width(bits);
