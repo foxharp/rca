@@ -10,15 +10,26 @@ all: rca rca-norl rca.1 copyrightcheck html
 # on the screen, add this to the compile rule.  it's due to a bug
 # in the readline library.
 #    -D READLINE_NO_ECHO_BARE_NL
+
+WARNINGS= -Wall -Wextra \
+    -Wfloat-conversion \
+    -Wconversion \
+    -Wshift-overflow=2 \
+    -Wsign-conversion \
+    -Wstrict-overflow=2
+
+
 rca: rca.c
 	v="$$(git describe --dirty=+ 2>/dev/null)"; \
-	gcc -g -O -Wall -Wextra -o rca \
+	gcc -g -o rca -O \
+		$(WARNINGS) \
 		-DCCVERSION=\"$${v}\" -D USE_READLINE \
 		rca.c -lm -lreadline
 
 rca-norl: rca.c
 	v="$$(git describe --dirty=+ 2>/dev/null)"; \
-	gcc -g -Wall -Wextra -o rca-norl \
+	gcc -g -o rca-norl \
+		$(WARNINGS) \
 		-DCCVERSION=\"$${v}\" \
 		rca.c -lm
 
