@@ -172,7 +172,7 @@ automatic
  0
 
 0 separators
- No thousands separator in current locale. Numeric separators disabled.
+ Numeric separators now off
 
 9007199254740992 1 +
  9.00719925474099e+15
