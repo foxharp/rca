@@ -18,12 +18,15 @@ WARNINGS= -Wall -Wextra \
     -Wsign-conversion \
     -Wstrict-overflow=2
 
+# temporary.  i have one test host with the bad library
+READLINE_BUG=$$(cat ./readline-is-buggy 2>/dev/null)
 
 # -fsanitize=undefined
 
 rca: rca.c
 	v="$$(git describe --dirty=+ 2>/dev/null)"; \
 	gcc -g -o rca -O \
+		$(READLINE_BUG) \
 		$(WARNINGS) \
 		-DCCVERSION=\"$${v}\" -D USE_READLINE \
 		rca.c -lm -lreadline
