@@ -131,37 +131,35 @@ uninstall:
 # before feeding what's left (i.e., the input) to rca, and comparing
 # the result, which should match exactly.
 
+ID=$$(./rca limits q|sed -n 's/ id: //p')
 tests:  gentest optest tweaktest pi_approximations
+	@echo Tests succeeded
 
 pi_approximations:  # with and without rca_float
 	test $$(PATH=:$$PATH bash -c ". ./rca_float; fe '22 / 7 - pi'") = 0.001
 	test $$(./rca "10 digits fixed ((355 / 113) - pi) q") = 0.0000002668
-	@echo Tests succeeded
 
 gentest:
-	egrep -v '^ ' tests/gentests.txt | \
-		./rca 2>&1 | \
-		tee .test | diff -u tests/gentests.txt -
-	@ echo test succeeded
+	egrep -v '^ ' tests/f64i64/gentests.txt | \
+		./rca 2>&1 | tee .test | \
+		diff -u tests/$(ID)/gentests.txt -
 
 # valgrind messes with floating point.  only optests.txt avoids high
 # precision FP, so only it works under valgrind.
 optest:
-	egrep -v '^ ' tests/optests.txt | \
+	egrep -v '^ ' tests/f64i64/optests.txt | \
 		( RUNVG="valgrind -q --leak-check=full"; \
 		  which valgrind >/dev/null || RUNVG=; \
 		  $$RUNVG ./rca 2>&1 \
-		) | \
-		tee .test | diff -u tests/optests.txt -
-	@ echo test succeeded
+		) | tee .test | \
+		diff -u tests/$(ID)/optests.txt -
 
 tweaktest:
-	egrep -v '^ ' tests/tweaktests.txt | \
-		./rca 2>&1 | \
-		tee .test | diff -u tests/tweaktests.txt -
-	@ echo test succeeded
+	egrep -v '^ ' tests/f64i64/tweaktests.txt | \
+		./rca 2>&1 | tee .test | \
+		diff -u tests/$(ID)/tweaktests.txt -
 
 .PHONY: clean all gentest optest tweaktest html htmldiff htmlmv \
-	release tag versioncheck pi_approximations
+	release tag versioncheck pi_approximations tests
 
 FORCE:

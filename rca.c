@@ -2292,7 +2292,7 @@ printstate(void)
 	p_printf("\n");
 	p_printf("\n Build-time sizes:\n");
 	p_printf("  Native sizes (bits):\n");
-	p_printf("   sizeof(long long):\t%lu\n", (unsigned long)(8 * sizeof(long long)));
+	p_printf("   sizeof(long long):\t%lu (%d bits)\n", sizeof(long long), sizeof(long long) * CHAR_BIT);
 	p_printf("   LLONG_MIN: %llx, LLONG_MAX: %llx\n", LLONG_MIN, LLONG_MAX);
 	p_printf("   sizeof(long double):\t%lu\n", (unsigned long)(8 * sizeof(long double)));
 	p_printf("   LDBL_MANT_DIG: %u\n", LDBL_MANT_DIG);
@@ -2307,6 +2307,16 @@ printstate(void)
 		decimal_pt ? decimal_pt : "null",
 		thousands_sep ? thousands_sep : "null",
 		currency ? currency : "null");
+
+	return GOODOP;
+}
+
+opreturn
+limits(void)
+{
+	p_printf(" floating point bits: %u\n", LDBL_MANT_DIG);
+	p_printf(" integer bits: %lu\n", max_int_width);
+	p_printf(" id: f%lui%u\n", LDBL_MANT_DIG, max_int_width);
 
 	return GOODOP;
 }
@@ -4592,6 +4602,7 @@ struct oper opers[] = {
 	{"help", help,		"Show this list (using $PAGER, if set)" },
 	{"config", config,	"Show current configuration settings" },
 	{"precedence", precedence, "List infix operator precedence" },
+	{"limits", limits,	"Show integer and float sizes" },
 	{"quit", quit,		0 },
 	{"q", quit,		0 },
 	{"exit", quit,		"Leave the calculator" },
