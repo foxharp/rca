@@ -1,0 +1,1348 @@
+
+1 debug
+ Debug commands enabled
+epsilon 10 * = _10eps
+                               1.92593e-33
+epsilon 100 * = _100eps
+                               1.92593e-32
+clear
+
+0 rightalign
+ Right alignment of integer modes is now off
+1 1 +
+ 2
+10 10 x
+ 100
+exch
+ 2
+/
+ 50
+8 /
+ 6.25
+int
+ 6
+lx
+ 6.25
+frac
+ 0.25
+-
+ 5.75
+P
+ 5.75
+pi
+ 3.14159
+P
+ 5.75
+ 3.14159
+%
+ 2.60841
+11 4 %
+ 3
+1-
+ 2
+10 **
+ 1,024
+2 >>
+ 256
+4 <<
+ 4,096
+
+.
+ error: unrecognized input '.'
+. mode
+ error: unrecognized input '.'
+foobar 12
+ error: unrecognized input 'foobar'
+2 ..3
+ error: unrecognized input '..3'
+pop
+ 4,096
+
+H
+ Mode is hex (H).  Integer math with 64 bits.
+ 0x2     # warning: accuracy lost, was 2.6084073464102067615373566167205
+ 0x1000
+0xfffff
+0xaaaaa ~ &
+ 0x5,5555
+lastx |
+ 0xffff,ffff,fff5,5555
+20 bits
+ Integers are now 20 bits wide.
+ 0x5,5555
+clear
+0xfffff
+0xaaaaa ~ &
+ 0x5,5555
+lastx ~ |
+ 0xf,ffff
+0x10101010 xor
+ 0xf,efef
+d
+ -4,113
+chs
+ 0x1011
+d
+ 4,113
+clear
+F
+ Mode is float (F).  Showing 6 digits of total precision in automatic format.
+3
+recip
+ 0.333333
+sqrt
+ 0.57735
+push
+ 0.57735
+recip
+ 1.73205
+*
+ 1
+asin
+ 90
+1 +
+ 91
+cos
+ -0.0174524
+0 degrees
+ trig functions will now use radians
+acos 180 * pi /
+ 91
+1 degrees
+ trig functions will now use degrees
+cos
+ -0.0174524
+1 degrees
+ trig functions will now use degrees
+lastx +
+ 90.9825
+frac
+ 0.982548
+sto
+ 0.982548
+1 i2mm
+ 25.4
+km2mi
+ 15.7828
+15digits
+ Floating formats configured for 15 digits.
+ 15.78282848
+automatic
+ Will show floating point in automatic format
+ 15.78282848
+oz2g
+ 447.43529599376
+g2oz
+ 15.78282848
+l2q
+ 16.6775570265312
+c2f
+ 62.0196026477562
+o
+ 0o76     # warning: display format loses accuracy
+h
+ 0x3e     # warning: display format loses accuracy
+0xf0 +
+ 302.019602647756
+H
+ Mode is hex (H).  Integer math with 20 bits.
+ 0x0     # warning: accuracy lost, was 0.982547593562716487180581021483685
+ 0x12e     # warning: accuracy lost, was 302.019602647756157022292524041944
+0xf00 |
+ 0xf2e
+4 <<
+ 0xf2e0
+12 width
+ Integers are now 12 bits wide.
+ 0x2e0
+4 >>
+ 0x2e
+0xf00 |
+ 0xf2e
+d
+ -210
+2 +
+ 0xf30
+d
+ -208
+100 +
+ 0xf94
+200 +
+ 0x5c
+clear
+64bits
+ Integers are now 64 bits wide.
+0x8765
+o
+ 0o103,545
+16 <<
+ 0x8765,0000
+h
+ 0x8765,0000
+b
+ 0b10000111,01100101,00000000,00000000
+0 separators
+ Numeric separators now off
+16bits
+ Integers are now 16 bits wide.
+ 0x0
+h
+ 0x0
+B
+ Mode is binary (B).  Integer math with 16 bits.
+ 0b0
+1s
+ Numeric separators now on
+b
+ 0b0
+0xabc
+ 0b1010,10111100
+1 zerofill
+ Zero fill in hex/octal/binary modes is now on
+ 0b00001010,10111100
+0s
+ Numeric separators now off
+P
+ 0b0000000000000000
+ 0b0000101010111100
+1s
+ Numeric separators now on
+P
+ 0b00000000,00000000
+ 0b00001010,10111100
+24 width
+ Integers are now 24 bits wide.
+ 0b00000000,00001010,10111100
+P
+ 0b00000000,00000000,00000000
+ 0b00000000,00001010,10111100
+0s
+ Numeric separators now off
+P
+ 0b000000000000000000000000
+ 0b000000000000101010111100
+1s
+ Numeric separators now on
+P
+ 0b00000000,00000000,00000000
+ 0b00000000,00001010,10111100
+pop
+ 0b00000000,00000000,00000000
+0z
+ Zero fill in hex/octal/binary modes is now off
+ 0b0
+16 bits
+ Integers are now 16 bits wide.
+ 0b0
+D
+ Mode is signed decimal (D).  Integer math with 16 bits.
+ 0
+32 bits
+ Integers are now 32 bits wide.
+ 0
+h
+ 0x0
+0x8765,0000
+ -2,023,424,000
+
+F
+ Mode is float (F).  Showing 15 digits of total precision in automatic format.
+ 0
+ -2,023,424,000
+pi 100,000 *
+ 314,159.265358979
+H
+ Mode is hex (H).  Integer math with 32 bits.
+ 0x0
+ 0x8765,0000
+ 0x4,cb2f     # warning: accuracy lost, was 314159.26535897932384626433832795
+D
+ Mode is signed decimal (D).  Integer math with 32 bits.
+ 0
+ -2,023,424,000
+ 314,159
+0s
+ Numeric separators now off
+
+# comment test
+clear H  # comment test
+ Mode is hex (H).  Integer math with 32 bits.
+0x7fffffff#ffff
+chs
+ 0x80000001
+chs
+ 0x7fffffff
+1 +
+ 0x80000000
+chs
+ 0x80000000
+1 +
+ 0x80000001
+chs
+ 0x7fffffff
+
+24 clearb
+ 0x7effffff
+
+O
+ Mode is octal (O).  Integer math with 32 bits.
+ 0o17677777777
+~
+ 0o20100000000
+h
+ 0x81000000
+1 separators
+ Numeric separators now on
+h
+ 0x8100,0000
+~
+ 0o17,677,777,777
+dup
+ 0o17,677,777,777
+O
+ Mode is octal (O).  Integer math with 32 bits.
+ 0o17,677,777,777
+ 0o17,677,777,777
+h
+ 0x7eff,ffff
+16 <<
+ 0o37,777,600,000
+h
+ 0xffff,0000
+16 <<
+ 0o0
+exch
+ 0o17,677,777,777
+32 <<
+ 0o0
+clear
+F
+ Mode is float (F).  Showing 15 digits of total precision in automatic format.
+40 digits
+ Floating formats configured for the maximum of 33 digits.
+auto
+ Will show floating point in automatic format
+pi
+ 3.1415926535897932384626433832795
+frac
+ 0.141592653589793238462643383279503
+pi
+ 3.1415926535897932384626433832795
+chs
+ -3.1415926535897932384626433832795
+frac
+ -0.141592653589793238462643383279503
+pi
+ 3.1415926535897932384626433832795
+int
+ 3
+pi
+ 3.1415926535897932384626433832795
+chs
+ -3.1415926535897932384626433832795
+int
+ -3
+pi
+ 3.1415926535897932384626433832795
+15 digits
+ Floating formats configured for 15 digits.
+ 3.14159265358979
+auto
+ Will show floating point in automatic format
+ 3.14159265358979
+pi
+ 3.14159265358979
+10 15 ^ *
+ 3.14159265358979e+15
+15 digits
+ Floating formats configured for 15 digits.
+ 3.14159265358979e+15
+automatic
+ Will show floating point in automatic format
+ 3.14159265358979e+15
+1 digits
+ Floating formats configured for 1 digit.
+ 3e+15
+automatic
+ Will show floating point in automatic format
+ 3e+15
+10 digits
+ Floating formats configured for 10 digits.
+ 3.141592654e+15
+auto
+ Will show floating point in automatic format
+ 3.141592654e+15
+d
+ 3,141,592,653,589,793     # warning: display format loses accuracy
+f
+ 3.141592654e+15
+pi
+ 3.141592654
+10 15 ** *
+ 3.141592654e+15
+-
+ 0
+
+# test the sum command
+clear
+1 2 3 4 5 sum
+ 15
+0 mark 1 2 3 4 5 avg
+ 3
+pop
+ 15
+1 2
+0 mark
+3 4 5
+sum
+ 12
+0 mark
+26 34
++
+ 60
+P
+ 15
+ 1
+ 2
+ 12
+ 60
+sum
+ 60
+sum
+ 90
+1 2 3 4 5 6 7 8 9 3mark sum
+ 24
+2 mark 17 18 19
+sum
+ 84
+
+clear
+-1 5 *
+ -5
+-10 -20 /
+ 0.5
+( 1 + 2 )
+ 3
+(3 + 4 * 5)
+ 23
+(7 - 4 + 2)
+ 5
+(10 - 2 - 3 )
+ 5
+(3 - 4 -2)
+ -3
+(6 / 2 * 3 )
+ 9
+(8 % 3 + 2 )
+ 4
+(3/4/2)
+ 0.375
+(5|2&1)
+ 5
+(4 << 1 + 1)
+ 16
+(1 || 0 && 0)
+ 1
+(-3 + 5)
+ 2
+(6 * -2)
+ -12
+(( 5 + 4) - 2)
+ 7
+( -3 ** 2 )
+ 9
+( pi - 1 )
+ 2.141592654
+((3 + 4) * 5)
+ 35
+((8 / (2 * 2)))
+ 2
+(3- -2)
+ 5
+-3 log2
+ nan
+(log10 -4)
+ nan
+==
+ 0
+(2 ^ 3 ^ 2)
+ 512
+(8 / (3 - 3))
+ inf
+0invalidok
+ error: unrecognized input 'invalidok'
+pop
+ inf
+(8 / (3 - 3))
+ inf
+(4 + 5)
+ 9
+(4 + * 5)
+ error: bad expression sequence, at '+' and '*'
+(4 + 5 6)
+ error: bad expression sequence, at '5' and '6'
+(4 + (5 + 6
+ error: missing parentheses
+(4 + (5 + 6)) - 7)
+ warning: mismatched/extra parentheses
+(3 setb 2)
+ 7
+(0xff clearb 3) h
+ 0xf7
+(3 xor 1 )
+ 2
+( 3 + 4 x 2 / ( 1 - 5 ) ** 2 ** 3 )
+ 3.00012207
+((2+3)*4**2)
+ 80
+((2 + 3)*4**2)
+ 80
+((0x5 & 8) && 1)
+ 0
+((0x5 & 4) && 1)
+ 1
+((0x5 & 4) <= pi)
+ 0
+((0x5 & 1) <= pi)
+ 1
+(23 - 7 == 1 << 4)
+ 1
+( 1 < 3 && 2 > .4 && 100.1 <= 100.0 )
+ 0
+( 1 < 3 && 2 > .4 && 100.1 <= 100.12 )
+ 1
+( 5 & 0xff == 255 )
+ 0
+( 5 & (0xff == 255) )
+ 1
+( 4 & (0xff == 255) )
+ 0
+
+3 digits
+ Floating formats configured for 3 digits.
+ 0
+auto
+ Will show floating point in automatic format
+ 0
+
+25 tan
+ 0.466
+atan
+ 25
+
+-25 tan
+ -0.466
+atan
+ -25
+
+115.1234 tan
+ -2.13
+atan
+ -64.9
+
+-115.1234 tan
+ 2.13
+atan
+ 64.9
+
+
+25 tan
+ 0.466
+10 * 10 atan2
+ 25
+
+-25 tan
+ -0.466
+10 x 10 atan2
+ -25
+
+115 tan
+ -2.14
+10 * 10 atan2
+ -65
+
+-115 tan
+ 2.14
+10 * 10 atan2
+ 65
+
+
+25 tan
+ 0.466
+10 * 10 atan2
+ 25
+
+-25 tan
+ -0.466
+10 x 10 atan2
+ -25
+
+115 tan
+ -2.14
+10 chs * 10 chs atan2
+ 115
+
+-115 tan
+ 2.14
+10 chs * 10 chs atan2
+ -115
+7 digits
+ Floating formats configured for 7 digits.
+ -115
+auto
+ Will show floating point in automatic format
+ -115
+( i2mm -.75 )
+ -19.05
+40 i2mm
+ 1,016
+0 s
+ Numeric separators now off
+3 digits
+ Floating formats configured for 3 digits.
+ 1.02e+03
+auto
+ Will show floating point in automatic format
+ 1.02e+03
+1 s
+ Numeric separators now on
+clear
+H
+ Mode is hex (H).  Integer math with 32 bits.
+16 bits
+ Integers are now 16 bits wide.
+0xffff
+d
+ -1
+u
+ 65,535
+32 bits
+ Integers are now 32 bits wide.
+ 0xffff,ffff
+d
+ -1
+u
+ 4,294,967,295
+0xffff &
+ 0xffff
+d
+ 65,535
+u
+ 65,535
+16 bits
+ Integers are now 16 bits wide.
+ 0xffff
+d
+ -1
+u
+ 65,535
+2bits
+ Integers are now 2 bits wide.
+ 0x3
+p
+ 0x3
+d
+ -1
+u
+ 3
+1 -
+ 0x2
+d
+ -2
+u
+ 2
+1-
+ 0x1
+d
+ 1
+u
+ 1
+1-
+ 0x0
+~
+ 0x3
+clear
+F 6 digits
+ Floating formats configured for 6 digits.
+auto
+ Will show floating point in automatic format
+10 10000 ^
+ inf
+10 -10000 ^
+ 0
+1 0 / = _pos_inf
+ inf
+-1 0 / = _neg_inf
+ -inf
+-2 log10 = _nan
+ nan
+1 0 /
+ inf
+-1 0 /
+ -inf
+1 0 %
+ nan
+-1 0 %
+ nan
+clear D
+ Mode is signed decimal (D).  Integer math with 2 bits.
+1 0 /
+ inf
+-1 0 /
+ -inf
+1 0 %
+ -nan
+-1 0 %
+ -nan
+clear F
+ Mode is float (F).  Showing 6 digits of total precision in automatic format.
+
+
+#
+# The comments below are taken directly from the powl() man page.
+# The x and y they refer to, i.e. powl(x, y), are expressed in the
+# same order in RPN notation, but rca would normally call them "y x ^"
+#
+# If x is +0 or -0, and y is less than 0 and not an odd
+# integer, a pole error occurs and +HUGE_VAL, +HUGE_VALF, or
+# +HUGE_VALL, is returned.
+0 -2 ^
+ inf
+-0 -2 ^
+ inf
+# If x is +0 (-0), and y is an odd integer greater than 0, the
+# result is +0 (-0).
+0 3 ^
+ 0
+-0 3 ^
+ -0
+# If x is 0, and y greater than 0 and not an odd integer, the
+# result is +0.
+0 2 ^
+ 0
+# If x is -1, and y is positive infinity or negative infinity,
+# the result is 1.0.
+-1 _pos_inf ^
+ 1
+-1 _neg_inf ^
+ 1
+# If x is +1, the result is 1.0 (even if y is a NaN).
+1 _nan ^
+ 1
+# If y is 0, the result is 1.0 (even if x is a NaN).
+_nan 0 ^
+ 1
+# If x is a finite value less than 0, and y is a finite
+# noninteger, a domain error occurs, and a NaN is returned.
+-1 .5 ^
+ nan
+-2 2.5 ^
+ nan
+# If the absolute value of x is less than 1, and y is negative
+# infinity, the result is positive infinity.
+.3 _neg_inf ^
+ inf
+# If the absolute value of x is greater than 1, and y is negative
+# infinity, the result is +0.
+-2 _neg_inf ^
+ 0
+# If the absolute value of x is less than 1, and y is positive
+# infinity, the result is +0.
+.5 _pos_inf ^
+ 0
+-.4 _pos_inf ^
+ 0
+# If the absolute value of x is greater than 1, and y is positive
+# infinity, the result is positive infinity.
+-3 _pos_inf ^
+ inf
+# If x is negative infinity, and y is an odd integer less than 0,
+# the result is -0.
+_neg_inf -3 ^
+ -0
+# If x is negative infinity, and y less than 0 and not an odd
+# integer, the result is +0.
+_neg_inf -2 **
+ 0
+# If x is negative infinity, and y is an odd integer greater than
+# 0, the result is negative infinity.
+_neg_inf 3 ^
+ -inf
+# If x is negative infinity, and y greater than 0 and not an odd
+# integer, the result is positive infinity.
+_neg_inf 4 ^
+ inf
+# If x is positive infinity, and y less than 0, the result is +0.
+_pos_inf -1 ^
+ 0
+_pos_inf -.5 ^
+ 0
+# If x is positive infinity, and y greater than 0, the result is
+# positive infinity.
+_pos_inf 2 ^
+ inf
+_pos_inf .5 ^
+ inf
+# end of powl(), tests above.
+# start of atan2 tests, from man page
+clear
+0 degrees
+ trig functions will now use radians
+# If y is +0 (-0) and x is less than 0, +pi (-pi) is returned.
+(0 atan2 -1) pi ==
+ 1
+(-0 atan2 -1) (-pi) ==
+ 1
+# If y is +0 (-0) and x is greater than 0, +0 (-0) is returned.
+(-0 atan2 2) -0 ==
+ 1
+# If y is less than 0 and x is +0 or -0, -pi/2 is returned.
+(-1 atan2 0) (-pi/2) ==
+ 1
+(-1 atan2 -0) (-pi/2) ==
+ 1
+
+# If y is greater than 0 and x is +0 or -0, pi/2 is returned.
+(1 atan2 0) (pi/2) ==
+ 1
+(1 atan2 -0) (pi/2) ==
+ 1
+
+# If either x or y is NaN, a NaN is returned.
+(_nan atan2 0)
+ nan
+(10 atan2 _nan)
+ nan
+
+# If y is +0 (-0) and x is -0, +pi (-pi) is returned.
+(0 atan2 -0) pi ==
+ 1
+(-0 atan2 -0) (-pi) ==
+ 1
+
+# If y is +0 (-0) and x is +0, +0 (-0) is returned.
+(-0 atan2 0) -0 ==
+ 1
+
+# If y is a finite value greater (less) than 0, and x is negative  infinity, +pi (-pi) is returned.
+(2 atan2 _neg_inf) pi ==
+ 1
+(-2 atan2 _neg_inf) (-pi) ==
+ 1
+
+# If y is a finite value greater (less) than 0, and x is positive infinity, +0 (-0) is returned.
+(3 atan2 _pos_inf) 0 ==
+ 1
+(-3 atan2 _pos_inf) -0 ==
+ 1
+
+# If y is positive infinity (negative infinity), and x  is  finite,  pi/2 (-pi/2) is returned.
+(_pos_inf atan2 2) (pi/2) ==
+ 1
+(_neg_inf atan2 2) (-pi/2) ==
+ 1
+
+# If  y is positive infinity (negative infinity) and x is negative infinity, +3*pi/4 (-3*pi/4) is returned.
+(_pos_inf atan2 _neg_inf) (3*pi/4) ==
+ 1
+(_neg_inf atan2 _neg_inf) (-3*pi/4) ==
+ 1
+
+# If y is positive infinity (negative infinity) and x is positive  infinity, +pi/4 (-pi/4) is returned.
+(_pos_inf atan2 _pos_inf) (pi/4) ==
+ 1
+(_neg_inf atan2 _pos_inf) (-pi/4) ==
+ 1
+
+# misc !finite tests follow
+clear
+0 degrees
+ trig functions will now use radians
+(tan(pi/2))
+ nan
+(tan(pi/2 + epsilon))
+ -6.70089e+33
+(tan(pi/2 + _10eps))
+ -5.31188e+32
+(tan(pi/2 - epsilon))
+ nan
+(tan(pi/2 - _10eps))
+ 5.07797e+32
+(ln(0))
+ -inf
+(ln(-1))
+ nan
+(sqrt(-1))
+ nan
+(3 % 0)
+ nan
+
+# "last x" tests
+1 5 + (pi + lx)
+ 9.14159
+lastx
+ 6
+1.5 +
+ 7.5
+lastx
+ 1.5
+(( lx * 2 ))
+ 3
+4 +
+ 7
+(( lx * 2 ))
+ 14
+3
+4 +
+ 7
+lx 2 *
+ 8
+
+clear
+0 separators
+ Numeric separators now off
+
+# =========================
+# basic numbers
+# =========================
+2 p
+ 2
++2 p
+ 2
+-2 p
+ -2
+0 p
+ 0
+3.5 p
+ 3.5
+.5 p
+ 0.5
+-.5 p
+ -0.5
++.5 p
+ 0.5
+1e3 p
+ 1000
+1e+3 p
+ 1000
+1e-3 p
+ 0.001
+-1e-3 p
+ -0.001
+# =========================
+# infix: binary operators
+# =========================
+(2 + 3)
+ 5
+(2+3)
+ 5
+(2 - 3)
+ -1
+(2-3)
+ -1
+(2 * 3)
+ 6
+(6 / 3)
+ 2
+(2 ^ 3)
+ 8
+# =========================
+# infix: unary operators
+# =========================
+(-3)
+ -3
+(+3)
+ 3
+(--3)
+ error: bad expression sequence, at '(' and '-'
+(+-3)
+ error: bad expression sequence, at '(' and '+'
+(-+3)
+ error: bad expression sequence, at '(' and '-'
+(++3)
+ error: bad expression sequence, at '(' and '+'
+# =========================
+# infix: precedence & grouping
+# =========================
+(2 + 3 * 4)
+ 14
+((2 + 3) * 4)
+ 20
+(-3^2)
+ 9
+((-3)^2)
+ 9
+(-(3^2))
+ -9
+# =========================
+# infix: functions (alpha operators)
+# =========================
+(sin(0))
+ 0
+(sqrt(4))
+ 2
+(sqrt(2)^2)
+ 2
+(-sqrt(4))
+ -2
+(sin(-0))
+ -0
+# =========================
+# infix: symbolic operators
+# =========================
+(2 == 2)
+ 1
+(2 == 3)
+ 0
+(2 != 3)
+ 1
+(2 < 3)
+ 1
+(3 <= 3)
+ 1
+(4 > 5)
+ 0
+# =========================
+# infix: errors
+# =========================
+(2 +)
+ error: bad expression sequence, at '+' and ')'
+(+)
+ error: bad expression sequence, at '(' and '+'
+(2 3)
+ error: bad expression sequence, at '2' and '3'
+((2 + 3)
+ error: missing parentheses
+(2 + + 3)
+ error: bad expression sequence, at '+' and '+'
+(2 - + 3)
+ error: bad expression sequence, at '-' and '+'
+(2 - - 3)
+ error: bad expression sequence, at '-' and '-'
+# =========================
+# rpn: basic operations
+# =========================
+2 3 +
+ 5
+2 3 -
+ -1
+2 3 *
+ 6
+6 3 /
+ 2
+2 3 ^
+ 8
+# =========================
+# rpn: signed literals
+# =========================
+-3 p
+ -3
++3 p
+ 3
+2 -3 +
+ -1
+2 +3 +
+ 5
+# =========================
+# rpn: functions
+# =========================
+0 sin
+ 0
+4 sqrt
+ 2
+2 sqrt 2 ^
+ 2
+4 sqrt chs
+ -2
+# =========================
+# rpn: symbolic operators
+# =========================
+2 2 ==
+ 1
+2 3 ==
+ 0
+2 3 !=
+ 1
+2 3 <
+ 1
+# =========================
+# rpn: sign edge cases
+# =========================
+clear
+2 - 3
+ empty stack
+clear
++
+ empty stack
+clear
+-
+ empty stack
+++2
+ error: unrecognized input '++2'
++-2
+ error: unrecognized input '+-2'
+-+2
+ error: unrecognized input '-+2'
+
+# =========================
+# expression syntax tests
+# =========================
+( 1  5 )
+ error: bad expression sequence, at '1' and '5'
+( 1  chs 5 )
+ error: bad expression sequence, at '1' and 'chs'
+( 1  -chs 5 )
+ 6
+( (1)  (5))
+ error: bad expression sequence, at ')' and '('
+( (1) + 5)
+ 6
+(() + 5)
+ error: bad expression sequence, at '(' and ')'
+((0) +5)
+ 5
+(() +5)
+ error: bad expression sequence, at '(' and ')'
+( (1)  5)
+ error: bad expression sequence, at ')' and '5'
+clear (7 / (pi %5) (1)/ ((2 *2)+3)/ 4))
+ error: bad expression sequence, at ')' and '('
+clear (7 / (pi (% (1)/ ((2 *2)+3)/ 4)))
+ error: bad expression sequence, at 'pi' and '('
+clear (7 / ((2 *2)) 4)
+ error: bad expression sequence, at ')' and '4'
+clear (7 / e (1))
+ error: bad expression sequence, at 'e' and '('
+clear (7 / e ((5 % pi) - chs 2) 3)
+ error: bad expression sequence, at 'e' and '('
+clear (exp 5 chs 3)
+ error: bad expression sequence, at '5' and 'chs'
+
+1 rightalign
+ Right alignment of integer modes is now on
+pi
+                               3.14159
+6 digits
+ Floating formats configured for 6 digits.
+                               3.14159
+eng
+ Will show floating point in engineering format
+                               3.14159
+100 /
+                              31.4159e-03
+100 *
+                               3.14159
+chs
+                              -3.14159
+100 *
+                            -314.159
+100 *
+                             -31.4159e+03
+100 *
+                              -3.14159e+06
+chs
+                               3.14159e+06
+recip
+                             318.310e-09
+100 *
+                              31.8310e-06
+chs
+                             -31.8310e-06
+100 *
+                              -3.18310e-03
+100 *
+                            -318.310e-03
+recip
+                              -3.14159
+clear
+-1 bits 1 s 0 right
+ Right alignment of integer modes is now off
+config
+            F,D,H,O,B       F
+       auto,eng,fixed     * engineering
+               digits       6
+                width       64
+           separators       1
+           rightalign     * 0
+             zerofill       0
+            autoprint       1
+              degrees     * 0
+            errorexit       0
+                debug     * 1
+             rounding       1
+              tracing       0
+ Starting from defaults, recreate with:
+    engineering  0 rightalign  0 degrees  1 debug
+
+0 debug config
+            F,D,H,O,B       F
+       auto,eng,fixed     * engineering
+               digits       6
+                width       64
+           separators       1
+           rightalign     * 0
+             zerofill       0
+            autoprint       1
+              degrees     * 0
+            errorexit       0
+ Starting from defaults, recreate with:
+    engineering  0 rightalign  0 degrees
+
+# test rotate across the sign bit
+H
+ Mode is hex (H).  Integer math with 64 bits.
+5 1 ror
+ 0x8000,0000,0000,0002
+1 ror
+ 0x4000,0000,0000,0001
+1 rol
+ 0x8000,0000,0000,0002
+1 rol
+ 0x5
+1 rol
+ 0xa
+0xa ==
+ 0x1
+24bits
+ Integers are now 24 bits wide.
+ 0x1
+5 1 ror
+ 0x80,0002
+1 ror
+ 0x40,0001
+1 rol
+ 0x80,0002
+1 rol
+ 0x5
+1 rol
+ 0xa
+0xa ==
+ 0x1
+clear
+0x2
+1 ror
+ 0x1
+1 ror
+ 0x80,0000
+1 ror
+ 0x40,0000
+1 rol
+ 0x80,0000
+1 rol
+ 0x1
+1 rol
+ 0x2
+
+# test rolling 1 across sign bit
+-1 width
+ Integers are now 64 bits wide.
+ 0x2
+1 ror
+ 0x1
+1 ror
+ 0x8000,0000,0000,0000
+1 ror
+ 0x4000,0000,0000,0000
+sto
+ 0x4000,0000,0000,0000
+1 rol
+ 0x8000,0000,0000,0000
+1 rol
+ 0x1
+1 rol
+ 0x2
+
+# test adding/subtracting 1 across sign bit
+1 -
+ 0x1
+1 -
+ 0x0
+1 -
+ 0xffff,ffff,ffff,ffff
+1 -
+ 0xffff,ffff,ffff,fffe
+1 -
+ 0xffff,ffff,ffff,fffd
+1 +
+ 0xffff,ffff,ffff,fffe
+1 +
+ 0xffff,ffff,ffff,ffff
+1 +
+ 0x0
+1 +
+ 0x1
+
+clear
+1 1 ror
+ 0x8000,0000,0000,0000
+~
+ 0x7fff,ffff,ffff,ffff
+2 -
+ 0x7fff,ffff,ffff,fffd
+1 +
+ 0x7fff,ffff,ffff,fffe
+1 +
+ 0x7fff,ffff,ffff,ffff
+1 +
+ 0x8000,0000,0000,0000
+1 +
+ 0x8000,0000,0000,0001
+1 +
+ 0x8000,0000,0000,0002
+1 -
+ 0x8000,0000,0000,0001
+1 -
+ 0x8000,0000,0000,0000
+1 -
+ 0x7fff,ffff,ffff,ffff
+1 -
+ 0x7fff,ffff,ffff,fffe
+1 -
+ 0x7fff,ffff,ffff,fffd
+
+# test shifting
+clear
+rcl
+ 0x4000,0000,0000,0000
+1 <<
+ 0x8000,0000,0000,0000
+1 >>
+ 0x4000,0000,0000,0000
+1 <<
+ 0x8000,0000,0000,0000
+1 <<
+ 0x0
+
+# test bit-setting
+0
+ 0x0
+rcl 1 << |
+ 0x8000,0000,0000,0000
+sto
+ 0x8000,0000,0000,0000
+push ~ &
+ 0x0
+rcl
+ 0x8000,0000,0000,0000
+push xor
+ 0x0
+rcl
+ 0x8000,0000,0000,0000
+push ~
+ 0x7fff,ffff,ffff,ffff
+xor
+ 0xffff,ffff,ffff,ffff
+rcl
+ 0x8000,0000,0000,0000
+chs
+ 0x8000,0000,0000,0000
+~
+ 0x7fff,ffff,ffff,ffff
+chs
+ 0x8000,0000,0000,0001
+recip
+ 0x0
+17 sqrt
+ 0x4
+-17 sqrt
+ nan
