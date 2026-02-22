@@ -60,7 +60,7 @@ pop
 
 H
  Mode is hex (H).  Integer math with 64 bits.
- 0x2     # warning: accuracy lost, was 2.60840734641020676
+ 0x2     # warning: accuracy lost, was 2.60840734641020676149
  0x1000
 0xfffff
 0xaaaaa ~ &
@@ -146,8 +146,8 @@ h
  302.019602647756
 H
  Mode is hex (H).  Integer math with 20 bits.
- 0x0     # warning: accuracy lost, was 0.982547593562716488
- 0x12e     # warning: accuracy lost, was 302.019602647756157
+ 0x0     # warning: accuracy lost, was 0.982547593562716488347
+ 0x12e     # warning: accuracy lost, was 302.019602647756157027
 0xf00 |
  0xf2e
 4 <<
@@ -255,7 +255,7 @@ H
  Mode is hex (H).  Integer math with 32 bits.
  0x0
  0x8765,0000
- 0x4,cb2f     # warning: accuracy lost, was 314159.265358979324
+ 0x4,cb2f     # warning: accuracy lost, was 314159.26535897932385
 D
  Mode is signed decimal (D).  Integer math with 32 bits.
  0
