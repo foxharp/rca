@@ -91,7 +91,8 @@ char *ccprogversion = "built " __DATE__ " " __TIME__;
 #endif
 
 /* these are filled in from the locale, if possible, otherwise
- * they'll default to period, comma, and dollar-sign */
+ * they'll default to period, comma, and dollar-sign.  none will
+ * be a null pointer after locale_init() has run. */
 char *decimal_pt;   // locale decimal_point
 size_t decimal_pt_len;
 char *thousands_sep, *thousands_sep_input;   // locale thousands_sep
@@ -228,13 +229,21 @@ void p_printf(const char *fmt, ...);
 /* if true, will decorate numbers, like "1,333,444".  */
 boolean digitseparators = PRINTF_SEPARATORS;
 
+/* this used to be used in controlling floating point error, and to
+ * calculate the maximum displayed precision, but now it's simply
+ * available as a calculator constant, for use in tests, mainly.  */
+long double epsilon = LDBL_EPSILON;
+
 /* float_digits may represent either the total displayed precision, or
- * the number of digits after the decimal, depending on
- * float_specifier.  it will be capped at max_precision, whose true
- * value is calculated at startup.  */
+ * the number of digits after the decimal, depending on float_specifier.
+ * it will be capped at max_digits.  */
+int max_digits = LDBL_DIG;
 int float_digits = 6;
-int max_precision = 18;
 char *float_specifier = "automatic"; // or "engineering" or "fixed decimal"
+/* NB:  If we ever save/restore externally, values should be written
+ * using LDBL_DECIMAL_DIG precision, to guarantee round-trip accuracy.
+ * We do this currently, in the "accuracy lost" message when switching
+ * modes.  */
 
 /* zerofill controls whether digits to the left of a value are
  * left blank, or shown as zero.  useful for smaller word widths
@@ -261,9 +270,6 @@ long long int_sign_bit;
 long long int_mask;
 long long int_max;
 long long int_min;
-
-/* this is used to control floating point error */
-long double epsilon;
 
 /* we don't allow parsing of floating hex input (e.g., -0x8.0p-63) by
  * default, to avoid confusion.  it's enabled after the first use of
@@ -324,6 +330,8 @@ error(const char *fmt, ...)
 		exit(4);
 }
 
+#ifdef CORRECT_BUT_UNNECESSARY
+/* epsilon and max_digits now come from float.h constants */
 void
 detect_epsilon(void)
 {
@@ -333,8 +341,9 @@ detect_epsilon(void)
 		epsilon /= 2.0L;
 
 	// round up to significant digit
-	max_precision = (int)(-log10l(epsilon)); // 18 for 64-bit mantissa
+	max_digits = (int)(-log10l(epsilon)); // 18 for 64-bit mantissa
 }
+#endif
 
 
 long double
@@ -373,24 +382,25 @@ tweak(ldouble x)
 	if (x != s)
 		return s;
 
-	/* use printf to round to max_precision significant digits.
+	/* use printf to round to max_digits significant digits.
 	 * it's as good as any other method, and we don't particularly
 	 * care about speed.  */
 	char buf[128];
-	snprintf(buf, sizeof buf, "%.*Lg", max_precision, x);
+	snprintf(buf, sizeof buf, "%.*Lg", max_digits, x);
 
 	return strtold(buf, NULL);
 }
 
-/* we snap/round any display of a float, and the operands of any
- * comparison between floats.  cmp_tweak() differs from tweak() only
- * because we don't want tracing every time we display a number.  */
+/* we snap/round a) any display of a float value, and b) the operands
+ * of any comparison between floats.  cmp_tweak() differs from tweak()
+ * only because we don't want tracing every time we display a number.
+ * */
 ldouble
 cmp_tweak(ldouble x)
 {
-	trace(EXEC,(" tweaking got %.*Lg (%La) ...\n", max_precision, x, x));
+	trace(EXEC,(" tweaking got %.*Lg (%La) ...\n", max_digits, x, x));
 	x = tweak(x);
-	trace(EXEC,("     returned %.*Lg (%La)\n", max_precision, x, x));
+	trace(EXEC,("     returned %.*Lg (%La)\n", max_digits, x, x));
 	return(x);
 }
 
@@ -1828,7 +1838,8 @@ show_int_truncation(boolean changed, ldouble old_n)
 	if (floating_mode(mode))
 		error("     # warning: display format loses accuracy\n");
 	else
-		error("     # warning: accuracy lost, was %.*Lg\n", max_precision, old_n);
+		error("     # warning: accuracy lost, was %.*Lg\n",
+				LDBL_DECIMAL_DIG, old_n);
 
 }
 
@@ -1979,7 +1990,7 @@ print_floating(ldouble n, int format)
 		/* The goal is to reduce the number of non-significant
 		 * digits shown.  If decimals is set to 6, then 123e12
 		 * would show "123,000,000,000,000.000000" which is
-		 * showing more than max_precision significant digits.  As
+		 * showing more than max_digits significant digits.  As
 		 * long as some of the excess digits are beyond the
 		 * decimal point, we can trim some from that end.  So the
 		 * code below gives us "123,000,000,000,000.000".  But that
@@ -2001,7 +2012,7 @@ print_floating(ldouble n, int format)
 
 		if (p) { /* found a decimal point */
 
-			decimals = min(float_digits, max_precision - leadingdigits);
+			decimals = min(float_digits, max_digits - leadingdigits);
 			if (decimals <= 0) decimals = 0;
 
 			snprintf(buf, sizeof(buf), printfmt, decimals, n);
@@ -2261,8 +2272,8 @@ printstate(void)
 	p_printf(" Current mode is %c\n", mode);
 	p_printf("\n");
 	p_printf(" In floating mode:\n");
-	p_printf("  max precision is %u decimal digits\n", max_precision);
-	p_printf("  current float display mode is \"%s\", with %d digits\n",
+	p_printf("  max digits is %u\n", max_digits);
+	p_printf("  display mode is \"%s\", with %d digits\n",
 		float_specifier, float_digits );
 	p_printf("  snapping/rounding is %s\n", do_rounding ? "on" : "off");
 	p_printf("\n");
@@ -2271,8 +2282,6 @@ printstate(void)
 	p_printf("  width is %d bits\n", int_width);
 	p_printf("  mask:     %s", puthex(int_mask));
 	p_printf("     sign bit: %s\n", puthex(int_sign_bit));
-	p_printf("  min:      %s", puthex(int_min));
-	p_printf("     max:      %s\n", puthex(int_max));
 	p_printf("\n");
 
 	s = stack;
@@ -2289,24 +2298,21 @@ printstate(void)
 	p_printf(" stack count %d, depth of the stack mark is %d\n",
 			stack_count, stack_count - stack_mark);
 
-	p_printf("\n");
-	p_printf("\n Build-time sizes:\n");
-	p_printf("  Native sizes (bits):\n");
-	p_printf("   sizeof(long long):\t%lu (%d bits)\n", sizeof(long long), sizeof(long long) * CHAR_BIT);
-	p_printf("   LLONG_MIN: %llx, LLONG_MAX: %llx\n", LLONG_MIN, LLONG_MAX);
-	p_printf("   sizeof(long double):\t%lu\n", (unsigned long)(8 * sizeof(long double)));
+	p_printf("\n Build-time constants:\n");
+	p_printf("   sizeof(long long):\t%lu (%d bits)\n", sizeof(long long),
+					sizeof(long long) * CHAR_BIT);
+	p_printf("   sizeof(long double):\t%lu (%d bits)\n", sizeof(long double),
+					(unsigned long)(8 * sizeof(long double)));
 	p_printf("   LDBL_MANT_DIG: %u\n", LDBL_MANT_DIG);
-	p_printf("   LDBL_MAX: %.20Lg\n", LDBL_MAX);
 	p_printf("   LDBL_EPSILON is %Lg (%La)\n", LDBL_EPSILON, LDBL_EPSILON);
 	p_printf("   LDBL_DIG: %u\n", LDBL_DIG);
-	p_printf("  Calculated:\n");
-	p_printf("   detected epsilon is %Lg (%La)\n", epsilon, epsilon);
 	p_printf("\n");
 	p_printf(" Locale elements (%s):\n", setlocale(LC_NUMERIC, NULL));
 	p_printf("  decimal '%s', thousands separator '%s', currency '%s'\n",
-		decimal_pt ? decimal_pt : "null",
-		thousands_sep ? thousands_sep : "null",
-		currency ? currency : "null");
+		decimal_pt[0] ? decimal_pt : "<none>",
+		thousands_sep[0]? thousands_sep : "<none>",
+		currency[0] ? currency : "<none>");
+	p_printf("\n");
 
 	return GOODOP;
 }
@@ -2495,8 +2501,8 @@ digits(void)
 		return BADOP;
 
 	// but it can't be greater than our maximum precision
-	if (digits > max_precision || digits < 0) {
-		digits = max_precision;
+	if (digits > max_digits || digits < 0) {
+		digits = max_digits;
 		limited = "the maximum of ";
 	}
 
@@ -3101,7 +3107,7 @@ sprint_token(char *s, size_t slen, token *t)
 {
 	switch (t->type) {
 	case NUMERIC:
-		snprintf(s, slen, "'%.*Lg'", max_precision, t->val.val);
+		snprintf(s, slen, "'%.*Lg'", max_digits, t->val.val);
 		break;
 	case SYMBOLIC:
 		snprintf(s, slen, "'%s'", t->val.oper->name);
@@ -4672,7 +4678,6 @@ main(int argc, char *argv[])
 	locale_init();
 
 	setup_width(0);
-	detect_epsilon();
 
 	create_infix_support_tokens();
 
