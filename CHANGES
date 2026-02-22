@@ -1,4 +1,27 @@
 
+v20 changes   (2/22/2026)
+
+    cleaned and trimmed the "state" command enough for it to be a
+    "real" command, not just debug.
+
+    set max_digits and epsilon variables based on the constants in
+    float.h, rather than hand-calculating.
+
+    created separate reference files for the tests for each FP layout.
+    there's now a simple ID, obtained from the "state" command, which
+    lets us select which test files to use for each build type.
+
+    added some useful compiler warnings to the build
+
+    now much more careful with long long / ldouble conversions.  the
+    RPi4 (much larger FP mantissa) and RPi3 (much smaller) are more
+    sensitive to this than x86_64.  this involved more casting, but
+    also more careful handling of transitions between long double,
+    long long, and unsigned long long.  introduced new tests,
+    especially for the bitwise operators.
+
+    "bits" is now a (very natural) synonym command for "width"
+
 v19 changes   (2/17/2026)
     major change to snapping/rounding tactics:  we now only tweak
     displayed floats, _never_ the stack.  this cleans up the remaining

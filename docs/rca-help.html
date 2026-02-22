@@ -14,7 +14,7 @@
   Operators replace either one or two stack values with their result.
   Most whitespace is optional between numbers and operators.
   Input can include locale currency and grouping symbols: $12,345.67
-  Always prefix hex (0x7f) or octal (0o177) input, even in hex or octal mode.
+  Always prefix hex (&quot;0x7f&quot;) or octal (&quot;0o177&quot;), even in hex or octal mode.
   Infix expressions are entered using (...), as in: (sin(30)^2 + cos(30)^2)
   Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.
   rca's normal exit value reflects the logical value of the top of stack.
@@ -90,7 +90,7 @@
 
  Modes:
         F, D, H, O, B     Switch to floating, decimal, hex, octal, binary modes
-          width, or w     Set effective word size for integer modes
+       width, or bits     Set effective word size for integer modes
        zerofill, or z     Toggle left-fill with zeros in H, O, and B modes
  rightalign, or right     Toggle right alignment of numbers
               degrees     Toggle trig functions: degrees (1) or radians (0)
@@ -101,6 +101,7 @@
  Housekeeping:
            ?, or help     Show this list (using $PAGER, if set)
                config     Show current configuration settings
+                state     Show calculator state
            precedence     List infix operator precedence
      quit, q, or exit     Leave the calculator
             errorexit     Toggle exiting on error and warning
@@ -110,7 +111,7 @@
                     #     Comment. The rest of the line will be ignored.
 
 
-                                                                   version v19
+                                                                   version v20
 
  Tip:	Use &quot;rca help q | less&quot; to view this help
 </pre>
