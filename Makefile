@@ -134,7 +134,7 @@ uninstall:
 # before feeding what's left (i.e., the input) to rca, and comparing
 # the result, which should match exactly.
 
-ID=$$(./rca limits q|sed -n 's/ id: //p')
+ID=$$(./rca state q|sed -n 's/ *rca descriptor: *//p')
 tests:  gentest optest tweaktest pi_approximations
 	@echo Tests succeeded
 

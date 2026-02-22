@@ -2269,19 +2269,21 @@ printstate(void)
 	struct num *s;
 
 	p_printf("\n");
-	p_printf(" Current mode is %c\n", mode);
+	p_printf(" Current mode is %c (%s)\n", mode,
+			floating_mode(mode) ? "floating" : "integer" );
 	p_printf("\n");
 	p_printf(" In floating mode:\n");
-	p_printf("  max digits is %u\n", max_digits);
-	p_printf("  display mode is \"%s\", with %d digits\n",
+	p_printf("  current display mode is \"%s\", with %d digits\n",
 		float_specifier, float_digits );
+	p_printf("  max digits is %u\n", max_digits);
 	p_printf("  snapping/rounding is %s\n", do_rounding ? "on" : "off");
 	p_printf("\n");
 
 	p_printf(" In integer modes:\n");
-	p_printf("  width is %d bits\n", int_width);
-	p_printf("  mask:     %s", puthex(int_mask));
+	p_printf("  current width is %d bits\n", int_width);
+	p_printf("         mask: %s\n", puthex(int_mask));
 	p_printf("     sign bit: %s\n", puthex(int_sign_bit));
+	p_printf("  max integer width is %d bits\n", max_int_width);
 	p_printf("\n");
 
 	s = stack;
@@ -2306,6 +2308,7 @@ printstate(void)
 	p_printf("   LDBL_MANT_DIG: %u\n", LDBL_MANT_DIG);
 	p_printf("   LDBL_EPSILON is %Lg (%La)\n", LDBL_EPSILON, LDBL_EPSILON);
 	p_printf("   LDBL_DIG: %u\n", LDBL_DIG);
+	p_printf("   rca descriptor: f%ui%u\n", LDBL_MANT_DIG, max_int_width);
 	p_printf("\n");
 	p_printf(" Locale elements (%s):\n", setlocale(LC_NUMERIC, NULL));
 	p_printf("  decimal '%s', thousands separator '%s', currency '%s'\n",
@@ -2313,16 +2316,6 @@ printstate(void)
 		thousands_sep[0]? thousands_sep : "<none>",
 		currency[0] ? currency : "<none>");
 	p_printf("\n");
-
-	return GOODOP;
-}
-
-opreturn
-limits(void)
-{
-	p_printf(" floating point bits: %u\n", LDBL_MANT_DIG);
-	p_printf(" integer bits: %lu\n", max_int_width);
-	p_printf(" id: f%lui%u\n", LDBL_MANT_DIG, max_int_width);
 
 	return GOODOP;
 }
@@ -4594,7 +4587,6 @@ struct oper opers[] = {
 	{"mode", modeinfo,	"Display current mode parameters" },
 	{""},
     {"Debug support:", 0, 0, 0, 0, 'D'},
-	{"state", printstate,	"Show calculator state", 0, 0, 'D' },
 	{"raw", printrawhex,	"Print x as raw floating hex", 0, 0, 'D'},
 	{"Raw", moderawhex,	"Switch to raw floating hex mode", 0, 0, 'D'},
 	{"epsilon", push_epsilon,"Push constant epsilon", Sym, 0, 'D'},
@@ -4607,8 +4599,8 @@ struct oper opers[] = {
 	{"?", help,		0 },
 	{"help", help,		"Show this list (using $PAGER, if set)" },
 	{"config", config,	"Show current configuration settings" },
+	{"state", printstate,	"Show calculator state"},
 	{"precedence", precedence, "List infix operator precedence" },
-	{"limits", limits,	"Show integer and float sizes" },
 	{"quit", quit,		0 },
 	{"q", quit,		0 },
 	{"exit", quit,		"Leave the calculator" },
