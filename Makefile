@@ -143,13 +143,18 @@ pi_approximations:  # with and without rca_float
 	test $$(./rca "10 digits fixed ((355 / 113) - pi) q") = 0.0000002668
 
 gentest:
+# keep valgrind optional for gentest:  it messes with floating point,
+# so we can't use it all the time.  remove XX to enable.  only look
+# for memory errors if you use it here, not math errors.
 	egrep -v '^ ' tests/f64i64/gentests.txt | \
-		./rca 2>&1 | tee .test | \
+		( RUNVG="valgrind -q --leak-check=full"; \
+		  which XXvalgrind >/dev/null || RUNVG=; \
+		  $$RUNVG ./rca 2>&1 \
+		) | tee .test | \
 		diff -u tests/$(ID)/gentests.txt -
 
-# valgrind messes with floating point.  only optests.txt avoids high
-# precision FP, so only it works under valgrind.
 optest:
+# optest doesn't test actual math at all, so always use valgrind if available
 	egrep -v '^ ' tests/f64i64/optests.txt | \
 		( RUNVG="valgrind -q --leak-check=full"; \
 		  which valgrind >/dev/null || RUNVG=; \
