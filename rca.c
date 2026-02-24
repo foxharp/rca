@@ -4537,7 +4537,7 @@ struct oper opers[] = {
 	{";", semicolon,	"Infix separator (in RPN, discards y)", 2, 4 },
 	{"snapshot", snapshot,	0, Auto}, // "Snapshot the stack, stop at \"mark\" if set", Auto },
 	{"sum", sum,		0, Auto },
-	{"avg", avg,		"Snapshot, sum or average stack, stop at \"mark\" if set", Auto },
+	{"avg", avg,		"Snapshot, sum or average stack, maybe stop at \"mark\"", Auto },
 	{"mark", mark,		"Mark stack to limit later snap/sum/average" },
 	{"restore", restore,	"Push the snapshot onto current stack", Auto },
 	{""},
@@ -4570,7 +4570,7 @@ struct oper opers[] = {
 	{"D", modedec,		0 },
 	{"H", modehex,		0 },
 	{"O", modeoct,		0 },
-	{"B", modebin,		"Switch to floating, decimal, hex, octal, binary modes" },
+	{"B", modebin,		"Switch to floating, decimal, hex, octal, binary mode" },
 	{"width", width,	0, Auto },
 	{"bits", width,		"Set effective word size for integer modes", Auto },
 	{"zerofill", zerof,	0, Auto },
@@ -4582,7 +4582,7 @@ struct oper opers[] = {
 	{"ap", autop,		"Toggle autoprinting on/off with 0/1" },
 #if PRINTF_SEPARATORS
 	{"separators", separators, 0 },
-	{"sep", separators,	"Toggle numeric separators (i.e., commas) on/off (0/1)" },
+	{"sep", separators,	"Toggle numeric separators on/off (0/1)" },
 #endif
 	{"mode", modeinfo,	"Display current mode parameters" },
 	{""},
