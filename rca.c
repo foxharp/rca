@@ -192,12 +192,12 @@ typedef struct token {
 } token;
 
 /* values for token type */
-#define UNKNOWN -1
-#define NUMERIC 0
-#define SYMBOLIC 1
-#define OP 2
-#define EOL 3
-#define VARIABLE 4
+#define UNKNOWN  0
+#define NUMERIC  1
+#define SYMBOLIC 2
+#define OP       3
+#define EOL      4
+#define VARIABLE 5
 
 /* values for # of operands field in opers table:
  *  1 & 2 are used verbatim as operand counts
@@ -288,7 +288,10 @@ int variable_write_enable;
 /* where program input is coming from currently */
 static char *input_ptr = NULL;
 
-int parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn);
+#define RPN 1
+#define INFIX 0
+int read_token(token *, int whichparse);
+int parse_token(char *p, token *t, char **nextp, int whichparse);
 
 long long
 ld_to_ll(long double n)
@@ -3158,12 +3161,11 @@ token open_paren_token, chsign_token, nop_token;
 void
 create_infix_support_tokens()
 {
-	/* we need a couple of token identifiers for later on,
-	 * specifically for dealing with infix processing.  */
-	char *outp;
-	(void)parse_tok("(", &open_paren_token, &outp, 0);
-	(void)parse_tok("chs", &chsign_token, &outp, 0);
-	(void)parse_tok("nop", &nop_token, &outp, 0);
+	/* we'll need a couple of standalone pre-parsed tokens later
+	 * on, specifically for dealing with infix processing.  */
+	(void)parse_token("(", &open_paren_token, NULL, INFIX);
+	(void)parse_token("chs", &chsign_token, NULL, INFIX);
+	(void)parse_token("nop", &nop_token, NULL, INFIX);
 }
 
 void
@@ -3214,8 +3216,8 @@ prev_tok_was_operand(token *pt)
 }
 
 #define t_op t->val.oper	// shorthands.  don't use unless type == OP
-#define tp_op tp->val.oper
 #define pt_op pt->val.oper
+#define tp_op tp->val.oper
 
 void shunt(token *t)
 {
@@ -3244,36 +3246,30 @@ opreturn
 open_paren(void)
 {
 	static token tok, prevtok;
+	token *t = &tok;	// permanent pointers to tok and prevtok
+	token *pt = &prevtok;
+
 	int paren_count;
-	token *t, *pt, *tp;	// pointers to tok, prevtok, and tpeek'ed token
+
 
 	tclear(&out_stack);
 	tclear(&oper_stack);
 
 	trace(TOK,("\n infix tokens: "));
 
-	// push the '(' token the user typed
+	// push the '(' token the user typed to get us here
 	tpush(&oper_stack, &open_paren_token);
+	// and pretend it was the last token we saw
+	*pt = open_paren_token;
 	paren_count = 1;
-	prevtok = open_paren_token;
-	pt = &prevtok;
 
 	while (1) {
 		trace(SHUNT,("\n"));
 		trace_stack_dump(SHUNT,&oper_stack);
 		trace_stack_dump(SHUNT,&out_stack);
 
-		while (isspace(*input_ptr))
-			input_ptr++;
-
-		if (!*input_ptr)
+		if (!read_token(&tok, INFIX) || tok.type == EOL)
 			break;
-
-		t = &tok;
-
-		if (!parse_tok(input_ptr, &tok, &input_ptr, 0)) {
-			goto cleanup;
-		}
 
 		/* we delayed classifying the previous variable token
 		 * until we could tell if we were assigning or not.
@@ -3323,6 +3319,8 @@ open_paren(void)
 					input_ptr = NULL;
 					return BADOP;
 				}
+
+				token *tp;
 				// Process until matching opening paren
 				while ((tp = tpeek(&oper_stack))) {
 					if (tp->type == OP &&
@@ -3369,10 +3367,10 @@ open_paren(void)
 					!prev_tok_was_operand(pt) &&
 					!strchr(" \t\v\r\n)+-", *input_ptr)) {
 					if (t_op->func == subtract) {
-						t = &chsign_token;
+						tok = chsign_token;
 						trace(TOK,(" subtract is now chs\n"));
 					} else {  // add
-						t = &nop_token;
+						tok = nop_token;
 						trace(TOK,(" add is now nop\n"));
 					}
 					goto unary;
@@ -3406,7 +3404,6 @@ open_paren(void)
 
 		default:
 		case UNKNOWN:
-		cleanup:
 			input_ptr = NULL;
 			return BADOP;
 		}
@@ -3414,7 +3411,7 @@ open_paren(void)
 		if (paren_count == 0)
 			break;
 
-		prevtok = *t;
+		prevtok = tok;
 
 	}
 	trace(EXEC,("\n finished reading expression\n"));
@@ -3426,7 +3423,8 @@ open_paren(void)
 
 	/* the shunting yard is finished.  output stack is in the
 	 * wrong order, so one more transfer to reverse it.
-	 * gettoken() will pull from this copy.
+	 * the loop in main() will pull from this copy before using
+	 * further user input.
 	 */
 	while((t = tpop(&out_stack)) != NULL) {
 		tpush(&infix_rpn_queue, t);
@@ -3459,7 +3457,7 @@ tracetoggle(void)
 		return BADOP;
 
 	// tracing is a bitmap of desired "feature" trace
-	tracing = (wanttracing != 0);
+	tracing = (int)wanttracing;
 
 	p_printf(" internal tracing now set to %d", tracing);
 	for (int i = 0; tracenames[i]; i++) {
@@ -3598,27 +3596,32 @@ size_t stralnum(char *s, char **endptr)
 	return (size_t)(ns - s);
 }
 
+/* parse_token() figures out what's in the text pointed to by p., and
+ * returns what it finds, in the return token t.  nextp, if non-null, is
+ * set to where processing should continue */
 int
-parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
+parse_token(char *p, token *t, char **nextp, int whichparse)
 {
 	int sign = 1;
 	size_t n;
+	char *np;
 
-	if (parsing_rpn && (*p == '+' || *p == '-')) {
-		/* In RPN, be sure + and - are bound closely to
-		 * numbers.  We want "1 2 -3" to push "1", "2", and
-		 * "-3", not "(1-2)", and "3".  For infix expressions,
-		 * whether to bind the +/- to a number depends on what
-		 * came before.  "(2-3)" should be read as "(2 - 3)",
-		 * not "(2 -3)".  That's handled in open_paren(),
-		 * where we can track ordering.
-		 */
-		if (*p == '+' && (match_dp(p + 1) || isdigit(*(p + 1)))) {
+	/* In RPN, +/- must be bound closely to numbers.  We want "1 2 -3"
+	 * to push "1", "2", and "-3", not "(1-2)", and "3".
+	 *
+	 * But for infix expressions, how to bind +/- depends on what came
+	 * before.  "(2-3)" should be read as "(2 - 3)", but "(recip-3)"
+	 * should be "(recip -3)".  Here we return +/- as a separate
+	 * binary operator, and it may be converted to unary in
+	 * open_paren(), where we can track ordering.
+	 */
+
+	if (whichparse == RPN && (*p == '+' || *p == '-')) {
+		if (match_dp(p + 1) || isdigit(*(p + 1))) { // a number?
+			if (*p == '-')
+				sign = -1;
 			p++;
-		} else if (*p == '-' && (match_dp(p + 1) || isdigit(*(p + 1)))) {
-			sign = -1;
-			p++;
-		} else if (isspace(*(p+1)) || *(p+1) == 0) {
+		} else if (isspace(*(p+1)) || *(p+1) == 0) { // standalone?
 			goto is_oper;
 		} else {
 			goto unknown;
@@ -3630,15 +3633,15 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 		long double dd;
 		if (raw_hex_input_ok) {
 			// will accept floating hex like 0xc.90fdaa22168c23cp-2
-			dd = strtold(p, nextp);
+			dd = strtold(p, &np);
 		} else {
 			// accept simple hex integers only
-			unsigned long long u = strtoull(p, nextp, 16);
+			unsigned long long u = strtoull(p, &np, 16);
 			dd = (ldouble)u;
 		}
 
 		/* be strict about what comes next */
-		if (isalnum(**nextp))
+		if (isalnum(*np))
 			goto unknown;
 
 		t->val.val = dd * sign;
@@ -3648,10 +3651,10 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 	} else if (*p == '0' && (*(p + 1) == 'b' || *(p + 1) == 'B')) {
 		// binary, leading "0b"
 		p += 2;
-		unsigned long long ln = strtoull(p, nextp, 2);
+		unsigned long long ln = strtoull(p, &np, 2);
 
 		/* be strict about what comes next */
-		if (*nextp == p || isalnum(**nextp))
+		if (np == p || isalnum(*np))
 			goto unknown;
 
 		t->type = NUMERIC;
@@ -3661,10 +3664,10 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 	} else if (*p == '0' && (*(p + 1) == 'o' || *(p + 1) == 'O')) {
 		// octal, leading "0o"
 		p += 2;
-		unsigned long long ln = strtoull(p, nextp, 8);
+		unsigned long long ln = strtoull(p, &np, 8);
 
 		/* be strict about what comes next */
-		if (*nextp == p || isalnum(**nextp))
+		if (np == p || isalnum(*np))
 			goto unknown;
 
 		t->type = NUMERIC;
@@ -3673,12 +3676,12 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 
 	} else if (isdigit(*p) || match_dp(p)) {
 		// decimal
-		long double dd = strtold(p, nextp);
+		long double dd = strtold(p, &np);
 
 		/* don't be strict about what comes next.  mistakes are
 		 * less likely when entering decimal. this makes 3k or 18w
 		 * legal */
-		if (p == *nextp)
+		if (p == np)
 			goto unknown;
 
 		t->type = NUMERIC;
@@ -3686,14 +3689,14 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 		t->val.val = dd * sign;
 	} else if (*p == '_' && isalnum(*(p+1))) {
 		// variable
-		n = stralnum(p, nextp);
+		n = stralnum(p, &np);
 		t->type = VARIABLE;
 		t->val.varname = strndup(p,n);
 	} else {
 
 	    is_oper:
 		if (isalpha(*p)) {
-			n = stralnum(p, nextp);
+			n = stralnum(p, &np);
 		} else if (ispunct(*p)) {
 			/* parser hack:  hard-coded list of
 			 * all double-punctuation operators */
@@ -3710,11 +3713,12 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 			} else {
 				n = 1;
 			}
-			*nextp = p + n;
+			np = p + n;
 		} else {
 			error(" error: illegal character in input\n");
 			t->val.str = p;
 			t->type = UNKNOWN;
+			if (nextp) *nextp = np;
 			return 0;
 		}
 
@@ -3735,7 +3739,7 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 			}
 			matchlen = strlen(op->name);
 			if (n == matchlen && !strncmp(op->name, p, matchlen)) {
-				*nextp = p + matchlen;
+				np = p + matchlen;
 				t->val.oper = op;
 				if (op->operands == Sym) // like "pi", "recall"
 					t->type = SYMBOLIC;
@@ -3751,10 +3755,12 @@ parse_tok(char *p, token *t, char **nextp, boolean parsing_rpn)
 				strtok(p, " \t\n"));
 			t->val.str = p;
 			t->type = UNKNOWN;
+			if (nextp) *nextp = np;
 			return 0;
 		}
 	}
 	trace_show_tok(TOK, t);
+	if (nextp) *nextp = np;
 	return 1;
 }
 
@@ -3845,7 +3851,8 @@ command_completion(const char* prefix, int start, int end)
 #endif
 
 /* on return from fetch_line(), the global input_ptr is a string
- * containing commands to be executed */
+ * containing commands to be executed, wherever they may have
+ * come from (i.e., command line, environment, user input) */
 int
 fetch_line(void)
 {
@@ -3957,10 +3964,15 @@ fetch_line(void)
 	return 1;
 }
 
+/* read_token() makes sure we have input available to parse, and sets
+ * things up for parse_token() to do the work.  */
 int
-gettoken(struct token *t)
+read_token(token *t, int parsing_rpn)
 {
 	char *next_input_ptr;
+
+	/* either it was never set, or we used up the data pointed
+	 * to by input_ptr */
 	if (input_ptr == NULL) {
 		if (!fetch_line())
 			return 0;
@@ -3969,7 +3981,7 @@ gettoken(struct token *t)
 	while (isspace(*input_ptr))
 		input_ptr++;
 
-	if (*input_ptr == '\0') {	/* out of input */
+	if (*input_ptr == '\0') {  // out of input -- create an EOL token
 		t->type = EOL;
 		// trace_show_tok(TOK, t);  // trace disabled:  too chatty
 		input_ptr = NULL;
@@ -3978,7 +3990,7 @@ gettoken(struct token *t)
 
 	fflush(stdin);
 
-	if (!parse_tok(input_ptr, t, &next_input_ptr, 1)) {
+	if (!parse_token(input_ptr, t, &next_input_ptr, parsing_rpn)) {
 		input_ptr = NULL;
 		return 0;
 	}
@@ -4656,11 +4668,13 @@ do_autoprint(token *pt)
 int
 main(int argc, char *argv[])
 {
-	static token prevtok;
-	token tok, *t;
-	char *pn;
+	static token tok, prevtok;
+	token *t = &tok;	// permanent pointers to tok and prevtok
+	token *pt = &prevtok;
 
-	pn = strrchr(argv[0], '/');
+	pt->type = UNKNOWN;
+
+	char *pn = strrchr(argv[0], '/');
 	progname = pn ? (pn + 1) : argv[0];
 
 	/* fetch_line() will process args as if they were input as commands */
@@ -4683,16 +4697,16 @@ main(int argc, char *argv[])
 	while (1) {
 
 		/* use up tokens created by infix processing first */
-		if ((t = tpop(&infix_rpn_queue))) {
-			tok = *t;
-			free(t);
+		token *tt;
+		if ((tt = tpop(&infix_rpn_queue))) {
+			tok = *tt;
+			free(tt);
 			freeze_lastx();
 		} else { /* otherwise get tokens from input as usual */
-			if (!gettoken(&tok))
+			if (!read_token(&tok, RPN))
 				continue;
 			thaw_lastx();
 		}
-		t = &tok;
 
 		if (t->type != EOL && t->type != OP) {
 			/* don't save pending info older than one command */
@@ -4718,7 +4732,7 @@ main(int argc, char *argv[])
 			(void)(t->val.oper->func) ();
 			break;
 		case EOL:
-			do_autoprint(&prevtok);
+			do_autoprint(pt);
 			pending_show();
 			break;
 		default:
@@ -4730,7 +4744,7 @@ main(int argc, char *argv[])
 		if (variable_write_enable)
 			variable_write_enable--;
 
-		prevtok = *t;
+		*pt = *t;
 
 	}
 	exit(3);  // not reached
