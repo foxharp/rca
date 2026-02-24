@@ -191,7 +191,7 @@ h
 B
  Mode is binary (B).  Integer math with 16 bits.
  0b0
-1s
+1sep
  Numeric separators now on
 b
  0b0
@@ -200,12 +200,12 @@ b
 1 zerofill
  Zero fill in hex/octal/binary modes is now on
  0b00001010,10111100
-0s
+0sep
  Numeric separators now off
 P
  0b0000000000000000
  0b0000101010111100
-1s
+1sep
  Numeric separators now on
 P
  0b00000000,00000000
@@ -216,19 +216,19 @@ P
 P
  0b00000000,00000000,00000000
  0b00000000,00001010,10111100
-0s
+0sep
  Numeric separators now off
 P
  0b000000000000000000000000
  0b000000000000101010111100
-1s
+1sep
  Numeric separators now on
 P
  0b00000000,00000000,00000000
  0b00000000,00001010,10111100
 pop
  0b00000000,00000000,00000000
-0z
+0zf
  Zero fill in hex/octal/binary modes is now off
  0b0
 16 bits
@@ -261,7 +261,7 @@ D
  0
  -2,023,424,000
  314,159
-0s
+0sep
  Numeric separators now off
 
 # comment test
@@ -596,7 +596,7 @@ auto
  -19.05
 40 i2mm
  1,016
-0 s
+0 sep
  Numeric separators now off
 3 digits
  Floating formats configured for 3 digits.
@@ -604,7 +604,7 @@ auto
 auto
  Will show floating point in automatic format
  1.02e+03
-1 s
+1 sep
  Numeric separators now on
 clear
 H
@@ -1155,7 +1155,7 @@ chs
 recip
                               -3.14159
 clear
--1 bits 1 s 0 right
+-1 bits 1 sep 0 ra
  Right alignment of integer modes is now off
 config
             F,D,H,O,B       F

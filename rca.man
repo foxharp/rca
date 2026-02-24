@@ -34,7 +34,7 @@ is on by default; it can be toggled off with
 .B 0 autoprint
 (or
 .B 0
-.BR a ).
+.BR ap ).
 
 If
 .B rca
@@ -363,7 +363,7 @@ when storing the result.
 can add commas (or the locale's "thousands separator") to group the
 numbers it prints.  These separators can be toggled on or off with
 .BR 0 / 1
-.B s
+.B sep
 (or
 .BR separators ).
 Separators will never appear in the fractional part of a value.  The
@@ -500,26 +500,26 @@ Selecting a size of -1 will select the system maxiumum.
 .P
 .B separators
 (or
-.BR s )
+.BR sep )
 toggles whether output will include separators (usually ',', but
 see the LOCALE section) for readability.  (Startup: enabled)
 .P
 .B rightalign
 (or
-.BR right )
+.BR ra )
 toggles whether displayed values should be vertically aligned at the
 left margin by their first digit, or to the right, by their decimal
 point.  (Startup:  enabled)
 .P
 .B zerofill
 (or
-.BR z )
+.BR zf )
 toggles whether or not hex, octal, and binary integers will be
 left-padded out to the chosen word width with zeros.  (Startup: disabled)
 .P
 .B autoprint
 (or
-.BR a )
+.BR ap )
 toggles printing of the top of stack after newlines.  (Startup:
 enabled)
 .P
