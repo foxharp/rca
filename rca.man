@@ -130,7 +130,11 @@ The
 .BR lx )
 operator can be used in an infix expression.  It returns the value of
 .I x
-(i.e., the top of stack) prior to the expression being invoked.
+(i.e., the top of stack) prior to the expression being invoked.  This
+can be convenient for chained calculations:  if several infix
+expressions are evaluated in a row, the value of
+.B lx
+in each will always be the the result of the previous.
 .P
 Variables, named with a leading
 .RB ' _ '
