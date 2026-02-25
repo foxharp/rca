@@ -119,12 +119,10 @@ int tracing;
 char *tracenames[] = {"tokens", "execution", "shunting", 0};
 
 typedef int boolean;
-
 #define TRUE 1
 #define FALSE 0
 
 typedef int opreturn;
-
 #define GOODOP 1
 #define BADOP 0
 
@@ -142,8 +140,7 @@ ldouble e =  2.718281828459045235360287471352662497L;
 /* internal representation of operands on the stack.  numbers are always
  * stored as long doubles, even when we're in integer mode.  this could
  * be revisited, but since the FP mantissa is usually as big as the integer
- * word size these days (64 bits), it's probably fine.
- */
+ * word size these days (64 bits), it's probably fine.  */
 struct num {
 	ldouble val;
 	struct num *next;
@@ -159,9 +156,9 @@ int stack_mark;
 /* for catching infix bugs */
 int infix_stacklevel;
 
+
 /* all user input is either a number or a command operator.
- * this is how operators are looked up, by name
- */
+ * this is how operators are looked up, by name */
 typedef opreturn(*opfunc) (void);
 
 /* operator routines */
@@ -177,15 +174,24 @@ typedef struct oper {
 /* operator table */
 struct oper opers[];
 
+/* values for # of operands field in opers table:
+ *  1 and 2 are used verbatim as operand counts
+ *  0 denotes a pseudo-op, i.e. printing, configuration, or similar
+ * -1 (Sym) means a symbolic "named number", like pi, lastx, rcl
+ * -2 (Auto) is a pseudo-op that wants autoprint, like "pop", "exch", "sum" */
+#define Sym	-1
+#define Auto	-2
+
+
 /* tokens are typed -- currently numbers, operators, symbolic, and line-ends */
 typedef struct token {
+	int type;
 	union {
 		ldouble val;   /* NUMERIC: simple value */
 		oper *oper;    /* OP or SYMBOLIC points into opers table */
 		char *varname; /* VARIABLE: variable's name, malloced */
 		char *str;     /* UNKNOWN: points to input buffer, for errors */
 	} val;
-	int type;
 	int imode;	    /* input mode: if NUMERIC, how was it entered?  */
 	int alloced;	    /* should this token be freed or not? */
 	struct token *next; /* for stacking tokens when infix processing */
@@ -199,20 +205,11 @@ typedef struct token {
 #define EOL      4
 #define VARIABLE 5
 
-/* values for # of operands field in opers table:
- *  1 & 2 are used verbatim as operand counts
- *  0 denotes a pseudo-op, i.e. it manipulates the calculator itself
- * -1 (Sym) means a "named number", like pi, or lastx
- * -2 (Auto) is a pseudo-op that wants autoprint, like "pop", "exch", "sum" */
-#define Sym	-1
-#define Auto	-2
-
 
 /* 6 major modes:  float, decimal, hex, octal, binary, and raw float.
  * all but float and raw float are integer modes.  (raw float is a
- * debug mode:  it uses the printf %a format)
- */
-int mode = 'F';			/* 'F', 'D', 'H', 'O', 'B', 'R' */
+ * debug mode:  it uses the printf %a format) */
+int mode = 'F';			// 'F', 'D', 'H', 'O', 'B', 'R'
 boolean floating_mode(int m) { return (m == 'F' || m == 'R'); }
 
 /* if true, exit(4) on error, warning, or access to empty operand stack */
@@ -223,15 +220,16 @@ boolean autoprint = TRUE;
 
 /* informative feedback, which is only printed if the command generating
  * it is followed by a newline */
-int pending_enabled = 1;
 void p_printf(const char *fmt, ...);
 
-/* if true, will decorate numbers, like "1,333,444".  */
+/* if true, will decorate numbers, like "1,333,444".  initial value
+ * derived from which libc we're using, since not all libraries
+ * support %'d */
 boolean digitseparators = PRINTF_SEPARATORS;
 
-/* this used to be used in controlling floating point error, and to
+/* this was initially used in controlling floating point error, and to
  * calculate the maximum displayed precision, but now it's simply
- * available as a calculator constant, for use in tests, mainly.  */
+ * available as a symbolic constant, for use in tests, mainly.  */
 long double epsilon = LDBL_EPSILON;
 
 /* float_digits may represent either the total displayed precision, or
@@ -240,28 +238,25 @@ long double epsilon = LDBL_EPSILON;
 int max_digits = LDBL_DIG;
 int float_digits = 6;
 char *float_specifier = "automatic"; // or "engineering" or "fixed decimal"
-/* NB:  If we ever save/restore externally, values should be written
- * using LDBL_DECIMAL_DIG precision, to guarantee round-trip accuracy.
- * We do this currently, in the "accuracy lost" message when switching
- * modes.  */
+/* NB:  If we save/restore externally, values should be written using
+ * LDBL_DECIMAL_DIG precision, to guarantee round-trip accuracy.  We
+ * do this currently in the "accuracy lost" message sometimes shown
+ * when switching modes.  */
 
-/* zerofill controls whether digits to the left of a value are
- * left blank, or shown as zero.  useful for smaller word widths
- * in hex, octal, and binary modes. */
+/* zerofill controls whether digits to the left of a value are left
+ * blank, or shown as zero.  applies in hex, octal, and binary modes. */
 boolean zerofill = 0;
 
 /* rightalign controls whether, when printing, we line up least
  * significant digits (right) or most significant digits (left).  */
 boolean rightalignment = 1;
 
-/* I tried making these alignment columns dynamic, adjusting to the
- * max width of a float, or an integer in whichever particular base,
- * but it added complexity for not a lot of value.  So now there are
- * just two choices, which just fit 64 bit octal and binary output. */
+/* Previously these right-alignment columns were dynamic, adjusting to
+ * the max width of the current display format and base, but it added
+ * more complexity than value.  Now there are only two choices, which
+ * just fit binary and 64 bit octal, the two longest formats */
 #define ALIGN_COL        32
 #define ALIGN_COL_BINARY 75
-
-#define LONGLONG_BITS (sizeof(long long) * 8)
 
 /* these all help limit the word size to anything we want.  */
 int max_int_width;
@@ -270,6 +265,8 @@ long long int_sign_bit;
 long long int_mask;
 long long int_max;
 long long int_min;
+#define LONGLONG_BITS (sizeof(long long) * 8)
+
 
 /* we don't allow parsing of floating hex input (e.g., -0x8.0p-63) by
  * default, to avoid confusion.  it's enabled after the first use of
@@ -282,16 +279,16 @@ boolean do_rounding = 1;
 /* the most recent top-of-stack */
 ldouble lastx;
 
-/* counting state variable used to allow variables to be read/write */
+/* counting state variable, which allows variables to be read/write */
 int variable_write_enable;
 
 /* where program input is coming from currently */
 static char *input_ptr = NULL;
 
-#define RPN 1
-#define INFIX 0
 int read_token(token *, int whichparse);
 int parse_token(char *p, token *t, char **nextp, int whichparse);
+#define RPN 1
+#define INFIX 0
 
 long long
 ld_to_ll(long double n)
@@ -1628,6 +1625,8 @@ memfile_close(struct memfile *mfp)
 }
 
 struct memfile pp;
+
+int pending_enabled = 1;
 
 void
 pending_suppress(void)
