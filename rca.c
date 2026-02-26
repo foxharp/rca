@@ -112,7 +112,6 @@ usage(void)
 
 /* debug logging support, runtime controllable */
 int tracing;
-#define trace(lev,a)  do {if (tracing & (lev)) printf a ;} while(0)
 #define TOK 1
 #define EXEC 2
 #define SHUNT 4
@@ -317,6 +316,21 @@ memory_failure(void)
 }
 
 void
+trace(int level, const char *fmt, ...)
+{
+	if ((tracing & level) == 0)
+		return;
+
+	fflush(stdout);
+
+	va_list ap;
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+
+}
+
+void
 error(const char *fmt, ...)
 {
 	fflush(stdout);
@@ -398,9 +412,9 @@ tweak(ldouble x)
 ldouble
 cmp_tweak(ldouble x)
 {
-	trace(EXEC,(" tweaking got %.*Lg (%La) ...\n", max_digits, x, x));
+	trace(EXEC, " tweaking got %.*Lg (%La) ...\n", max_digits, x, x);
 	x = tweak(x);
-	trace(EXEC,("     returned %.*Lg (%La)\n", max_digits, x, x));
+	trace(EXEC, "     returned %.*Lg (%La)\n", max_digits, x, x);
 	return(x);
 }
 
@@ -434,12 +448,12 @@ push(ldouble n)
 
 	if (floating_mode(mode) || !isfinite(n)) {
 		p->val = n;
-		trace(EXEC,(" pushed %La (%Lg)\n", n, n));
+		trace(EXEC, " pushed %La (%Lg)\n", n, n);
 	} else {
 		p->val = integer_adjust( ld_to_ll(n));
 		if (tracing) {
 			long long ll = ld_to_ll(p->val);
-			trace(EXEC,(" pushed masked/extended %lld/0x%llx\n", ll, ll));
+			trace(EXEC, " pushed masked/extended %lld/0x%llx\n", ll, ll);
 		}
 	}
 
@@ -476,7 +490,7 @@ pop(ldouble *f)
 	}
 	*f = p->val;
 	stack = p->next;
-	trace(EXEC,(" popped %La (%Lg)\n", *f, *f));
+	trace(EXEC, " popped %La (%Lg)\n", *f, *f);
 	free(p);
 	stack_count--;
 
@@ -3133,7 +3147,7 @@ trace_show_tok(int lev, token *t)
 	static char buf[128];
 
 	sprint_token(buf, sizeof(buf), t);
-	printf(" %s ", buf);
+	fprintf(stderr, " %s ", buf);
 }
 
 void
@@ -3144,15 +3158,15 @@ trace_stack_dump(int lev, token **tstackp)
 
 	token *t = *tstackp;
 
-	printf("%s: ", stackname(tstackp));
+	fprintf(stderr, "%s: ", stackname(tstackp));
 	if (!t)
-		printf("<empty>");
+		fprintf(stderr, "<empty>");
 	else
 		while (t) {
 			trace_show_tok(0xff, t);
 			t = t->next;
 		}
-	printf("\n");
+	fprintf(stderr, "\n");
 }
 
 token open_paren_token, chsign_token, nop_token;
@@ -3290,8 +3304,8 @@ open_paren(void)
 			}
 			/* do nothing now.  we need to know what comes
 			 * next:  "r1 = 3" is very different than "r1 + 3" */
-			trace(SHUNT, (" delaying classification of %s\n",
-					t->val.varname));
+			trace(SHUNT, " delaying classification of %s\n",
+					t->val.varname);
 			break;
 		case NUMERIC:
 		case SYMBOLIC:
@@ -3367,10 +3381,10 @@ open_paren(void)
 					!strchr(" \t\v\r\n)+-", *input_ptr)) {
 					if (t_op->func == subtract) {
 						tok = chsign_token;
-						trace(TOK,(" subtract is now chs\n"));
+						trace(TOK, " subtract is now chs\n");
 					} else {  // add
 						tok = nop_token;
-						trace(TOK,(" add is now nop\n"));
+						trace(TOK, " add is now nop\n");
 					}
 					goto unary;
 				}
@@ -3413,7 +3427,7 @@ open_paren(void)
 		prevtok = tok;
 
 	}
-	trace(EXEC,("\n finished reading expression\n"));
+	trace(EXEC, "\n finished reading expression\n");
 
 	if (paren_count) {
 		error(" error: missing parentheses\n");
@@ -3429,9 +3443,9 @@ open_paren(void)
 		tpush(&infix_rpn_queue, t);
 	}
 
-	trace(SHUNT,("\n merged and reversed:\n"));
-	trace(TOK|SHUNT,("\n"));
-	trace_stack_dump(TOK|SHUNT,&infix_rpn_queue);
+	trace(SHUNT, "\n merged and reversed:\n");
+	trace(TOK|SHUNT, "\n");
+	trace_stack_dump(TOK|SHUNT, &infix_rpn_queue);
 
 	return GOODOP;
 
@@ -3575,10 +3589,10 @@ dynamic_var(token *t)
 	if (variable_write_enable) {
 		ldouble a;
 		if (!peek(&a)) {
-			trace(EXEC,( " nothing to assign\n"));
+			trace(EXEC, " nothing to assign\n");
 			return 0;
 		}
-		trace(EXEC,( " assigning %Lg to %s\n", a, v->name));
+		trace(EXEC, " assigning %Lg to %s\n", a, v->name);
 		v->value = a;
 	} else {
 		push(v->value);
@@ -4714,16 +4728,16 @@ main(int argc, char *argv[])
 
 		switch (t->type) {
 		case NUMERIC:
-			trace(EXEC,( " numeric %Lg\n", t->val.val));
+			trace(EXEC,  " numeric %Lg\n", t->val.val);
 			push(t->val.val);
 			break;
 		case VARIABLE:
-			trace(EXEC,( " variable %s\n", t->val.varname));
+			trace(EXEC, " variable %s\n", t->val.varname);
 			dynamic_var(t);
 			break;
 		case SYMBOLIC:
 		case OP:
-			trace(EXEC,( " invoking %s\n", t->val.oper->name));
+			trace(EXEC, " invoking %s\n", t->val.oper->name);
 			if (t->val.oper->func == quit)
 				pending_show();
 			else
