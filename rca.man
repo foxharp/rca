@@ -11,7 +11,7 @@ is a command-line reverse polish notation (RPN) calculator loosely
 inspired by the long line of Hewlett-Packard scientific calculators.
 Operators include scientific, logical, and bitwise operations.
 .B rca
-can also evaluate traditional infix (parenthesized) expressions,
+can also evaluate traditional infix expressions,
 greatly expanding its usefulness.  As a programmer's calculator, word
 width can be adjusted to emulate the arithmetic of any class of CPU.
 .B rca
@@ -89,17 +89,59 @@ operator returns the value that was at the top of stack just previous to the
 most recently executed operator.
 
 .SH INFIX NOTATION
+Infix expressions in
 .B rca
-supports infix (i.e., traditional, "normal") expressions.  Such
-expressions must be fully enclosed in parentheses, and cannot cross to
-a new line.  (Infix expressions are translated to RPN by an
+are translated to RPN by an
 implementation of Dijkstra's "shunting yard" algorithm, and then
-executed as usual.) A single line of input can be a mix of RPN
-notation (unparenthesized) and complete infix expressions
-(parenthesized).  The infix expressions "escape" the RPN model, and
-are evaluated with fairly typical rules of precedence (see OPERATOR
-PRECEDENCE below).  All input number formats are accepted in infix,
-just as in RPN.
+executed as usual.
+.B rca
+supports infix (i.e., traditional, "normal") expressions in two
+different ways: as "transient" additions to the stream
+of RPN command input, and as a full-time replacement for that stream.
+
+.RS
+Transient infix expressions must be fully enclosed in parentheses, and
+cannot cross to a new line.  A single line of input can be a mix of
+RPN notation (unparenthesized) and complete infix expressions
+(parenthesized).  The infix expressions "escape" the RPN model, but
+evaluate to a single result, which is pushed onto the RPN stack as if
+the infix expression were a single operator.
+
+Full-time infix mode is toggled on/off with the
+.B infix
+command.  When infix mode is enabled (using
+.B 1
+.BR infix ),
+all input will be taken as infix expressions, one per line.  No outer
+enclosing parentheses are required.  (More than one per line can be
+separated by
+.RB ' ; '.
+See below.)  Since infix expressions are incompatible with the
+.B rca
+commands for printing, quitting, configuration, etc, those commands
+(and any other valid RPN) must be entered on a line which is prefixed
+with the
+.B :
+(colon) character.  In full-time infix mode, use
+.B :q
+to quit,
+.B :p
+to print,
+.B : config
+to view configuration,
+.B : H zf ra
+to switch to hex mode with zero-fill and right alignment, etc.  All
+infix expressions put a result on the stack, so while in full-time infix
+mode, the stack will slowly grow.  It can be viewed, of course, with
+.BR :P .
+Use
+.B :0 infix
+to leave full-time infix mode.
+.RE
+
+Infix expressions are evaluated with fairly typical rules of
+precedence (see OPERATOR PRECEDENCE below).  All input number formats
+are accepted in infix, just as in RPN.
 .P
 All
 .B rca
@@ -527,6 +569,14 @@ enabled)
 toggles whether degrees are used by the trig functions, rather than
 radians.  (Startup:  enabled)
 .P
+.B infix
+toggles whether full-time infix mode is active or not.  Use
+.B 1 infix
+to enable, and
+.B : 0 infix
+to disable.
+(Startup:  disabled)
+.P
 .B errorexit
 forces
 .B rca
@@ -563,7 +613,7 @@ denotes those which are right associative.  All others group
 left to right.  (This list has no meaning for RPN.)
 
  \fR 1    \fB  ( )
- \fR 2  R \fB  ~ ! + - chs negate nop recip sqrt sin cos tan asin acos
+ \fR 2  R \fB  ~ : ! + - chs negate recip sqrt sin cos tan asin acos
  \fR      \fB   atan exp ln log2 log10 abs frac int i2mm mm2i ft2m
  \fR      \fB   m2ft mi2km km2mi f2c c2f oz2g g2oz oz2ml ml2oz q2l
  \fR      \fB   l2q d2r r2d mpg2l100km
@@ -737,13 +787,17 @@ and
 .B snapshot
 are the only operators to consume more than 2 stack elements.
 .P
-.B nop
-does nothing.  It exists only to satisfy an internal
-.B rca
-need, but might be useful at the end of a line, or the command line,
-to suppress the normal output from the last command.
-.RE
+The
+.B :
+(colon) command does nothing, but at the start of an input line,
+signifies that the rest of the line should be interpreted as RPN, when
+in full-time infix mode.
+.B :
+might also be useful at the end of a line (or at the end of the
+command line), to suppress the normal auto-printed output from the
+last command.
 
+.RE
 .SH LOCALE
 The locale is consulted for just three things.
 .P
