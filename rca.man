@@ -443,7 +443,7 @@ disturbing the stack).
 fetches that value, pushing it onto the stack.  These commands are
 largely superseded by
 .B rca
-variables.
+variables, but are still quick and convenient.
 
 Variables are created dynamically (with a value of 0) on first
 reference, either by assigning a value (
@@ -476,6 +476,8 @@ Variables can be listed with
 .B variables
 or
 .BR vars .
+Variables can all be discarded with
+.BR clearvariables .
 .SH CONFIGURATION
 The
 .B config

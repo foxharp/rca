@@ -3579,6 +3579,18 @@ comparevars(const void *a, const void *b)
 }
 
 opreturn
+clearvars(void)
+{
+	dynvar *v;
+
+	for (v = variables; v->name; v++) {
+		free(v->name);
+		v->name = 0;
+	}
+	return GOODOP;
+}
+
+opreturn
 showvars(void)
 {
 	dynvar *v;
@@ -3625,8 +3637,6 @@ dynamic_var(token *t)
 	dynvar *v;
 
 	v = findvar(t->val.varname);
-	free(t->val.varname);
-	t->val.varname = 0;
 	if (!v) {
 		error(" error: out of space for variables\n");
 		return 0;
@@ -4600,6 +4610,7 @@ struct oper opers[] = {
 	{"=", assignment,	"Assign variable.  RPN: \"3 = _v\"   infix: \"(_v = 3)\"", 2, 6 },
 	{"variables", showvars, 0 },
 	{"vars", showvars, "Show the current list of variables" },
+	{"clearvariables", clearvars, "Discard all variables" },
 	{""},
     {"Unit conversions (one operand):"},
 	{"i2mm", units_in_mm,	0, 1, 30, 'R' },
@@ -4810,6 +4821,7 @@ main(int argc, char *argv[])
 		case VARIABLE:
 			trace(EXEC, " variable %s\n", t->val.varname);
 			dynamic_var(t);
+			free(t->val.varname);
 			break;
 		case SYMBOLIC:
 		case OP:
