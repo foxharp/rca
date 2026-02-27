@@ -1541,7 +1541,7 @@ clear(void)
 opreturn
 rolldown(void)			// aka "pop"
 {
-	(void)pop(&lastx);
+	pop(&lastx);
 	return GOODOP;
 }
 
@@ -3176,9 +3176,9 @@ create_infix_support_tokens()
 {
 	/* we'll need a couple of standalone pre-parsed tokens later
 	 * on, specifically for dealing with infix processing.  */
-	(void)parse_token("(", &open_paren_token, NULL, INFIX);
-	(void)parse_token("chs", &chsign_token, NULL, INFIX);
-	(void)parse_token(":", &nop_token, NULL, INFIX);
+	parse_token("(", &open_paren_token, NULL, INFIX);
+	parse_token("chs", &chsign_token, NULL, INFIX);
+	parse_token(":", &nop_token, NULL, INFIX);
 }
 
 void
@@ -4788,14 +4788,16 @@ main(int argc, char *argv[])
 			thaw_lastx();
 			// in infix mode, check the first token on a line...
 			if (infix_mode && pt->type == EOL) {
-				// to see if it's anything but '@'
+				// ...to see if it's anything but ':'
 				if ( ! (t->type == OP &&
 						t->val.oper->func == nop)) {
-					trace(EXEC, "calling open_paren()\n");
 					putback_token(t);
-					(void)shunting_yard(0);
+					shunting_yard(0);
 					continue;
 				}
+				/* it must have been a ':' at the
+				 * start of the line.  we ignore it,
+				 * and now consume tokens as usual */
 			}
 		}
 
@@ -4821,7 +4823,7 @@ main(int argc, char *argv[])
 				pending_show();
 			else
 				pending_clear();
-			(void)(t->val.oper->func) ();
+			(t->val.oper->func) ();
 			break;
 		case EOL:
 			do_autoprint(pt);
