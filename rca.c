@@ -250,13 +250,6 @@ boolean zerofill = 0;
  * significant digits (right) or most significant digits (left).  */
 boolean rightalignment = 1;
 
-/* Previously these right-alignment columns were dynamic, adjusting to
- * the max width of the current display format and base, but it added
- * more complexity than value.  Now there are only two choices, which
- * just fit binary and 64 bit octal, the two longest formats */
-#define ALIGN_COL        32
-#define ALIGN_COL_BINARY 75
-
 /* these all help limit the word size to anything we want.  */
 int max_int_width;
 int int_width;
@@ -2067,25 +2060,23 @@ print_floating(ldouble n, int format)
 	return mp.bufp;
 }
 
-int
-calc_align(int bpd /* bits/digit */, int dps /* digits/separator */)
-{
-	(void)dps;
+/* Previously these right-alignment columns were dynamic, adjusting to
+ * the max width of the current display format and base, but it added
+ * more complexity than value.  Now there are only two choices, which
+ * respectively just fit the two longest formats: binary, and 64 bit octal. */
+#define ALIGN_COL        32
+#define ALIGN_COL_BINARY 75
 
+int
+calc_align(int binary)
+{
 	if (!rightalignment)
 		return 0;
 
-#if DYNAMIC_ALIGNMENT
-	int digits = (int_width + (bpd - 1)) / bpd;
-	int seps = ((digits-1)/ dps) * digitseparators;
-
-	return seps + digits + 3;  /* +3 for prefix:  " 0x" */
-#else
-	if (bpd == 1)
+	if (binary)
 		return ALIGN_COL_BINARY;
 	else
 		return ALIGN_COL;
-#endif
 }
 
 void
@@ -2106,7 +2097,7 @@ print_n(ldouble *np, int format, boolean conv)
 		align = 0;
 		if (rightalignment) {
 			char *eos, *dp;
-			align = ALIGN_COL;
+			align = calc_align(0);
 			dp = strstr(pf, decimal_pt);
 			if (dp) {
 				eos = pf + strlen(pf);
@@ -2137,17 +2128,17 @@ print_n(ldouble *np, int format, boolean conv)
 	switch (format) {
 	case 'H':
 		ln = ld_to_ll(n) & mask;
-		align = calc_align(4, 4);
+		align = calc_align(0);
 		p_printf("%*s", align, puthex(ln));
 		break;
 	case 'O':
 		ln = ld_to_ll(n) & mask;
-		align = calc_align(3, 3);
+		align = calc_align(0);
 		p_printf("%*s", align, putoct(ln));
 		break;
 	case 'B':
 		ln = ld_to_ll(n) & mask;
-		align = calc_align(1, 8);
+		align = calc_align(1);
 		p_printf("%*s", align, putbinary(ln));
 		break;
 	case 'U':
@@ -2157,7 +2148,7 @@ print_n(ldouble *np, int format, boolean conv)
 		ln = ld_to_ll(n) & mask;
 		uln = (unsigned long long)ln;
 		/* for decimal, worst case width is like octal's */
-		align = calc_align(3, 3);
+		align = calc_align(0);
 		p_printf("%*s", align, putunsigned(uln));
 		break;
 	case 'D':
@@ -2177,7 +2168,7 @@ print_n(ldouble *np, int format, boolean conv)
 				ln = ln & mask;
 			}
 		}
-		align = calc_align(3, 3);
+		align = calc_align(0);
 		p_printf("%*s", align, putsigned(ln));
 		break;
 	default:
