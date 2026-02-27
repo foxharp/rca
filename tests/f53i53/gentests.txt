@@ -1168,6 +1168,7 @@ config
              zerofill       0
             autoprint       1
               degrees     * 0
+                infix       0
             errorexit       0
                 debug     * 1
              rounding       1
@@ -1185,6 +1186,7 @@ config
              zerofill       0
             autoprint       1
               degrees     * 0
+                infix       0
             errorexit       0
  Starting from defaults, recreate with:
     engineering  0 rightalign  0 degrees
@@ -1347,3 +1349,81 @@ recip
  0x4
 -17 sqrt
  nan
+
+# infix mode
+F 1 ra auto clear
+1 infix
+ Full-time infix mode enabled
+5 + 7
+                              12
+: 1 3 -
+                              -2
+: 1 3 - (4 + 5)
+                               9
+* 10
+ error: bad expression sequence, at start and '*'
+11 *
+ error: bad expression sequence, at '*' and end
+
+: (* 10)
+ error: bad expression sequence, at '(' and '*'
+: (11 *)
+ error: bad expression sequence, at '*' and ')'
+
+: (1 + - 2)
+ error: bad expression sequence, at '+' and '-'
+
+1 + - 2
+ error: bad expression sequence, at '+' and '-'
+
+: 1 infix
+ Full-time infix mode enabled
+: clearvariables
+_a = 22 / 7
+                               3.14286
+_b = 355 / 133
+                               2.66917
+_b = 355 / 113
+                               3.14159
+_bacc = _b / pi
+                               1
+_aacc = _a / pi
+                               1.0004
+: 10 digits
+ Floating formats configured for 10 digits.
+                               1.000402499
+vars
+ error: 'vars' unsuitable in infix expression
+: vars
+                   _a  3.142857143
+                _aacc  1.000402499
+                   _b  3.14159292
+                _bacc  1.000000085
+: eng
+ Will show floating point in engineering format
+                               1.000402499
+:6 digits
+ Floating formats configured for 6 digits.
+                               1.00040
+:vars
+                   _a  3.14286
+                _aacc  1.00040
+                   _b  3.14159
+                _bacc  1.00000
+:11 digits vars
+                   _a  3.1428571429
+                _aacc  1.0004024994
+                   _b  3.1415929204
+                _bacc  1.0000000849
+# lx in infix
+: auto
+ Will show floating point in automatic format
+                               1.0004024994
+10 * pi
+                              31.415926536
+e * lx
+                              85.397342227
+lx / pi
+                              27.182818285
+lx == 10 * e
+                               1
