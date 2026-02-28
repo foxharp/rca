@@ -304,8 +304,19 @@ ld_to_ll(long double n)
 void
 memory_failure(void)
 {
-	perror("rca: malloc failure");
+	perror("rca: memory allocation failure");
 	exit(3);
+}
+
+/* handle pointer check and exit, and use calloc() to get zero-fill. */
+void *
+safe_calloc(size_t size)
+{
+       void *p = calloc(1, size);
+
+       if (!p) memory_failure();
+
+       return p;
 }
 
 void
@@ -435,9 +446,7 @@ push(ldouble n)
 {
 	struct num *p;
 
-	p = (struct num *)calloc(1, sizeof(struct num));
-	if (!p)
-		memory_failure();
+	p = (struct num *)safe_calloc(sizeof(struct num));
 
 	if (floating_mode(mode) || !isfinite(n)) {
 		p->val = n;
@@ -2726,9 +2735,7 @@ snapshot(void)
 		struct num *np;
 
 		// push p->val on snapstack
-		np = (struct num *)calloc(1, sizeof(struct num));
-		if (!np)
-			memory_failure();
+		np = (struct num *)safe_calloc(sizeof(struct num));
 		np->val = p->val;
 		np->next = snapstack;
 		snapstack = np;
@@ -3061,9 +3068,7 @@ tpush(token **tstackp, token *tok)
 	if (tok->alloced) {
 		t = tok;
 	} else {
-		t = (struct token *)calloc(1, sizeof(struct token));
-		if (!t)
-			memory_failure();
+		t = (struct token *)safe_calloc(sizeof(struct token));
 
 		*t = *tok;
 		t->alloced = 1;
@@ -3928,9 +3933,7 @@ fetch_line(void)
 		rca_init = getenv("RCA_INIT");
 		if (rca_init) {
 			blen = strlen(rca_init) + 1;
-			input_buf = malloc(blen);
-			if (!input_buf)
-				memory_failure();
+			input_buf = safe_calloc(blen);
 			strcpy(input_buf, rca_init);
 			no_comments(input_buf);
 			input_ptr = input_buf;
@@ -3956,9 +3959,7 @@ fetch_line(void)
 		for (arg = 1; arg < g_argc; arg++)
 			blen += strlen(g_argv[arg]) + 2;
 
-		input_buf = malloc(blen);
-		if (!input_buf)
-			memory_failure();
+		input_buf = safe_calloc(blen);
 
 		*input_buf = '\0';
 		for (arg = 1; arg < g_argc; arg++) {
@@ -4261,9 +4262,7 @@ precedence(void)
 			}
 
 			if (!prec_ops[op->prec]) {
-				prec_ops[op->prec] = (char *)calloc(1, 500);
-				if (!prec_ops[op->prec])
-					memory_failure();
+				prec_ops[op->prec] = (char *)safe_calloc(500);
 				prefix[op->prec] = "";
 				linelen[op->prec] = 12;
 			}
