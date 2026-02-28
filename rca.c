@@ -83,21 +83,6 @@ char *ccprogversion = "built " __DATE__ " " __TIME__;
 #include <readline/history.h>
 #endif
 
-/* libraries that reportedly support %' for adding commas to %d, %f, etc */
-#if defined(__GLIBC__) || defined(__APPLE__)
-# define PRINTF_SEPARATORS 1
-#else
-# define PRINTF_SEPARATORS 0
-#endif
-
-/* these are filled in from the locale, if possible, otherwise
- * they'll default to period, comma, and dollar-sign.  none will
- * be a null pointer after locale_init() has run. */
-char *decimal_pt;   // locale decimal_point
-size_t decimal_pt_len;
-char *thousands_sep, *thousands_sep_input;   // locale thousands_sep
-char *currency ;   // locale currency_symbol
-
 /* who are we? */
 char *progname;
 
@@ -221,10 +206,9 @@ boolean autoprint = TRUE;
  * it is followed by a newline */
 void p_printf(const char *fmt, ...);
 
-/* if true, will decorate numbers, like "1,333,444".  initial value
- * derived from which libc we're using, since not all libraries
- * support %'d */
-boolean digitseparators = PRINTF_SEPARATORS;
+/* if this is true, and the locale provides the separator and the
+ * grouping information, we will decorate numbers, like "1,333,444" */
+boolean digitseparators = 1;
 
 /* this was initially used in controlling floating point error, and to
  * calculate the maximum displayed precision, but now it's simply
@@ -250,6 +234,13 @@ boolean zerofill = 0;
  * significant digits (right) or most significant digits (left).  */
 boolean rightalignment = 1;
 
+/* the max number of characters needed to hold float digits on any
+ * machine I can access, including sign, exponent, etc, is under 50
+ * chars.  binary format takes around 80 chars for a 64 bit long long.
+ * this constant is used as the size for various holding buffers for
+ * numbers being prepared for display.  */
+#define TEMP_BUFSIZE 512
+
 /* these all help limit the word size to anything we want.  */
 int max_int_width;
 int int_width;
@@ -259,6 +250,14 @@ long long int_max;
 long long int_min;
 #define LONGLONG_BITS (sizeof(long long) * 8)
 
+/* these are filled in from the locale, if possible, otherwise
+ * they'll default to period, comma, and dollar-sign.  none will
+ * be a null pointer after locale_init() has run. */
+char *decimal_pt;   // decimal_point
+size_t decimal_pt_len;
+char *thousands_sep, *thousands_sep_input;   // digit group separator
+char *grouping;    // how digits should be grouped (not always by 3!)
+char *currency ;   // locale currency_symbol
 
 /* we don't allow parsing of floating hex input (e.g., -0x8.0p-63) by
  * default, to avoid confusion.  it's enabled after the first use of
@@ -392,6 +391,7 @@ snap_integer(long double x)
 ldouble
 tweak(ldouble x)
 {
+	char buf[TEMP_BUFSIZE];
 
 	if (!do_rounding || x == 0.0L || !isfinite(x))
 		return x;
@@ -403,8 +403,7 @@ tweak(ldouble x)
 	/* use printf to round to max_digits significant digits.
 	 * it's as good as any other method, and we don't particularly
 	 * care about speed.  */
-	char buf[128];
-	snprintf(buf, sizeof buf, "%.*Lg", max_digits, x);
+	snprintf(buf, sizeof(buf), "%.*Lg", max_digits, x);
 
 	return strtold(buf, NULL);
 }
@@ -1809,12 +1808,112 @@ putoct(long long l)
 	return mp.bufp;
 }
 
+void
+strreverse(char *s)
+{
+        if (!s) return;
+
+        char *e = s + strlen(s) - 1;
+        char t;
+
+        while (s < e) {
+                t = *s; *s = *e; *e = t;    // swap start and end
+                s++; e--; 		    // move pointers inward
+        }
+}
+
+/* take the printf'd number in iobuf, and replace it with a grouped
+ * version of the same string, if configured to do so.  preserves
+ * leading and trailing whitespace. */
+void
+add_digit_grouping(char *iobuf)
+{
+	char *upto;
+	char *ioptr = iobuf, *tptr;
+	long count;
+	static char rev_dec_pt[10];
+	static char *tbuf;
+
+	if (!digitseparators || grouping[0] == CHAR_MAX)
+		return;
+
+	if (!tbuf) tbuf = safe_calloc(TEMP_BUFSIZE);
+
+	tptr = tbuf;
+
+	strreverse(iobuf);
+
+	/* reverse the (potentially) multi-byte decimal point, so
+	 * that we can search for it in the reversed input buffer */
+	if (!rev_dec_pt[0]) {
+		if (decimal_pt_len > sizeof(rev_dec_pt) - 1)
+			error(" BUG: see add_digit_grouping()\n");
+		strncpy(rev_dec_pt, decimal_pt, sizeof(rev_dec_pt) - 1);
+		rev_dec_pt[sizeof(rev_dec_pt) - 1] = '\0';
+		strreverse(rev_dec_pt);
+	}
+
+	/* working from the tail end of the number (now the front of
+	 * the string), we want to copy verbatim up to the decimal
+	 * point, or the e, if either exists.  */
+	upto = strstr(iobuf, rev_dec_pt);
+	if (upto) upto += decimal_pt_len - 1;  // point at end of rev_dec_pt
+	if (!upto)
+		upto = strchr(iobuf, 'e');
+	if (!upto)
+		upto = strchr(iobuf, 'E');
+
+	while (isspace(*ioptr))
+		*tptr++ = *ioptr++;
+	if (upto) {
+		count = upto - ioptr + 1;
+		while (count--)
+			*tptr++ = *ioptr++;
+	}
+
+	int gindex = 0;
+	int gsize = grouping[gindex++];
+
+	while (*ioptr) {
+		int i;
+
+		/* copy the group */
+		for (i = gsize; i && *ioptr; i--) {
+			*tptr++ = *ioptr++;
+		}
+		/* add the separator if there's more to come */
+		if (*ioptr && isdigit(*ioptr)) {
+			char *t = thousands_sep;
+			while (*t)
+				*tptr++ = *t++;
+		}
+		*tptr = '\0';
+
+		if (grouping[gindex] == CHAR_MAX) {
+			/* no further grouping */
+			while (*ioptr)
+				*tptr++ = *ioptr++;
+			*tptr = '\0';
+			break;
+		}
+
+		if (grouping[gindex] > 0)
+			gsize = grouping[gindex++];
+
+	}
+	strreverse(tbuf);
+	strcpy(iobuf, tbuf);
+}
+
 char *
 putunsigned(unsigned long long uln)
 {
+	char buf[TEMP_BUFSIZE];
 	m_file_start();
 
-	fprintf(mp.fp, digitseparators ? " %'llu" : " %llu", uln);
+	snprintf(buf, sizeof(buf), " %llu", uln);
+	add_digit_grouping(buf);
+	fputs(buf, mp.fp);
 
 	m_file_finish();
 
@@ -1824,9 +1923,12 @@ putunsigned(unsigned long long uln)
 char *
 putsigned(long long ln)
 {
+	char buf[TEMP_BUFSIZE];
 	m_file_start();
 
-	fprintf(mp.fp, digitseparators ? " %'lld" : " %lld", ln);
+	snprintf(buf, sizeof(buf), " %lld", ln);
+	add_digit_grouping(buf);
+	fputs(buf, mp.fp);
 
 	m_file_finish();
 
@@ -1882,6 +1984,8 @@ min(int a, int b)
 }
 
 
+/* adjust the %e (scientific) format string to put it in engineering
+ * format, where the exponent of 10 is always a multiple of 3 */
 int
 convert_eng_format(char *buf)
 {
@@ -1966,9 +2070,7 @@ convert_eng_format(char *buf)
 char *
 print_floating(ldouble n, int format)
 {
-	/* 3 bits per decimal digit is just 21 digits in a long long,
-	 * and 256 >>> 21 */
-	char buf[256];
+	char buf[TEMP_BUFSIZE];
 
 	m_file_start();
 	fputc(' ', mp.fp);
@@ -1991,27 +2093,19 @@ print_floating(ldouble n, int format)
 		// 1 digit per 4 bits, and 1 of them is before the decimal
 		fprintf(mp.fp, "%.*La", (LDBL_MANT_DIG + 3)/4 - 1, n);
 
-	} else if (format == 'F' && float_specifier[0] == 'a') {
-		char *printfmt;
+	} else if (format == 'F' && float_specifier[0] == 'a') { // 'a'uto
+
+		int fdigs = (float_digits < 1) ? 1 : float_digits;
 
 		// simple:  "auto" uses %g directly
-		if (digitseparators)
-			printfmt = "%'.*Lg";
-		else
-			printfmt = "%.*Lg";
+		snprintf(buf, sizeof(buf), "%.*Lg", fdigs, n);
+		add_digit_grouping(buf);
+		fputs(buf, mp.fp);
 
-		int fd = (float_digits < 1) ? 1 : float_digits;
-		fprintf(mp.fp, printfmt, fd, n);
+	} else if (format == 'F' && float_specifier[0] == 'f') { // 'f'ixed
 
-	} else if (format == 'F' && float_specifier[0] == 'f') {
-		char *printfmt;
-		char *p;
 		int decimals, leadingdigits = 0;
-
-		if (digitseparators)
-			printfmt = "%'.*Lf";
-		else
-			printfmt = "%.*Lf";
+		char *p;
 
 		/* The goal is to reduce the number of non-significant
 		 * digits shown.  If decimals is set to 6, then 123e12
@@ -2025,7 +2119,7 @@ print_floating(ldouble n, int format)
 		 * and we're back to showing more than we should.  (At that
 		 * point the user should be switching to %g mode.)
 		 */
-		snprintf(buf, sizeof(buf), printfmt, float_digits, n);
+		snprintf(buf, sizeof(buf), "%.*Lf", float_digits, n);
 
 		for (p = buf; *p && !match_dp(p); p++) {
 			if (isdigit(*p))
@@ -2037,30 +2131,32 @@ print_floating(ldouble n, int format)
 			leadingdigits = 0;
 
 		if (p) { /* found a decimal point */
-
 			decimals = min(float_digits, max_digits - leadingdigits);
 			if (decimals <= 0) decimals = 0;
 
-			snprintf(buf, sizeof(buf), printfmt, decimals, n);
+			snprintf(buf, sizeof(buf), "%.*Lf", decimals, n);
 		}
+		add_digit_grouping(buf);
 		fputs(buf, mp.fp);
 
 	} else if (format == 'F' && float_specifier[0] == 'e') { // "eng"
 
-		int fd = (float_digits < 3) ? 3 : float_digits;
+		int fdigs = (float_digits < 3) ? 3 : float_digits;
 
 		/* %e format is easy to dissect, so we start there.
 		 * our float_digits is a count of all the digits.  but
 		 * the %e "precision" value is just the number of
 		 * decimals.  there's exactly one non-fraction digit,
 		 * so subtract 1 to specify the %e fraction length */
-		snprintf(buf, sizeof(buf), "%.*Le", fd-1, n);
+		snprintf(buf, sizeof(buf), "%.*Le", fdigs-1, n);
 
 		/* Do text manipulation to renormalize.  */
-		if (!convert_eng_format(buf))
+		if (!convert_eng_format(buf)) {
 			error(" BUG: parse error in engineering format\n");
-		else
+		} else {
+			add_digit_grouping(buf);
 			fputs(buf, mp.fp);
+		}
 
 	}
 
@@ -2455,11 +2551,11 @@ modefloat(void)
 opreturn
 separators(void)
 {
-	if (!thousands_sep[0]) {
+	if (!thousands_sep[0] || grouping[0] == CHAR_MAX) {
 		ldouble discard;
 		pop(&discard);
-		p_printf(" No thousands separator in "
-			"current locale. Numeric separators disabled.\n");
+		p_printf(" No grouping support in current locale, "
+			"so numeric separators are disabled\n");
 		digitseparators = 0;
 		return GOODOP;
 	}
@@ -4487,9 +4583,13 @@ locale_init(void)
 		if (strcmp(decimal_pt, ".") == 0)
 			thousands_sep_input = ",";
 	}
-	if (!thousands_sep[0]) {
+
+	/* digit grouping */
+	grouping = lc->grouping;
+
+	/* no separator, or no grouping configured */
+	if (!thousands_sep[0] || grouping[0] == CHAR_MAX)
 		digitseparators = 0;
-	}
 
 	/* fetch the currency symbol.  default to '$' */
 	currency = lc->currency_symbol;
@@ -4670,10 +4770,8 @@ struct oper opers[] = {
 	{"degrees", use_degrees, "Toggle trig functions: degrees (1) or radians (0)" },
 	{"autoprint", autop,	0 },
 	{"ap", autop,		"Toggle autoprinting on/off with 0/1" },
-#if PRINTF_SEPARATORS
 	{"separators", separators, 0 },
 	{"sep", separators,	"Toggle numeric separators on/off (0/1)" },
-#endif
 	{"mode", modeinfo,	"Display current mode parameters" },
 	{"infix", infixmode,	"Toggle running mainly in infix, or in rpn" },
 	{""},

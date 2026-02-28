@@ -413,11 +413,7 @@ separators are strictly cosmetic, based on the printed digits.  No
 bitwise splitting (e.g., into bytes) is implied.
 
 Numeric grouping will not be functional if the locale doesn't define
-a thousands separator.  Also, numeric grouping may not be functional if
-.B rca
-is built with libraries other than glibc.  (In that case the
-.B separators
-command will be missing entirely.)
+a thousands separator, or provide the necessary grouping information.
 
 On input, the locale's currency symbol and thousands separator will be
 ignored, as a convenience for doing arithmetic on copy/pasted data.
