@@ -255,9 +255,11 @@ long long int_min;
  * be a null pointer after locale_init() has run. */
 char *decimal_pt;   // decimal_point
 size_t decimal_pt_len;
-char *thousands_sep, *thousands_sep_input;   // digit group separator
+char *thousands_sep;   // digit group separator
 char *grouping;    // how digits should be grouped (not always by 3!)
-char *currency ;   // locale currency_symbol
+char *currency;   // locale currency_symbol
+char *locale;	    // locale name, returned from setlocale()
+char *locale_modified = "";  // indicates if we've changed the locale info
 
 /* we don't allow parsing of floating hex input (e.g., -0x8.0p-63) by
  * default, to avoid confusion.  it's enabled after the first use of
@@ -1834,7 +1836,7 @@ add_digit_grouping(char *iobuf)
 	static char rev_dec_pt[10];
 	static char *tbuf;
 
-	if (!digitseparators || grouping[0] == CHAR_MAX)
+	if (!digitseparators)
 		return;
 
 	if (!tbuf) tbuf = safe_calloc(TEMP_BUFSIZE);
@@ -2430,7 +2432,8 @@ printstate(void)
 	p_printf("   LDBL_DIG: %u\n", LDBL_DIG);
 	p_printf("   rca descriptor: f%ui%u\n", LDBL_MANT_DIG, max_int_width);
 	p_printf("\n");
-	p_printf(" Locale elements (%s):\n", setlocale(LC_NUMERIC, NULL));
+	p_printf(" Locale elements (from '%s')%s:\n",
+		locale, locale_modified);
 	p_printf("  decimal '%s', thousands separator '%s', currency '%s'\n",
 		decimal_pt[0] ? decimal_pt : "<none>",
 		thousands_sep[0]? thousands_sep : "<none>",
@@ -2554,8 +2557,8 @@ separators(void)
 	if (!thousands_sep[0] || grouping[0] == CHAR_MAX) {
 		ldouble discard;
 		pop(&discard);
-		p_printf(" No grouping support in current locale, "
-			"so numeric separators are disabled\n");
+		p_printf(" No separator support in locale, "
+			"numeric separators are disabled\n");
 		digitseparators = 0;
 		return GOODOP;
 	}
@@ -3959,15 +3962,15 @@ no_comments(char *cp)
 	 * don't use.  So the command line won't be harmed by this
 	 * removal.  Some locales use a space as a separator, but it's
 	 * a "hard" space, represented as unicode.  */
-	if (thousands_sep_input[0])
-		strremoveall(cp, thousands_sep_input);
+	if (thousands_sep[0])
+		strremoveall(cp, thousands_sep);
 
 	/* Same for currency symbols.  They're mostly unicode
-	 * sequences or punctuation (e.g., '$'), which are safe to
-	 * remove.  But some are plain ascii.  We checked earlier to
-	 * be sure the currency symbol doesn't match any of our
+	 * sequences or "$", which are safe to remove.  But some are
+	 * plain ascii, or punctuation we need.  We checked earlier to
+	 * be sure the currency symbol doesn't match in any of our
 	 * commands.  */
-	if (currency && currency[0])
+	if (currency[0])
 		strremoveall(cp, currency);
 }
 
@@ -4488,15 +4491,12 @@ help(void)
   Entering a number pushes it on the stack.\n\
   Operators replace either one or two stack values with their result.\n\
   Most whitespace is optional between numbers and operators.\n\
-  Input can include locale currency%s symbols: %s12%s345%s67\n\
+  Input can include locale currency and digit grouping symbols (e.g. $12,345)\n\
   Always prefix hex (\"0x7f\") or octal (\"0o177\"), even in hex or octal mode.\n\
   Infix expressions are entered using (...), as in: (sin(30)^2 + cos(30)^2)\n\
   Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.\n\
   rca's normal exit value reflects the logical value of the top of stack.\n\
-\n\
-",
-	thousands_sep_input[0] ? " and grouping" : "",
-		currency, thousands_sep_input, decimal_pt);
+\n");
 
 	char cbuf[1000];
 	opfunc prevfunc;
@@ -4562,61 +4562,48 @@ locale_init(void)
 	struct lconv *lc;
 
 	setlocale(LC_ALL, "");
+	locale = setlocale(LC_NUMERIC, NULL);
 
 	lc = localeconv();
 
-	/* fetch the decimal point */
 	decimal_pt = lc->decimal_point;
 	decimal_pt_len = strlen(decimal_pt);
 
-	/* fetch the thousands separator
-	 * thousands_sep will be used only for output
-	 * thousands_sep_input only for input */
-	thousands_sep_input = thousands_sep = lc->thousands_sep;
-
-	/* if there's no thousands separator, default the input
-	 * version (which will be used to clean up program input) to
-	 * ",", but only if the decimal point is ".".  this lets us
-	 * safely strip commas from input even if the locale isn't set
-	 * up */
-	if (!thousands_sep_input[0]) {
-		if (strcmp(decimal_pt, ".") == 0)
-			thousands_sep_input = ",";
+	/* C guarantees there will always be a locale decimal point,
+	 * but nothing else that we care about.  If we're using the
+	 * default locale, we default the others to (somewhat
+	 * US-centric, sorry) defaults.  */
+	if (strcmp(locale, "C") == 0 || strcmp(locale, "POSIX") == 0) {
+		thousands_sep = ",";
+		grouping = "\003";
+		currency= "$";
+		locale_modified = " with added defaults";
+		return;
 	}
 
-	/* digit grouping */
-	grouping = lc->grouping;
+	thousands_sep = lc->thousands_sep;	// digit separator
+	grouping = lc->grouping;		// digit grouping
 
-	/* no separator, or no grouping configured */
-	if (!thousands_sep[0] || grouping[0] == CHAR_MAX)
-		digitseparators = 0;
-
-	/* fetch the currency symbol.  default to '$' */
 	currency = lc->currency_symbol;
-	if (!currency[0]) {
-		/* as above, this lets us strip '$', even if the
-		 * locale isn't set up.  we don't use currency for
-		 * output purposes */
-		currency = "$";
-	} else {
-		/* make sure the currency symbol doesn't conflict with
-		 * any command names, because we're going to simply
-		 * delete the symbol from input lines before parsing.
-		 * A few are known to match, or be substrings of, our
-		 * commands.  */
 
-		/* first check if it's unicode.  if so, no worries. */
-		if (!isascii(*currency))
-			return;
-
-		/* then search for it anywhere in every command */
-		oper *op = opers;
-		while (op->name) {
-			if (strstr(op->name, currency)) {
-				currency = 0;
-				break;
+	/* make sure any non-$ currency symbol string doesn't conflict
+	 * with any command name, because we're going to simply delete
+	 * the symbol from input lines before parsing.  A few are
+	 * known to match, or be substrings of, our commands.  */
+	if (strcmp(currency, "$") != 0) {
+		/* first check if it's simple ascii.  if not, no worries. */
+		if (isascii(*currency)) {
+			/* otherwise search for it anywhere in every command */
+			oper *op = opers;
+			while (op->name) {
+				// if (strstr(op->name, currency)) {
+				if (strcmp("CHF", currency) == 0) {
+					currency = ""; // nuke it
+					locale_modified = ", currency removed";
+					break;
+				}
+				op++;
 			}
-			op++;
 		}
 	}
 

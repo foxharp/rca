@@ -408,17 +408,14 @@ numbers it prints.  These separators can be toggled on or off with
 .B sep
 (or
 .BR separators ).
-Separators will never appear in the fractional part of a value.  The
-separators are strictly cosmetic, based on the printed digits.  No
-bitwise splitting (e.g., into bytes) is implied.
-
-Numeric grouping will not be functional if the locale doesn't define
-a thousands separator, or provide the necessary grouping information.
+Separators will be applied to all integer bases and floating formats.
+The separators are strictly cosmetic, and based solely on the printed
+digits.  No bitwise splitting (e.g., into bytes) is implied.
 
 On input, the locale's currency symbol and thousands separator will be
 ignored, as a convenience for doing arithmetic on copy/pasted data.
-If the locale isn't configured, then for the purpose of input stripping
-only, these symbols will be set to defaults of '$', and ',', respectively.
+
+See the LOCALE section, below, for more detail.
 
 .SH SPECIAL VALUES AND VARIABLES
 The
@@ -797,21 +794,23 @@ last command.
 
 .RE
 .SH LOCALE
-The locale is consulted for just three things.
+The locale is consulted for just a few things:  the decimal point,
+the thousands separator (and grouping specification), and the currency
+symbol.  If using the minimal C/POSIX locale, defaults will be
+provided:  the thousands separator will be be set to ',' (at every 3
+digits), and the currency symbol to '$'.
 .P
-The locale chooses the decimal point.  Usually this is '.', but
+The locale always chooses the decimal point.  Usually this is '.', but
 is also commonly ','.
 .P
-If the locale defines a thousands separator, it will be used for
-numeric grouping, and will be ignored during input.  If the locale
-doesn't define a thousands separator, there will be no numeric grouping.
+The thousands separator will be will be stripped from all input, and
+optionally used for numeric grouping of output,
 .P
-If the locale defines a currency symbol, and its value doesn't
-match the name of any
+The currency symbol will be checked to see if its value occurs
+anywhere in the name of any
 .B rca
-command, it will be ignored on input.
-If the locale doesn't define a currency symbol, it will be set to
-"$", and ignored on input.
+command or operator.  If not, it will be stripped from all input.
+
 .SH DATA TYPES, OVERFLOW, ACCURACY
 All stack values in
 .B rca
