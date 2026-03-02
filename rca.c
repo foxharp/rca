@@ -3269,7 +3269,7 @@ trace_stack_dump(int lev, token **tstackp)
 
 	token *t = *tstackp;
 
-	fprintf(stderr, "%s: ", stackname(tstackp));
+	fprintf(stderr, " %s: ", stackname(tstackp));
 	if (!t)
 		fprintf(stderr, "<empty>");
 	else
@@ -3386,6 +3386,7 @@ shunting_yard(int command)
 	static token tok, prevtok;
 	token *t = &tok;	// permanent pointers to tok and prevtok
 	token *pt = &prevtok;
+	token *tp; // used for tpeek()
 	opreturn open_paren(void);
 
 	int nesting;
@@ -3425,17 +3426,21 @@ shunting_yard(int command)
 				tpush(&out_stack, pt);
 		}
 
-		if (t->type == EOL)
-			goto closing_paren;
-
-		//  : is bound to nop()
-		if (t->type == OP && t->val.oper->func == rpnswitch) {
+		if (t->type == OP && t_op->func == rpnswitch) {
+			//  ':' is bound to rpnswitch()
 			putback_token(t);
 			t->type = EOL;
-			goto closing_paren;
 		}
 
 		switch (t->type) {
+		case EOL:
+			if (!prev_tok_was_operand(pt)) {
+				expression_error(pt, t);
+				input_ptr = NULL;
+				return BADOP;
+			}
+			break;
+
 		case VARIABLE:
 			if (prev_tok_was_operand(pt)) {
 				expression_error(pt, t);
@@ -3470,14 +3475,12 @@ shunting_yard(int command)
 			} else if (t_op->func == close_paren) {
 				nesting--;
 
-			    closing_paren:  // EOL comes here
 				if (!prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
 					input_ptr = NULL;
 					return BADOP;
 				}
 
-				token *tp;
 				// Process until matching opening paren
 				while ((tp = tpeek(&oper_stack))) {
 					if (tp->type == OP &&
@@ -3490,10 +3493,13 @@ shunting_yard(int command)
 
 				// Pop the opening parenthesis
 				free(tpop(&oper_stack));
+
+				/* if the parenthesized expression was
+				 * an operand for a unary operator
+				 * (i.e., a function), pop that too. */
 				tp = tpeek(&oper_stack);
-				if (tp && tp_op->operands == 1) {
+				if (tp && tp_op->operands == 1)
 					tpush(&out_stack, tpop(&oper_stack));
-				}
 
 			} else if (t_op->operands == 1) { // just one operand
 			unary:
@@ -3579,23 +3585,33 @@ shunting_yard(int command)
 
 	}
 
+	trace(SHUNT, "\n loop done:\n");
+	trace_stack_dump(SHUNT,&oper_stack);
+	trace_stack_dump(SHUNT,&out_stack);
+
+	// the last step is to move the remainder of the operator stack
+	while ((tp = tpeek(&oper_stack))) {
+		tpush(&out_stack, tpop(&oper_stack));
+	}
+
 	if (nesting != 0) {
 		error(" error: %s parentheses\n",
 			nesting < 0 ? "extra" : "missing");
 		return BADOP;
 	}
 
-	/* the shunting yard is finished.  output stack is in the
-	 * wrong order, so one more transfer to reverse it.
-	 * the loop in main() will pull from this copy before using
-	 * further user input.
-	 */
-	 /* but first, if we're in infix mode and we used our line of
+	 /* if we're in infix mode and we used our entire line of
 	  * input, then trick the rpn execution into reporting that
-	  * fact (the end of line) when it's finished running.  this
-	  * makes autoprint work. */
+	  * (i.e., the EOL) for us when it's finished running.  this
+	  * makes autoprint work.  */
 	if (infix_mode && t->type == EOL)
 		tpush(&infix_rpn_queue, t);
+
+	/* the shunting yard is done.  Dijkstra specified an
+	 * output queue, but we used a stack, so it's in the wrong
+	 * order.  we do one more transfer to reverse it.  the loop in
+	 * main() will pull from this copy before using further user
+	 * input.  */
 	while((t = tpop(&out_stack)) != NULL) {
 		tpush(&infix_rpn_queue, t);
 	}
