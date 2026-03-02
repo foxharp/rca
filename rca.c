@@ -4690,7 +4690,7 @@ struct oper opers[] = {
 	{"!", logical_not,	"Logical NOT of x", 1, 30, 'R'},
 	{""},
     {"Constants and storage:"},
-	{"sto", store,		0, Auto },
+	{"sto", store,		0, 0 },
 	{"rcl", recall,		"Save to, or push from, off-stack storage", Sym },
 	{"pi", push_pi,		0, Sym },
 	{"e", push_e,		"Push constant pi or e", Sym },
@@ -4771,8 +4771,8 @@ struct oper opers[] = {
 	{"degrees", use_degrees, "Toggle trig functions: degrees (1) or radians (0)" },
 	{"autoprint", autop,	0 },
 	{"ap", autop,		"Toggle autoprinting on/off with 0/1" },
-	{"separators", separators, 0 },
-	{"sep", separators,	"Toggle numeric separators on/off (0/1)" },
+	{"separators", separators, 0, Auto },
+	{"sep", separators,	"Toggle numeric separators on/off (0/1)", Auto },
 	{"mode", modeinfo,	"Display current mode parameters" },
 	{"infix", infixmode,	"Toggle running mainly in infix, or in rpn" },
 	{""},
@@ -4819,6 +4819,7 @@ do_autoprint(token *pt)
 	case OP:
 		if (pt->val.oper->operands == 0)  // pseudo op
 			return;
+		// 1, 2, Auto (-2) continue.  Sym (-1) is parsed as SYMBOLIC
 		break;
 
 	case SYMBOLIC:
@@ -4826,8 +4827,7 @@ do_autoprint(token *pt)
 		break;
 
 	case NUMERIC:
-		if ((mode == 'F' || mode == 'D') &&
-			pt->imode == 'D')
+		if ((mode == 'F' || mode == 'D') && pt->imode == 'D')
 			return;
 		if (pt->imode == mode)
 			return;
