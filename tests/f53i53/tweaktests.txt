@@ -173,6 +173,7 @@ automatic
 
 0 separators
  Numeric separators now off
+ 0
 
 9007199254740992 1 +
  9.00719925474099e+15
