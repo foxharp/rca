@@ -1109,6 +1109,12 @@ nop(void)
 }
 
 opreturn
+rpnswitch(void)
+{
+	return GOODOP;
+}
+
+opreturn
 absolute(void)
 {
 	ldouble a;
@@ -3283,7 +3289,7 @@ create_infix_support_tokens()
 	 * on, specifically for dealing with infix processing.  */
 	parse_token("(", &open_paren_token, NULL, INFIX);
 	parse_token("chs", &chsign_token, NULL, INFIX);
-	parse_token(":", &nop_token, NULL, INFIX);
+	parse_token("nop", &nop_token, NULL, INFIX);
 }
 
 void
@@ -3423,7 +3429,7 @@ shunting_yard(int command)
 			goto closing_paren;
 
 		//  : is bound to nop()
-		if (t->type == OP && t->val.oper->func == nop) {
+		if (t->type == OP && t->val.oper->func == rpnswitch) {
 			putback_token(t);
 			t->type = EOL;
 			goto closing_paren;
@@ -4691,12 +4697,12 @@ struct oper opers[] = {
 	{""},
     {"Constants and storage:"},
 	{"sto", store,		0, 0 },
-	{"rcl", recall,		"Save to, or push from, off-stack storage", Sym },
+	{"rcl", recall,		"Save to or push from off-stack storage", Sym },
 	{"pi", push_pi,		0, Sym },
 	{"e", push_e,		"Push constant pi or e", Sym },
 	{"lastx", repush,	0, Sym },
 	{"lx", repush,		"Push previous value of x", Sym },
-	{"_<name>", 0,		"Push variable" },  // help only.  no function.
+	{"_<name>", nop,	"Push variable" },
 	{"=", assignment,	"Assign variable.  RPN: \"3 = _v\"   infix: \"(_v = 3)\"", 2, 6 },
 	{"variables", showvars, 0 },
 	{"vars", showvars, "Show the current list of variables" },
@@ -4725,12 +4731,13 @@ struct oper opers[] = {
 	{"(", open_paren,	0, 0, 32 },
 	{")", close_paren,	"Infix grouping", 0, 32 },
 	{";", semicolon,	"Infix separator (in RPN, discards y)", 2, 4 },
-	{":", nop,		"Treat rest of line as RPN. (needed in infix mode)", 1, 30, 'R' },
+	{":", rpnswitch,	"Treat rest of line as RPN. (needed in infix mode)"},
 	{"snapshot", snapshot,	0, 0},
 	{"sum", sum,		0, Auto },
 	{"avg", avg,		"Snapshot, sum or average stack, maybe stop at \"mark\"", Auto },
 	{"mark", mark,		"Mark stack to limit later snap/sum/average" },
 	{"restore", restore,	"Push the snapshot onto current stack", Auto },
+	{"nop", nop,		"Does nothing", 1, 30, 'R' },
 	{""},
     {"Stack manipulation:"},
 	{"clear", clear,	"Clear stack" },
@@ -4888,7 +4895,7 @@ main(int argc, char *argv[])
 			if (infix_mode && pt->type == EOL) {
 				// ...to see if it's anything but ':'
 				if ( ! (t->type == OP &&
-						t->val.oper->func == nop)) {
+						t->val.oper->func == rpnswitch)) {
 					putback_token(t);
 					shunting_yard(0);
 					continue;

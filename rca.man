@@ -107,26 +107,27 @@ RPN notation (unparenthesized) and complete infix expressions
 evaluate to a single result, which is pushed onto the RPN stack as if
 the infix expression were a single operator.
 
-Full-time infix mode is toggled on/off with the
+Full-time infix mode is turned on/off with the
+.BR 0 / 1
 .B infix
-command.  When infix mode is enabled (using
+toggle command.  When infix mode is enabled (using
 .B 1
 .BR infix ),
-all input will be taken as infix expressions, one per line.  No outer
-enclosing parentheses are required.  (More than one per line can be
-separated by
+all input will be taken as infix expressions. No outer
+enclosing parentheses are required.  More than one expression per line
+can be separated by
 .RB ' ; '.
-See below.)  Since infix expressions are incompatible with the
+(See below.)  A single expression must start and end on the same line of
+input.  Since infix expressions are incompatible with the
 .B rca
 commands for printing, quitting, configuration, etc, those commands
-(and any other valid RPN) must be entered on a line which is prefixed
-with the
+(and any other valid RPN) must be entered following a
 .B :
 (colon) character.  In full-time infix mode, use
-.B :q
+.B : q
 to quit,
 .B :p
-to print,
+to print (the whitespace is optional),
 .B : config
 to view configuration,
 .B : H zf ra
@@ -568,7 +569,7 @@ radians.  (Startup:  enabled)
 toggles whether full-time infix mode is active or not.  Use
 .B 1 infix
 to enable, and
-.B : 0 infix
+.B :0 infix
 to disable.
 (Startup:  disabled)
 .P
@@ -608,10 +609,10 @@ denotes those which are right associative.  All others group
 left to right.  (This list has no meaning for RPN.)
 
  \fR 1    \fB  ( )
- \fR 2  R \fB  ~ : ! + - chs negate recip sqrt sin cos tan asin acos
+ \fR 2  R \fB  ~ ! + - chs negate recip sqrt sin cos tan asin acos
  \fR      \fB   atan exp ln log2 log10 abs frac int i2mm mm2i ft2m
  \fR      \fB   m2ft mi2km km2mi f2c c2f oz2g g2oz oz2ml ml2oz q2l
- \fR      \fB   l2q d2r r2d mpg2l100km
+ \fR      \fB   l2q d2r r2d mpg2l100km nop
  \fR 3  R \fB  ^ **
  \fR 4    \fB  atan2
  \fR 5    \fB  * x / %
@@ -782,15 +783,15 @@ and
 .B snapshot
 are the only operators to consume more than 2 stack elements.
 .P
+.B nop
+does nothing.  It exists only to satisfy an internal rca need.
+.P
 The
 .B :
-(colon) command does nothing, but at the start of an input line,
-signifies that the rest of the line should be interpreted as RPN, when
-in full-time infix mode.
-.B :
-might also be useful at the end of a line (or at the end of the
-command line), to suppress the normal auto-printed output from the
-last command.
+(colon) command does nothing, but signifies to the parser that the
+rest of the line should be interpreted as RPN.  This is needed in
+full-time infix mode to do things like printing and mode changing,
+or to quit.
 
 .RE
 .SH LOCALE
@@ -806,7 +807,7 @@ is also commonly ','.
 The thousands separator will be will be stripped from all input, and
 optionally used for numeric grouping of output,
 .P
-The currency symbol will be checked to see if its value occurs
+The currency symbol will first be checked to see if its value occurs
 anywhere in the name of any
 .B rca
 command or operator.  If not, it will be stripped from all input.
