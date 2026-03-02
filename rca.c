@@ -2383,7 +2383,7 @@ rawprintstack(int n, struct num *s)
 
 	p_printf(" %#20llx   %#20.20Lg    %La%s\n",
 		ld_to_ll(s->val), s->val, s->val,
-		(n == stack_mark) ? "   <-  mark":"");
+		(n == stack_mark) ? "   <-  mark" : "");
 }
 
 opreturn
@@ -2866,7 +2866,7 @@ sum_worker(boolean do_sum)
 	ldouble a, tot = 0, n = 0;
 
 	if (stack_count <= stack_mark) {
-		error(" error: nothing to %s\n", do_sum ? "sum":"avg");
+		error(" error: nothing to %s\n", do_sum ? "sum" : "avg");
 		return BADOP;
 	}
 
@@ -3575,7 +3575,7 @@ shunting_yard(int command)
 
 	if (nesting != 0) {
 		error(" error: %s parentheses\n",
-			nesting < 0 ? "extra":"missing");
+			nesting < 0 ? "extra" : "missing");
 		return BADOP;
 	}
 
