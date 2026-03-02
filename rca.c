@@ -280,6 +280,7 @@ static char *input_ptr = NULL;
 
 int read_token(token *, int whichparse);
 int parse_token(char *p, token *t, char **nextp, int whichparse);
+void putback_token(token *t);
 #define RPN 1
 #define INFIX 0
 
@@ -3313,7 +3314,7 @@ close_paren(void)
 {
 	/* this has to be a warning -- the command in error is already
 	 * finished, so we can't cancel it. */
-	error(" warning: mismatched/extra parentheses\n");
+	error(" warning: extra parentheses\n");
 	return BADOP;
 }
 
@@ -3381,26 +3382,20 @@ shunting_yard(int command)
 	token *pt = &prevtok;
 	opreturn open_paren(void);
 
-	int paren_count;
+	int nesting;
 
 	tclear(&out_stack);
 	tclear(&oper_stack);
 
 	trace(TOK,("\n infix tokens: "));
 
-	/* this is mainly about error messages:  when invoked as a
-	 * command, the expression will be surrounded in a (...) pair.
-	 * in infix mode, those parentheses are missing.  the difference
-	 * shows up when we report syntax errors at the start or end of
-	 * the expression */
 	if (command) {
 		*pt = open_paren_token;
+		nesting = 1;
 	} else {
 		pt->type = UNKNOWN;
+		nesting = 0;
 	}
-
-	/* start the count at one parenthesis, regardless */
-	paren_count = 1;
 
 	while (1) {
 		trace(SHUNT,("\n"));
@@ -3411,7 +3406,6 @@ shunting_yard(int command)
 			if (!infix_mode)
 				break;
 			tok.type = EOL;
-			goto closing_paren;
 		}
 
 		/* we delayed classifying the previous variable token
@@ -3423,6 +3417,16 @@ shunting_yard(int command)
 				tpush(&oper_stack, pt);
 			else
 				tpush(&out_stack, pt);
+		}
+
+		if (t->type == EOL)
+			goto closing_paren;
+
+		//  : is bound to nop()
+		if (t->type == OP && t->val.oper->func == nop) {
+			putback_token(t);
+			t->type = EOL;
+			goto closing_paren;
 		}
 
 		switch (t->type) {
@@ -3448,6 +3452,8 @@ shunting_yard(int command)
 			break;
 		case OP:
 			if (t_op->func == open_paren) {
+				nesting++;
+
 				if (prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
 					input_ptr = NULL;
@@ -3455,9 +3461,10 @@ shunting_yard(int command)
 				}
 				// Push opening parenthesis to operator stack
 				tpush(&oper_stack, t);
-				paren_count++;
 			} else if (t_op->func == close_paren) {
-			    closing_paren:
+				nesting--;
+
+			    closing_paren:  // EOL comes here
 				if (!prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
 					input_ptr = NULL;
@@ -3468,8 +3475,9 @@ shunting_yard(int command)
 				// Process until matching opening paren
 				while ((tp = tpeek(&oper_stack))) {
 					if (tp->type == OP &&
-						tp_op->func == open_paren)
+						tp_op->func == open_paren) {
 						break;
+					}
 
 					tpush(&out_stack, tpop(&oper_stack));
 				}
@@ -3480,7 +3488,6 @@ shunting_yard(int command)
 				if (tp && tp_op->operands == 1) {
 					tpush(&out_stack, tpop(&oper_stack));
 				}
-				paren_count--;
 
 			} else if (t_op->operands == 1) { // just one operand
 			unary:
@@ -3552,16 +3559,23 @@ shunting_yard(int command)
 			return BADOP;
 		}
 
-		if (paren_count == 0)
+		// in infix mode, we're done when the line ends
+		if (!command && t->type == EOL) {
 			break;
+		}
+
+		// otherwise, we're done when the parentheses match
+		if (command && nesting == 0) {
+			break;
+		}
 
 		prevtok = tok;
 
 	}
-	trace(EXEC, "\n finished reading expression\n");
 
-	if (paren_count) {
-		error(" error: missing parentheses\n");
+	if (nesting != 0) {
+		error(" error: %s parentheses\n",
+			nesting < 0 ? "extra":"missing");
 		return BADOP;
 	}
 
@@ -4682,7 +4696,7 @@ struct oper opers[] = {
 	{"e", push_e,		"Push constant pi or e", Sym },
 	{"lastx", repush,	0, Sym },
 	{"lx", repush,		"Push previous value of x", Sym },
-	{"_<name>", nop,	"Push variable" }, // not really nop(). see dynamic_var()
+	{"_<name>", 0,		"Push variable" },  // help only.  no function.
 	{"=", assignment,	"Assign variable.  RPN: \"3 = _v\"   infix: \"(_v = 3)\"", 2, 6 },
 	{"variables", showvars, 0 },
 	{"vars", showvars, "Show the current list of variables" },
@@ -4711,8 +4725,8 @@ struct oper opers[] = {
 	{"(", open_paren,	0, 0, 32 },
 	{")", close_paren,	"Infix grouping", 0, 32 },
 	{";", semicolon,	"Infix separator (in RPN, discards y)", 2, 4 },
-	{":", nop,		"In infix mode, at line start, take rest as RPN", 1, 30, 'R' },
-	{"snapshot", snapshot,	0, Auto}, // "Snapshot the stack, stop at \"mark\" if set", Auto },
+	{":", nop,		"Treat rest of line as RPN. (needed in infix mode)", 1, 30, 'R' },
+	{"snapshot", snapshot,	0, 0},
 	{"sum", sum,		0, Auto },
 	{"avg", avg,		"Snapshot, sum or average stack, maybe stop at \"mark\"", Auto },
 	{"mark", mark,		"Mark stack to limit later snap/sum/average" },

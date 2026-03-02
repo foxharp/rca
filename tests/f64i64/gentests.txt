@@ -484,7 +484,7 @@ pop
 (4 + (5 + 6
  error: missing parentheses
 (4 + (5 + 6)) - 7)
- warning: mismatched/extra parentheses
+ warning: extra parentheses
 (3 setb 2)
  7
 (0xff clearb 3) h
@@ -1426,3 +1426,33 @@ lx / pi
                               27.182818285
 lx == 10 * e
                                1
+# paretheses accounting
+4 + 3)
+ error: extra parentheses
+(3 + 4
+ error: missing parentheses
+8 + (9 * 10))
+ error: extra parentheses
+: 0 infix
+ Full-time infix mode disabled
+(4 + 3)
+                               7
+((3 + 4
+ error: missing parentheses
+(3 + 4))
+ warning: extra parentheses
+(8 + (9 * 10)))
+ warning: extra parentheses
+()
+ error: bad expression sequence, at '(' and ')'
+((( )))
+ error: bad expression sequence, at '(' and ')'
+((
+ error: missing parentheses
+))
+ warning: extra parentheses
+ warning: extra parentheses
+(0))
+ warning: extra parentheses
+((0)
+ error: missing parentheses
