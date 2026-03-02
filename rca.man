@@ -235,7 +235,7 @@ entirely by how it is entered:  10, 0xa, 0o12, 0b1010 and 1e01 are all
 the same value.  The mode does not affect input:  for example, hex
 values must include the "0x" prefix even in
 .B H
-mode.)  Note that octal
+mode.  Note that octal
 .I must
 be entered using the "0o" prefix, which is also how octal will be
 printed.  The more traditional "0" prefix will be interpreted as decimal.
@@ -409,9 +409,10 @@ numbers it prints.  These separators can be toggled on or off with
 .B sep
 (or
 .BR separators ).
-Separators will be applied to all integer bases and floating formats.
-The separators are strictly cosmetic, and based solely on the printed
-digits.  No bitwise splitting (e.g., into bytes) is implied.
+Separators will be applied to all integer bases and floating formats,
+as in "3,141,593" and "0o13,767,730".  The separators are strictly
+cosmetic, and based solely on the printed digits.  No bitwise
+splitting (e.g., into bytes) is implied.
 
 On input, the locale's currency symbol and thousands separator will be
 ignored, as a convenience for doing arithmetic on copy/pasted data.
@@ -446,9 +447,9 @@ reference, either by assigning a value (
 or by using it (
 .B _var +
 .BR 17 ).
-Variables' names must start with an underscore character.  Variables cannot
-be deleted.  In RPN, simply naming the variable will push its value to the
-stack.  To write to a variable in RPN, the "assign to" operator
+Variables' names must start with an underscore character.  In RPN,
+simply naming the variable will push its value to the stack.  To write
+to a variable in RPN, the "assign to" operator
 .RB ( = )
 must be used immediately before naming the variable.  If
 .B =
@@ -472,6 +473,7 @@ or
 .BR vars .
 Variables can all be discarded with
 .BR clearvariables .
+Variables cannot be deleted individually.
 .SH CONFIGURATION
 The
 .B config
@@ -789,8 +791,8 @@ does nothing.  It exists only to satisfy an internal rca need.
 The
 .B :
 (colon) command does nothing, but signifies to the parser that the
-rest of the line should be interpreted as RPN.  This is needed in
-full-time infix mode to do things like printing and mode changing,
+rest of the line should be interpreted as RPN.  This is needed when in
+full-time infix mode, to accomplish printing and mode changing,
 or to quit.
 
 .RE
@@ -830,8 +832,10 @@ If the conversion from
 to
 .I long long
 can't be done without loss, a error message is issued, but the
-conversion has already occurred, and the loss cannot be undone.  If
-simply displaying a float value as integer, without changing modes,
+conversion has already occurred, and the loss cannot be undone.  (The
+error message shows the value with enough digits to ensure it can
+be restored accurately via copy and paste.)  If the conversion occurred
+while simply displaying a float value as integer, without changing modes,
 then the original value is unchanged.  Execution will proceed after
 the warning unless
 .B errorexit
@@ -854,14 +858,14 @@ to decimal conversions, to change values in obvious ways.  Something
 that should be 0 may instead have a very tiny value, or two numbers which
 should be equal may differ by an insignificant amount.
 .B rca
-helps by adjusting displayed values:  first, values very close
-to an integer are forced to that integer.  Then,
-values are rounded to
+helps by adjusting displayed values, and values being compared to one
+another:  first, values very close to an integer are forced to that
+integer.  Then, values are rounded to
 .BR rca 's
 maximum precision (again, usually 18 digits).  The internal representation
 of these values remains unchanged --
 .I only
-the printed output is affected.
+the printed output (or the comparison) is affected.
 
 .SH EXIT STATUS
 .B rca
