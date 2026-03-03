@@ -1,4 +1,4 @@
-char *progversion = "v20";
+char *progversion = "v21";
 /*
  *
  *	This program is a mediocre but practical stack-based floating
