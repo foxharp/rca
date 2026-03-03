@@ -1,3 +1,40 @@
+v21 changes   (03/02/2026)
+
+    implemented a full-time infix mode.  invoke with "1 infix".  once
+    in infix mode, all input is taken as infix format.  to enter
+    anything else (for printing, configuration, quitting, etc, or
+    RPN), prefix it/them on the line with ':'.  so ":0 infix" to leave
+    the mode, ":q" to quit, etc.
+
+    adding infix mode required a closer look at the shunting yard
+    code, so many improvements there:  better accounting of
+    parenthesis nesting levels (better error messages), and also code
+    rearrangement so it more closely follows Dijkstra's original
+    algorithm.  enabling the token and shunting categories for debug
+    tracing ("rca 1 debug 5 tracing 1 infix") now shows a nice
+    progression of the algorithm.
+
+    UI change!  changed the "a", "z", "s", and "right" commands to
+    "ap", "zf", "sep", and "ra".  this makes the printing and
+    mode-change commands the only one-character commands:  f, d, u, o,
+    h, b and F, D, O, H, B.
+
+    added a new "clearvariables" command.
+
+    wrote new code to implement numeric separators for decimal floats
+    and integers, so no more dependence on the C library's %' feature.
+    the former ifdefs, based on library type, seemed fragile.  the new
+    defaults for whether separators are enabled are much cleaner:  we
+    now trust and use what the locale gives us completely, unless it's
+    the minimal C locale, in which case we augment it with ',' (for
+    grouping) and '$'.
+
+    made some adjustments to which commands do and don't cause
+    autoprinting.
+
+    made valgrind easier to enable for "make gentest"
+
+
 
 v20 changes   (2/22/2026)
 

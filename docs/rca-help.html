@@ -13,7 +13,7 @@
   Entering a number pushes it on the stack.
   Operators replace either one or two stack values with their result.
   Most whitespace is optional between numbers and operators.
-  Input can include locale currency and grouping symbols: $12,345.67
+  Input can include locale currency and digit grouping symbols (e.g. $12,345)
   Always prefix hex (&quot;0x7f&quot;) or octal (&quot;0o177&quot;), even in hex or octal mode.
   Infix expressions are entered using (...), as in: (sin(30)^2 + cos(30)^2)
   Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.
@@ -24,7 +24,7 @@
               *, or x     Multiply x and y
                  /, %     Divide and modulo of y by x
              ^, or **     Raise y to the x'th power
-               &gt;&gt;, &lt;&lt;     Right/left logical shift of y by x bits
+               &gt;&gt;, &lt;&lt;     Shift y right/left by x bits (logical shift)
              ror, rol     Rotate y right/left by x bits
             &amp;, |, xor     Bitwise AND, OR, and XOR of y and x
          setb, clearb     Set and clear bit x in y
@@ -32,7 +32,6 @@
  Numerical operators with one operand:
                     ~     Bitwise NOT of x (1's complement)
        chs, or negate     Change sign of x (2's complement)
-                  nop     Does nothing
           recip, sqrt     Reciprocal and square root of x
         sin, cos, tan
      asin, acos, atan     Trig functions
@@ -47,12 +46,13 @@
                     !     Logical NOT of x
 
  Constants and storage:
-             sto, rcl     Save, or push off-stack storage
+             sto, rcl     Save to or push from off-stack storage
                 pi, e     Push constant pi or e
          lastx, or lx     Push previous value of x
               _&lt;name&gt;     Push variable
                     =     Assign variable.  RPN: &quot;3 = _v&quot;   infix: &quot;(_v = 3)&quot;
    variables, or vars     Show the current list of variables
+       clearvariables     Discard all variables
 
  Unit conversions (one operand):
            i2mm, mm2i     inches / millimeters
@@ -68,9 +68,11 @@
  Other:
                  (, )     Infix grouping
                     ;     Infix separator (in RPN, discards y)
-   snapshot, sum, avg     Snapshot, sum or average stack, stop at &quot;mark&quot; if set
+                    :     Treat rest of line as RPN. (needed in infix mode)
+   snapshot, sum, avg     Snapshot, sum or average stack, maybe stop at &quot;mark&quot;
                  mark     Mark stack to limit later snap/sum/average
               restore     Push the snapshot onto current stack
+                  nop     Does nothing
 
  Stack manipulation:
                 clear     Clear stack
@@ -89,14 +91,15 @@
                digits     Number of digits for floating formats
 
  Modes:
-        F, D, H, O, B     Switch to floating, decimal, hex, octal, binary modes
+        F, D, H, O, B     Switch to floating, decimal, hex, octal, binary mode
        width, or bits     Set effective word size for integer modes
-       zerofill, or z     Toggle left-fill with zeros in H, O, and B modes
- rightalign, or right     Toggle right alignment of numbers
+      zerofill, or zf     Toggle left-fill with zeros in H, O, and B modes
+    rightalign, or ra     Toggle right alignment of numbers
               degrees     Toggle trig functions: degrees (1) or radians (0)
-      autoprint, or a     Toggle autoprinting on/off with 0/1
-     separators, or s     Toggle numeric separators (i.e., commas) on/off (0/1)
+     autoprint, or ap     Toggle autoprinting on/off with 0/1
+   separators, or sep     Toggle numeric separators on/off (0/1)
                  mode     Display current mode parameters
+                infix     Toggle running mainly in infix, or in rpn
 
  Housekeeping:
            ?, or help     Show this list (using $PAGER, if set)
@@ -111,7 +114,7 @@
                     #     Comment. The rest of the line will be ignored.
 
 
-                                                                   version v20
+                                                                   version v21
 
  Tip:	Use &quot;rca help q | less&quot; to view this help
 </pre>
