@@ -1,39 +1,48 @@
 
-# override with make PREFIX=/xyzzy install
+# if you don't have make, or this makefile doesn't work for you,
+# the simple commands you want are one of these:
+#	gcc -g -o rca -D USE_READLINE rca.c -lm -lreadline
+# or, without command-line editing:
+#	gcc -g -o rca rca.c -lm
+
+all: rca rca.1 copyrightcheck
+
+# to override install paths, use: "make PREFIX=/home/me install"
 PREFIX = /usr/local
 MANPREFIX = $(PREFIX)/share/man
 
-# build both the readline and no-readline versions by default
-all: rca rca-norl rca.1 copyrightcheck html 
+# if hitting Enter on an empty line doesn't cause rca to echo a
+# newline, it's due to a bug in some sub-versions of readline 8.2.
+# uncomment this to work around it:
+#   CFLAGS += -D READLINE_NO_ECHO_BARE_NL
 
-# if hitting enter on an empty line doesn't cause a newline
-# on the screen, add this to the compile rule.  it's due to a bug
-# in the readline library.  uncomment:
-#    READLINE_BUG=-D READLINE_NO_ECHO_BARE_NL
+# temporary.  i have one test host with the bad library
+-include ./readline-is-buggy
 
-WARNINGS= -Wall -Wextra \
-    -Wfloat-conversion \
-    -Wconversion \
-    -Wshift-overflow=2 \
-    -Wsign-conversion \
-    -Wstrict-overflow=2
 
-# -fsanitize=undefined
+CFLAGS += -Wall -Wextra -Wfloat-conversion -Wconversion  \
+    -Wshift-overflow=2 -Wsign-conversion -Wstrict-overflow=2
+LIBS = -lm
 
 rca: rca.c
 	gver="$$(git describe --dirty=+ 2>/dev/null || echo '+?')"; \
 	gcc -g -o rca -O \
 		$(READLINE_BUG) \
-		$(WARNINGS) \
-		-DGITVERSION=\"$${gver}\" -D USE_READLINE \
-		rca.c -lm -lreadline
+		$(CFLAGS) -DGITVERSION=\"$${gver}\" \
+		rca.c $(LIBS)
 
-rca-norl: rca.c
-	gver="$$(git describe --dirty=+ 2>/dev/null)"; \
-	gcc -g -o rca-norl \
-		$(WARNINGS) \
-		-DGITVERSION=\"$${gver}\" \
-		rca.c -lm
+# build-time check for whether readline library is available:
+READLINE_CHECK := $(shell echo "int main() { return 0; }" > trl.c; \
+  $(CC) trl.c -lreadline -o trl 2>/dev/null && echo YES; rm -f trl.c trl )
+
+ifeq ($(READLINE_CHECK),YES)
+    LIBS += -lreadline
+    CFLAGS += -DUSE_READLINE
+    $(info Building with readline support)
+else
+    $(info No readline support!!)
+endif
+
 
 rca.1: rca.man
 	v="\"$$(rca version q)\""; \
@@ -45,9 +54,10 @@ copyrightcheck:
 	grep -q "Copyright.*$$year" LICENSE && \
 	grep -q "Copyright.*$$year" rca.c
 
-# we build the docs/*.html.new files regularly, and only occasionally,
-# usually when doing releases, do we move and commit them to docs/*.html
-# this keeps the git tree clean(er) most of the time.
+
+# building the html into ".new" files keeps the git tree clean(er)
+# most of the time.  we don't commit the html build products that
+# often.  see htmldiff and htmlmv targets below.
 html: docs/index.html.new docs/rca-man.html.new docs/rca-help.html.new
 
 docs/index.html.new: README.md
@@ -66,16 +76,31 @@ docs/rca-help.html.new: rca
 	    aha -t "rca calculator help text" --style 'font-size:125%' \
 		> docs/rca-help.html.new
 
-# to release a version:
-#   vi rca.c (bump version)
+SHELL = /bin/bash
+htmldiff:
+	-diff -u <( links -dump docs/index.html ) \
+		<( links -dump docs/index.html.new )
+	-diff -u <( links -dump docs/rca-man.html ) \
+		<( links -dump docs/rca-man.html.new )
+	-diff -u <( links -dump docs/rca-help.html ) \
+		<( links -dump docs/rca-help.html.new )
+
+htmlmv:
+	mv docs/index.html.new docs/index.html
+	mv docs/rca-man.html.new docs/rca-man.html
+	mv docs/rca-help.html.new docs/rca-help.html
+
+
+# to release a new version:
+#   vi rca.c (bump release version)
 #   git commit	    # "bumped to vNN"
-#   make tag clean all versioncheck
+#   make release
 #   make htmldiff   # check html files
 #   make htmlmv
 #   update CHANGES file
-#   git commit      # "new man/help html files for vNN"
+#   git commit html CHANGES  # "new man/help html files for vNN"
 
-release: tag clean all versioncheck
+release: tag clean all html versioncheck
 
 tag: FORCE
 	@git diff --quiet HEAD -- || (echo dirty tree; false)
@@ -91,20 +116,6 @@ versioncheck:
 		tail -n 6 docs/*.new | \
 		sed -n -e 's/<span .*//' \
 			-e 's/^ *\( version v[0-9]\+.*\)/\1/p'
-
-SHELL = /bin/bash
-htmldiff:
-	-diff -u <( links -dump docs/index.html ) \
-		<( links -dump docs/index.html.new )
-	-diff -u <( links -dump docs/rca-man.html ) \
-		<( links -dump docs/rca-man.html.new )
-	-diff -u <( links -dump docs/rca-help.html ) \
-		<( links -dump docs/rca-help.html.new )
-
-htmlmv:
-	mv docs/index.html.new docs/index.html
-	mv docs/rca-man.html.new docs/rca-man.html
-	mv docs/rca-help.html.new docs/rca-help.html
 
 clean:
 	rm -f rca rca-norl rca.1 .test docs/index.html.new \
