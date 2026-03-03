@@ -1,4 +1,4 @@
-char *progversion = "v21";
+char *release = "v21";
 /*
  *
  *	This program is a mediocre but practical stack-based floating
@@ -55,14 +55,6 @@ char licensetext[] = \
  or otherwise) arising in any way out of the use of this software, even\n\
  if advised of the possibility of such damage.\n\
 ";
-
-/* in addition to progversion, above, Makefile may pass in a
- * definition of CCVERSION */
-#ifdef CCVERSION
-char *ccprogversion = CCVERSION;
-#else
-char *ccprogversion = "built " __DATE__ " " __TIME__;
-#endif
 
 #include <stdlib.h>
 #include <stdarg.h>
@@ -4480,17 +4472,29 @@ license(void)
 	return GOODOP;
 }
 
+/* in addition to "release", at the top of the source, the Makefile
+ * may pass a -DGITVERSION=...  */
+#ifndef GITVERSION
+# define GITVERSION ""
+#endif
+
 char *
 getversion(void)
 {
+	char *gitversion = GITVERSION;
+	char m[8], d[8], y[8];
 	static char vbuf[100];
-	if (!ccprogversion[0] || strcmp(ccprogversion, progversion) == 0) {
-		snprintf(vbuf, sizeof(vbuf), "version %s",
-			progversion);
-	} else {
-		snprintf(vbuf, sizeof(vbuf), "version %s (%s)",
-			progversion, ccprogversion);
-	}
+
+	if (strcmp(release, GITVERSION) == 0)
+		gitversion = "";
+	else
+		gitversion = GITVERSION;
+
+	/* so shoot me:  I detest the extra space between month and
+	 * day during the first 9 days of the month */
+	sscanf(__DATE__, "%s %s %s", m, d, y);
+	snprintf(vbuf, sizeof(vbuf), "version %s  %s   %s %s, %s",
+			release, gitversion, m, d, y);
 	return vbuf;
 }
 

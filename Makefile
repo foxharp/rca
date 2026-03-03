@@ -6,10 +6,10 @@ MANPREFIX = $(PREFIX)/share/man
 # build both the readline and no-readline versions by default
 all: rca rca-norl rca.1 copyrightcheck html 
 
-# if hitting return on an empty line doesn't cause a newline
+# if hitting enter on an empty line doesn't cause a newline
 # on the screen, add this to the compile rule.  it's due to a bug
-# in the readline library.
-#    -D READLINE_NO_ECHO_BARE_NL
+# in the readline library.  uncomment:
+#    READLINE_BUG=-D READLINE_NO_ECHO_BARE_NL
 
 WARNINGS= -Wall -Wextra \
     -Wfloat-conversion \
@@ -18,24 +18,21 @@ WARNINGS= -Wall -Wextra \
     -Wsign-conversion \
     -Wstrict-overflow=2
 
-# temporary.  i have one test host with the bad library
-READLINE_BUG=$$(cat ./readline-is-buggy 2>/dev/null)
-
 # -fsanitize=undefined
 
 rca: rca.c
-	v="$$(git describe --dirty=+ 2>/dev/null)"; \
+	gver="$$(git describe --dirty=+ 2>/dev/null || echo '+?')"; \
 	gcc -g -o rca -O \
 		$(READLINE_BUG) \
 		$(WARNINGS) \
-		-DCCVERSION=\"$${v}\" -D USE_READLINE \
+		-DGITVERSION=\"$${gver}\" -D USE_READLINE \
 		rca.c -lm -lreadline
 
 rca-norl: rca.c
-	v="$$(git describe --dirty=+ 2>/dev/null)"; \
+	gver="$$(git describe --dirty=+ 2>/dev/null)"; \
 	gcc -g -o rca-norl \
 		$(WARNINGS) \
-		-DCCVERSION=\"$${v}\" \
+		-DGITVERSION=\"$${gver}\" \
 		rca.c -lm
 
 rca.1: rca.man
