@@ -11,13 +11,13 @@ all: rca rca.1 copyrightcheck
 PREFIX = /usr/local
 MANPREFIX = $(PREFIX)/share/man
 
-# if hitting Enter on an empty line doesn't cause rca to echo a
-# newline, it's due to a bug in some sub-versions of readline 8.2.
-# uncomment this to work around it:
+# if you're using readline, and hitting Enter on an empty line doesn't
+# cause rca to echo the newline, it's due to a bug in some builds of
+# readline 8.2.  uncomment this as a workaround:
 #   CFLAGS += -D READLINE_NO_ECHO_BARE_NL
 
 # temporary.  i have one test host with the bad library
--include ./readline-is-buggy
+-include ./readline-is-buggy  # (file contains the above CFLAGS change)
 
 
 CFLAGS += -Wall -Wextra -Wfloat-conversion -Wconversion  \
@@ -31,16 +31,33 @@ rca: rca.c
 		$(CFLAGS) -DGITVERSION=\"$${gver}\" \
 		rca.c $(LIBS)
 
-# build-time check for whether readline library is available:
-READLINE_CHECK := $(shell echo "int main() { return 0; }" > trl.c; \
-  $(CC) trl.c -lreadline -o trl 2>/dev/null && echo YES; rm -f trl.c trl )
+# build-time check for whether editline is available:
+EDITLINE_CHECK := $(shell echo "int main() { return 0; }" > _tt.c; \
+   $(CC) _tt.c -ledit -o _tt 2>/dev/null && echo YES; rm -f _tt.c _tt )
 
-ifeq ($(READLINE_CHECK),YES)
-    LIBS += -lreadline
-    CFLAGS += -DUSE_READLINE
-    $(info Building with readline support)
+# due to licensing incompatibility, building against readline requires
+# a manual step.  run this command:
+#     make ENABLE_READLINE_BUILD=YES
+#
+# editline is preferred, since its license matches rca's.
+# if you don't already have editline, use:
+#   apt install libedit-dev    (on debian/ubuntu/etc)
+#   dnf install libedit-devel      (on fedora/redhat/etc)
+
+ifeq ($(ENABLE_READLINE_BUILD),YES)
+    # linking against readline means GPL3 distribution terms will apply
+    # to the built binary (even if libreadline is a shared library).
+    $(info -- Building with readline support ---)
+    $(info -- The binary will be subject to GPL3 distribution terms!! ---)
+    # some systems might also require libncurses or libtinfo
+    LIBS += -lreadline   # -lncurses -ltinfo
+    CFLAGS += -D USE_READLINE
+else ifeq ($(EDITLINE_CHECK),YES)
+    $(info --- Building with editline support ---)
+    LIBS += -ledit
+    CFLAGS += -D USE_EDITLINE
 else
-    $(info No readline support!!)
+    $(info No command editing support!!)
 endif
 
 

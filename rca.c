@@ -23,8 +23,8 @@ char *release = "v21";
  *
  *
  *  If you don't have the Makefile, build with:
- *    doit:         gcc -g -o rca -D USE_READLINE rca.c -lm -lreadline
- *    doit-norl:    gcc -g -o rca rca.c -lm
+ *    doit:           gcc -o rca -D USE_EDITLINE rca.c -lm -ledit
+ *    doit-noedit:    gcc -o rca rca.c -lm
  *
  */
 
@@ -70,9 +70,11 @@ char licensetext[] = \
 #include <errno.h>
 #include <locale.h>
 
-#ifdef USE_READLINE
-#include <readline/readline.h>
-#include <readline/history.h>
+#if defined(USE_EDITLINE)
+# include <editline/readline.h>
+#elif defined(USE_READLINE)
+# include <readline/readline.h>
+# include <readline/history.h>
 #endif
 
 /* who are we? */
@@ -4002,8 +4004,8 @@ no_comments(char *cp)
 		strremoveall(cp, currency);
 }
 
-#ifdef USE_READLINE
-/* This supports readline command completion */
+#if defined(USE_EDITLINE) || defined(USE_READLINE)
+/* This supports command completion */
 char *
 command_generator(const char *prefix, int state)
 {
@@ -4099,7 +4101,7 @@ fetch_line(void)
 		return 1;
 	}
 
-#ifdef USE_READLINE
+#if defined(USE_EDITLINE) || defined(USE_READLINE)
 	static char readline_init_done = 0;
 
 	if (!readline_init_done) {

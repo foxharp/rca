@@ -36,10 +36,10 @@ is on by default; it can be toggled off with
 .B 0
 .BR ap ).
 
-If
+Depending on how
 .B rca
-is built with the readline library, then command line editing, command
-history, and command completion are available.
+is built, command-line editing, command history, and command
+completion may be available.
 
 .SH REVERSE POLISH NOTATION
 Numbers entered by the user are pushed onto a stack.  An operator pops
