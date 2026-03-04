@@ -4102,51 +4102,49 @@ fetch_line(void)
 	}
 
 #if defined(USE_EDITLINE) || defined(USE_READLINE)
-	static char readline_init_done = 0;
+	if (isatty(0)) {
+		static char readline_init_done = 0;
 
-	if (!readline_init_done) {
-		rl_readline_name = "rca";
-		rl_basic_word_break_characters = " \t\n";
-		rl_attempted_completion_function = command_completion;
-		using_history();
-		readline_init_done = 1;
-	}
+		if (!readline_init_done) {
+			rl_readline_name = "rca";
+			rl_basic_word_break_characters = " \t\n";
+			rl_attempted_completion_function = command_completion;
+			using_history();
+			readline_init_done = 1;
+		}
 
-	/* if we used the buffer as input, add it to history.  doing
-	 * this here records any command line input, possibly stored
-	 * in the buffer above, on the first call to fetch_line() */
-	if (input_buf && *input_buf)
-		add_history(input_buf);
+		/* if we used the buffer as input, add it to history.  doing
+		 * this here records any command line input, possibly stored
+		 * in the buffer above, on the first call to fetch_line() */
+		if (input_buf && *input_buf)
+			add_history(input_buf);
 
-	if (input_buf) free(input_buf);
+		if (input_buf) free(input_buf);
 
-	if ((input_buf = readline("")) == NULL)  // got EOF
-		exitret();
+		if ((input_buf = readline("")) == NULL)  // got EOF
+			exitret();
 
 #if READLINE_NO_ECHO_BARE_NL
-	/* a bug in readline() doesn't echo bare newlines to a tty if
-	 * the program has no prompt.  so we do it here.  this is
-	 * needed in some sub-versions of readline 8.2 */
-	if (*input_buf == '\0')
-		putchar('\n');
+		/* a bug in readline() doesn't echo bare newlines to a tty if
+		 * the program has no prompt.  so we do it here.  this is
+		 * needed in some sub-versions of readline 8.2 */
+		if (*input_buf == '\0')
+			putchar('\n');
 #endif
 
-#else // no readline()
+	} else
+#endif  // no READLINE or EDITLINE
+	{
+		/* we're here if either we were built w/o editing
+		 * support, or stdin isn't a tty.  */
 
-	if (getline(&input_buf, &blen, stdin) < 0)  // EOF
-		exitret();
+		if (getline(&input_buf, &blen, stdin) < 0)  // EOF
+			exitret();
 
-	if (input_buf[strlen(input_buf) - 1] == '\n')
-		input_buf[strlen(input_buf) - 1] = '\0';
+		if (input_buf[strlen(input_buf) - 1] == '\n')
+			input_buf[strlen(input_buf) - 1] = '\0';
 
-	/* if stdin is a terminal, the command is already on-screen.
-	 * but we also want it mixed with the output if we're
-	 * redirecting from a file or pipe.  easy to get rid of it
-	 * with something like:   rca < commands | grep '^ '
-	 */
-	if (!isatty(0))
-		printf("%s\n", input_buf);
-#endif
+	}
 
 	no_comments(input_buf);
 
