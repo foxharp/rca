@@ -1832,7 +1832,7 @@ strreverse(char *s)
 
         while (s < e) {
                 t = *s; *s = *e; *e = t;    // swap start and end
-                s++; e--; 		    // move pointers inward
+                s++; e--;		    // move pointers inward
         }
 }
 
@@ -4054,6 +4054,60 @@ command_completion(const char* prefix, int start, int end)
 
 	return rl_completion_matches(prefix, command_generator);
 }
+
+/* get an input line from the command line editor.  returns NULL if
+ * EOF, or if not reading a tty.  input_buf (i.e., *ibp) is untouched
+ * in that case.  */
+int
+editor_line(char **ibp)
+{
+	char *input_buf = *ibp;
+	if (!isatty(0))
+		return 0;
+
+	static char readline_init_done = 0;
+
+	if (!readline_init_done) {
+		rl_readline_name = "rca";
+		rl_basic_word_break_characters = " \t\n";
+		rl_attempted_completion_function = command_completion;
+		using_history();
+		readline_init_done = 1;
+	}
+
+	/* if we used the buffer as input, add it to history.  doing
+	 * this here records any command line input, possibly stored
+	 * in the buffer above, on the first call to fetch_line() */
+	if (input_buf && *input_buf)
+		add_history(input_buf);
+
+	if (input_buf) free(input_buf);
+
+	if ((input_buf = readline("")) == NULL)  // got EOF
+		exitret();
+
+#if READLINE_NO_ECHO_BARE_NL
+	/* a bug in readline() doesn't echo bare newlines to a tty if
+	 * the program has no prompt.  so we do it here.  this is
+	 * needed in some sub-versions of readline 8.2 */
+	if (*input_buf == '\0')
+		putchar('\n');
+#endif
+
+	*ibp = input_buf;
+
+	return 1;
+}
+
+#else // no editline or readline
+
+int
+editor_line(char **ibp)
+{
+	(void)ibp;
+	return 0;
+}
+
 #endif
 
 /* on return from fetch_line(), the global input_ptr is a string
@@ -4068,6 +4122,7 @@ fetch_line(void)
 	static boolean tried_rca_init;
 	char *rca_init;
 
+	/* get commands from $RCA_INIT */
 	if (!tried_rca_init) {
 		tried_rca_init = TRUE;
 		rca_init = getenv("RCA_INIT");
@@ -4084,10 +4139,10 @@ fetch_line(void)
 
 	pending_allow();
 
-	/* if there are args on the command line, they're taken as
-	 * initial commands.  since only numbers can start with '-',
-	 * we let any other use of a hyphen bring up a usage message.
-	 */
+	/* get commands from the command line.  since only numbers can
+	 * start with '-', we let any other use of a hyphen bring up a
+	 * usage message.  (this isn't perfectly robust, but good
+	 * enough) */
 	if (arg < g_argc) {
 
 		if (g_argv[1][0] == '-' && !(isdigit(g_argv[1][1])))
@@ -4112,42 +4167,12 @@ fetch_line(void)
 		return 1;
 	}
 
-#if defined(USE_EDITLINE) || defined(USE_READLINE)
-	if (isatty(0)) {
-		static char readline_init_done = 0;
+	/* get an input line from editline or readline */
+	if (!editor_line(&input_buf)) {
 
-		if (!readline_init_done) {
-			rl_readline_name = "rca";
-			rl_basic_word_break_characters = " \t\n";
-			rl_attempted_completion_function = command_completion;
-			using_history();
-			readline_init_done = 1;
-		}
-
-		/* if we used the buffer as input, add it to history.  doing
-		 * this here records any command line input, possibly stored
-		 * in the buffer above, on the first call to fetch_line() */
-		if (input_buf && *input_buf)
-			add_history(input_buf);
-
-		if (input_buf) free(input_buf);
-
-		if ((input_buf = readline("")) == NULL)  // got EOF
-			exitret();
-
-#if READLINE_NO_ECHO_BARE_NL
-		/* a bug in readline() doesn't echo bare newlines to a tty if
-		 * the program has no prompt.  so we do it here.  this is
-		 * needed in some sub-versions of readline 8.2 */
-		if (*input_buf == '\0')
-			putchar('\n');
-#endif
-
-	} else
-#endif  // no READLINE or EDITLINE
-	{
-		/* we're here if either we were built w/o editing
-		 * support, or stdin isn't a tty.  */
+		/* the command line editor didn't provide a line, so
+		 * either we're running without an editor, or stdin
+		 * isn't a tty.  */
 
 		if (getline(&input_buf, &blen, stdin) < 0)  // EOF
 			exitret();
@@ -4155,8 +4180,7 @@ fetch_line(void)
 		if (input_buf[strlen(input_buf) - 1] == '\n')
 			input_buf[strlen(input_buf) - 1] = '\0';
 
-		/* if stdin is a terminal, the command is already on-screen.
-		 * we might also want it mixed with the output if we're
+		/* we might want stdin mixed with the output if we're
 		 * redirecting from a file or pipe.  */
 		if (echo_enabled)
 			puts(input_buf);
