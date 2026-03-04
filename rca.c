@@ -193,6 +193,9 @@ boolean floating_mode(int m) { return (m == 'F' || m == 'R'); }
 /* if true, exit(4) on error, warning, or access to empty operand stack */
 boolean exit_on_error = FALSE;
 
+/* true, to copy stdin to stdout when it comes from a file or pipe */
+boolean echo_enabled = FALSE;
+
 /* if true, print the top of stack after any line that ends with an operator */
 boolean autoprint = TRUE;
 
@@ -520,7 +523,8 @@ toggler(boolean *control, char *descrip, char *yes, char *no)
 
 	*control = (n != 0);
 
-	p_printf(" %s %s\n", descrip, n ? yes : no);
+	if (descrip)
+		p_printf(" %s %s\n", descrip, n ? yes : no);
 	return GOODOP;
 }
 
@@ -530,6 +534,13 @@ infixmode(void)
 {
 	return toggler(&infix_mode,  "Full-time infix mode",
 		"enabled", "disabled");
+}
+
+opreturn
+enable_echo(void)
+{
+	/* no confirmation messages, which might defeat the silent purpose */
+	return toggler(&echo_enabled,  0, 0, 0);
 }
 
 opreturn
@@ -4144,6 +4155,11 @@ fetch_line(void)
 		if (input_buf[strlen(input_buf) - 1] == '\n')
 			input_buf[strlen(input_buf) - 1] = '\0';
 
+		/* if stdin is a terminal, the command is already on-screen.
+		 * we might also want it mixed with the output if we're
+		 * redirecting from a file or pipe.  */
+		if (echo_enabled)
+			puts(input_buf);
 	}
 
 	no_comments(input_buf);
@@ -4821,6 +4837,7 @@ struct oper opers[] = {
 	{"quit", quit,		0 },
 	{"q", quit,		0 },
 	{"exit", quit,		"Leave the calculator" },
+	{"echo", enable_echo,	"Toggle echoing input when stdin is a file or pipe" },
 	{"errorexit", enable_errexit,	"Toggle exiting on error and warning" },
 	{"debug", debug,	"Toggle enabling of debug commands" },
 	{"license", license,	"Display the rca copyright and license." },

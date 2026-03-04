@@ -174,7 +174,7 @@ gentest:
 	egrep -v '^ ' tests/f64i64/gentests.txt | \
 		( RUNVG="valgrind -q --leak-check=full"; \
 		  which XXvalgrind >/dev/null || RUNVG=; \
-		  $$RUNVG ./rca 2>&1 \
+		  $$RUNVG ./rca 1echo 2>&1 \
 		) | tee .test | \
 		diff -u tests/$(ID)/gentests.txt -
 
@@ -183,13 +183,13 @@ optest:
 	egrep -v '^ ' tests/f64i64/optests.txt | \
 		( RUNVG="valgrind -q --leak-check=full"; \
 		  which valgrind >/dev/null || RUNVG=; \
-		  $$RUNVG ./rca 2>&1 \
+		  $$RUNVG ./rca 1echo 2>&1 \
 		) | tee .test | \
 		diff -u tests/$(ID)/optests.txt -
 
 tweaktest:
 	egrep -v '^ ' tests/f64i64/tweaktests.txt | \
-		./rca 2>&1 | tee .test | \
+		./rca 1echo 2>&1 | tee .test | \
 		diff -u tests/$(ID)/tweaktests.txt -
 
 .PHONY: clean all gentest optest tweaktest html htmldiff htmlmv \

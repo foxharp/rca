@@ -575,6 +575,19 @@ to enable, and
 to disable.
 (Startup:  disabled)
 .P
+.B echo
+toggles whether input that comes from a file or pipe should be copied
+to stdout, allowing commands to be recorded along with
+their results.  (Output from
+.B rca
+all starts with at least one space character, so input and output can
+usually be easily distinguished.) Unlike other
+.B rca
+commands,
+.B echo
+produces no confirmation messages.
+(Startup:  disabled)
+.P
 .B errorexit
 forces
 .B rca
