@@ -1,4 +1,4 @@
-char *release = "v21";
+char *release = "v22";
 /*
  *
  *	This program is a mediocre but practical stack-based floating
@@ -2721,7 +2721,7 @@ width(void)
 opreturn
 zerof(void)
 {
-	return toggler(&zerofill, "Zero fill in hex/octal/binary modes is now",
+	return toggler(&zerofill, "Zero fill of hex/octal/binary output is now",
 		"on", "off");
 }
 
