@@ -39,8 +39,8 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        the stack after most input lines.  This is on by default; it can
        be toggled off with <span style="font-weight:bold;">0 autoprint </span>(or <span style="font-weight:bold;">0 ap</span>).
 
-       If <span style="font-weight:bold;">rca </span>is built with the readline library, then command line
-       editing, command history, and command completion are available.
+       Depending on how <span style="font-weight:bold;">rca </span>is built, command-line editing, command
+       history, and command completion may be available.
 
 <span style="font-weight:bold;">REVERSE POLISH NOTATION</span>
        Numbers entered by the user are pushed onto a stack.  An operator
@@ -342,6 +342,14 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
               not.  Use <span style="font-weight:bold;">1 infix </span>to enable, and <span style="font-weight:bold;">:0 infix </span>to disable.
               (Startup:  disabled)
 
+              <span style="font-weight:bold;">echo </span>toggles whether input that comes from a file or pipe
+              should be copied to stdout, allowing commands to be
+              recorded along with their results.  (Output from <span style="font-weight:bold;">rca </span>all
+              starts with at least one space character, so input and
+              output can usually be easily distinguished.) Unlike other
+              <span style="font-weight:bold;">rca </span>commands, <span style="font-weight:bold;">echo </span>produces no confirmation messages.
+              (Startup:  disabled)
+
               <span style="font-weight:bold;">errorexit </span>forces <span style="font-weight:bold;">rca </span>to exit on any subsequent error.
               Normally errors which result from user input are reported,
               but operation continues.  (Startup: disabled)
@@ -579,7 +587,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        Paul Fox created <span style="font-weight:bold;">rca </span>(formerly called &quot;ca&quot;) very slowly over a
        span of decades, starting in 1993.
 
-                                version v21                        <span style="font-style:italic;">rca</span>(1)
+                        version v22     Mar 5, 2026                <span style="font-style:italic;">rca</span>(1)
 </pre>
 </body>
 </html>

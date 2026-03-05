@@ -1,3 +1,26 @@
+
+v22 changes   (03/05/2026)
+
+    added "echo" toggle command, to explicitly control whether input
+    from a file or pipe gets copied to the ouput.  it's more normal to
+    not emit a copy of that input, but rca has always done so in the
+    past, and the unit tests are written assuming it does.
+
+    simplified input path, by skipping the readline/editline code
+    entirely if input isn't coming from a terminal.  command line
+    editing support code is now isolated in a single ifdef.
+
+    added support for the editline command-line editing library.
+    readline is GPL3, which means binaries linked against it become
+    subject to the GPL3 distribution terms.  editline is the safer
+    choice for a BSD-licensed program like rca.  the Makefile
+    autodetects editline, and builds accordingly.  using readline is
+    still easy, but requires specific user action (as described in
+    Makefile comments).
+
+    revised version handling somewhat
+
+
 v21 changes   (03/02/2026)
 
     implemented a full-time infix mode.  invoke with "1 infix".  once
