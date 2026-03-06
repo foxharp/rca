@@ -68,9 +68,10 @@ rca.1: rca.man
 
 copyrightcheck:
 	@year=$$(date +%Y) ;\
-	echo Checking for $$year in licenses; \
+	echo Checking for $$year in copyrights... ; \
 	grep -q "Copyright.*$$year" LICENSE && \
-	grep -q "Copyright.*$$year" rca.c
+	grep -q "Copyright.*$$year" rca.c || \
+	echo "  out of date."
 
 
 # building the html into ".new" files keeps the git tree clean(er)
