@@ -199,7 +199,7 @@ b
 0xabc
  0b1010,10111100
 1 zerofill
- Zero fill in hex/octal/binary modes is now on
+ Zero fill of hex/octal/binary output is now on
  0b00001010,10111100
 0sep
  Numeric separators now off
@@ -234,7 +234,7 @@ P
 pop
  0b00000000,00000000,00000000
 0zf
- Zero fill in hex/octal/binary modes is now off
+ Zero fill of hex/octal/binary output is now off
  0b0
 16 bits
  Integers are now 16 bits wide.
