@@ -1,0 +1,8 @@
+tar-ignore='*.deb'
+tar-ignore='.git*'
+tar-ignore='*.new'
+tar-ignore='*.html'
+tar-ignore='.test'
+tar-ignore='docs'
+tar-ignore='TODO'
+extend-diff-ignore='.git*'

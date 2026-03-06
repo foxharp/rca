@@ -1,0 +1,29 @@
+Source: rca
+Section: math
+Priority: optional
+Maintainer: Paul Fox <pgf@foxharp.boston.ma.us>
+Build-Depends:  debhelper (>= 12),
+                libedit-dev,
+		git
+Standards-Version: 4.6.0
+Homepage: https://foxharp.github.io/rca/
+
+Package: rca
+Architecture: any
+Depends: libedit2
+Description: RPN or infix format scientific and programmer's calculator
+ rca is a command-line calculator which can operate seamlessly in
+ RPN or infix modes.  It uses the native floating point library, so
+ it's not an an arbitrary precision calculator:  it's a convenient,
+ non-programmable, desktop calculator, for typical one-off
+ professional and everyday problems.
+ .
+ rca has the usual scientific and engineering operations, as well
+ as support for different bases, word widths, and bitwise operations
+ to make it a programmer's calculator.
+ .
+ rca was inspired by the author's HP-35, HP-25c, and HP-16c calculators.
+
+
+
+
