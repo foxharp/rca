@@ -1,9 +1,9 @@
 
 # _rca_: a rich/RPN calculator
 
-_rca_ is simple, yet extremely versatile
+_rca_ is simple, yet extremely versatile:
 
- - It's a reverse polish notation calculator in the HP tradition
+ - It's a reverse polish notation calculator in the HP tradition.
 
     ```
         34 11 *
@@ -26,7 +26,7 @@ _rca_ is simple, yet extremely versatile
                                      999.428
     ```
 
- - It runs in either floating point or integer mode
+ - It runs in either floating point or integer mode.
     ```
         D
          Mode is signed decimal (D).  Integer math with 64 bits.
@@ -35,7 +35,7 @@ _rca_ is simple, yet extremely versatile
                                      999     # warning: accuracy lost, was 999.4277284357265288
     ```
 
- - It has the trig and math functions of a scientific calculator
+ - It has the trig and math functions of a scientific calculator.
     ```
         30 sin 2 ^ 30 cos 2 ^ + sqrt
                                        1.000
@@ -47,7 +47,7 @@ _rca_ is simple, yet extremely versatile
     ```
 
  - It has the word width selection, bitwise operators, and multiple bases
-    of a programmer's calculator
+    of a programmer's calculator.
     ```
         32 bits H
          Mode is hex (H).  Integer math with 32 bits.
@@ -63,7 +63,7 @@ _rca_ is simple, yet extremely versatile
                                   0b10000000,00000001,00000101,00000000
     ```
 
- - It supports variables
+ - It supports variables.
     ```
         (_a = 7 + 10; _b = 11 + 43)
                                       54
@@ -75,7 +75,7 @@ _rca_ is simple, yet extremely versatile
                          _sum  71
     ```
 
- - It can be trivially incorporated into shell scripts
+ - It can be trivially incorporated into shell scripts.
     ```
         $ source rca_float
         $ foo=$(fe "22 / 7")
@@ -87,7 +87,7 @@ _rca_ is simple, yet extremely versatile
 
  - _rca_ is written in C, uses the native floating point library, and
    is maintained in a single source file.  It's not an an arbitrary
-   precision calculator like __dc__ or __bc__:  it's a convenient,
+   precision calculator like _dc_ or _bc_:  it's a convenient,
    non-programmable, desktop calculator, for typical one-off
    professional and everyday problems.
 
