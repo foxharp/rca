@@ -1,0 +1,15 @@
+
+# emit a preamble:
+#  - control the width of long lines
+#  - give <pre> blocks a background tint
+cat <<-EOF
+	<div style="font-size: 150%; max-width: 700px; width: 100%;">
+	<style>
+	  pre {
+	    background-color: #f4f4f4; /* Light gray shading */
+	    padding: 15px;            /* Adds space around text */
+	    border-radius: 5px;       /* Optional rounded corners */
+	    overflow: auto;           /* Scrollbars if text too wide */
+	  }
+	</style>
+EOF

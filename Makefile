@@ -74,12 +74,14 @@ copyrightcheck:
 
 # building the html into ".new" files keeps the git tree clean(er)
 # most of the time.  we don't commit the html build products that
-# often.  see htmldiff and htmlmv targets below.
+# often.  see htmldiff and htmlmv targets below.  put a copy
+# of the readme in /tmp, for easier local browser viewing.
 html: docs/index.html.new docs/rca-man.html.new docs/rca-help.html.new
+	cp docs/index.html.new /tmp/rca-readme.html
 
 docs/index.html.new: README.md
-	echo '<div style="max-width: 700px; width: 100%;">' >docs/index.html.new
-	python3 -m markdown README.md >>docs/index.html.new
+	html_preamble >docs/index.html.new
+	gfm README.md >>docs/index.html.new
 
 docs/rca-man.html.new: rca.1
 	MAN_KEEP_FORMATTING=1 MANWIDTH=75 \
@@ -115,7 +117,7 @@ htmlmv:
 #   make htmldiff   # check html files
 #   make htmlmv
 #   update CHANGES file
-#   git commit html CHANGES  # "new man/help html files for vNN"
+#   git commit docs CHANGES  # "update docs and CHANGES for vNN"
 
 release: tag clean all html versioncheck
 

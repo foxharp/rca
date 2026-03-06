@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# get github to format for Github Flavored Markdown.  who better?
+
+if [ $# -lt 1 ]
+then
+    echo "usage: gfm <md-source> [ <html-output>" ]
+    exit 1
+fi
+
+md_source=$1
+html_output=${2:--}  # default to "-"
+
+jq --slurp --raw-input  '{"text": "\(.)", "mode": "markdown"}' < $md_source |
+	curl --data @"$html_output" https://api.github.com/markdown
