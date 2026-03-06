@@ -21,12 +21,13 @@ MANPREFIX = $(PREFIX)/share/man
 
 
 CFLAGS += -Wall -Wextra -Wfloat-conversion -Wconversion  \
-    -Wshift-overflow=2 -Wsign-conversion -Wstrict-overflow=2
+    -Warray-bounds=2 -Wformat-security -Wsign-conversion \
+    -Wshift-overflow=2 -Wstrict-overflow=2
 LIBS = -lm
 
 rca: rca.c
 	gver="$$(git describe --dirty=+ 2>/dev/null || echo '+?')"; \
-	gcc -g -o rca -O \
+	gcc -g -o rca -O2 \
 		$(READLINE_BUG) \
 		$(CFLAGS) -DGITVERSION=\"$${gver}\" \
 		rca.c $(LIBS)
@@ -111,13 +112,14 @@ htmlmv:
 
 
 # to release a new version:
+#   update CHANGES file
 #   vi rca.c (bump release version)
-#   git commit	    # "bumped to vNN"
+#   git commit     # "bumped to vNN"
 #   make release
 #   make htmldiff   # check html files
 #   make htmlmv
-#   update CHANGES file
-#   git commit docs CHANGES  # "update docs and CHANGES for vNN"
+#   git commit docs  # "update docs for vNN"
+
 
 release: tag clean all html versioncheck
 

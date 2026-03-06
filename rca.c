@@ -4025,21 +4025,19 @@ command_generator(const char *prefix, int state)
 
 	/* If this is the first time called, initialize our state. */
 	if (!state) {
-		op = opers - 1;
+		op = opers;
 		len = strlen(prefix);
 	}
 
 	/* Return the next name in the list that matches our prefix. */
-	while (op++) {
-		if (!op->name)
+	while (1) {
+		if (!op->name)		// end of list
 			break;
-		if (!op->name[0])
+		if (!op->func || strncmp(op->name, prefix, len) != 0) {
+			op++;
 			continue;
-		if (!op->func)
-			continue;
-		if (strncmp(op->name, prefix, len) != 0)
-			continue;
-		return strdup(op->name);
+		}
+		return strdup((op++)->name);
 	}
 
 	return 0;
@@ -4154,17 +4152,19 @@ fetch_line(void)
 		for (arg = 1; arg < g_argc; arg++)
 			blen += strlen(g_argv[arg]) + 2;
 
-		input_buf = safe_calloc(blen);
+		if (blen) {
+			input_buf = safe_calloc(blen);
 
-		*input_buf = '\0';
-		for (arg = 1; arg < g_argc; arg++) {
-			strcat(input_buf, g_argv[arg]);
-			strcat(input_buf, " ");
+			*input_buf = '\0';
+			for (arg = 1; arg < g_argc; arg++) {
+				strcat(input_buf, g_argv[arg]);
+				strcat(input_buf, " ");
+			}
+
+			no_comments(input_buf);
+			input_ptr = input_buf;
+			return 1;
 		}
-
-		no_comments(input_buf);
-		input_ptr = input_buf;
-		return 1;
 	}
 
 	/* get an input line from editline or readline */
