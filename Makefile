@@ -8,8 +8,10 @@
 all: rca rca.1 copyrightcheck
 
 # to override install paths, use: "make PREFIX=/home/me install"
-PREFIX = /usr/local
-MANPREFIX = $(PREFIX)/share/man
+PREFIX  ?= /usr
+BINDIR  ?= $(PREFIX)/bin
+MANDIR  ?= $(PREFIX)/share/man
+MAN1DIR ?= $(MANDIR)/man1
 
 # if you're using readline, and hitting Enter on an empty line doesn't
 # cause rca to echo the newline, it's due to a bug in some builds of
@@ -143,19 +145,17 @@ clean:
 	rm -f rca rca-norl rca.1 .test docs/index.html.new \
 		docs/rca-man.html.new docs/rca-help.html.new
 
+# debian packaging uses this target, so be sure it always honors
+# DESTDIR and INSTALL correctly
 install: all
-	@echo "INSTALL bin/rca"
-	install -D -m 755 -o root -g root rca \
-		$(PREFIX)/bin/rca
-	@echo "INSTALL rca.1"
-	install -D -m 644 -o root -g root rca.1 \
-		$(MANPREFIX)/man1/rca.1
+	mkdir -p $(DESTDIR)$(BINDIR)
+	mkdir -p $(DESTDIR)$(MAN1DIR)
+	$(INSTALL) -m 0755 rca $(DESTDIR)$(BINDIR)/rca
+	$(INSTALL) -m 0644 rca.1 $(DESTDIR)$(MAN1DIR)/rca.1
 
 uninstall:
-	@echo "REMOVE installed bin/rca"
-	rm -f $(PREFIX)/bin/rca
-	@echo "REMOVE installed rca.1"
-	rm -f $(MANPREFIX)/man1/rca.1
+	rm -f $(DESTDIR)$(BINDIR)/rca
+	rm -f $(DESTDIR)$(MAN1DIR)/rca.1
 
 
 
