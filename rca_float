@@ -9,8 +9,14 @@
 #
 # Use RCA_INIT to set common initial conditions.  Defaults are
 # provided here, but values set externally will override.
+#
+# Because the values stored by the shell are dependent on the display
+# format that you configure with RCA_INIT, accuracy can degrade
+# quickly during chained or looping calculations.  Good practice is to
+# choose a precision at least 1 or 2 digits more than the application
+# really needs.
 
-export RCA_INIT_DEFAULTS="3digits fixed 0separators 1errorexit"
+export RCA_INIT_DEFAULTS="4digits fixed 0separators 1errorexit"
 
 _rca_run()    # support routine
 {

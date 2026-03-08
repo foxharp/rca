@@ -169,7 +169,7 @@ tests:  gentest optest tweaktest pi_approximations
 	@echo Tests succeeded
 
 pi_approximations:  # with and without rca_float
-	test $$(PATH=:$$PATH bash -c ". ./rca_float; fe '22 / 7 - pi'") = 0.001
+	test $$(PATH=:$$PATH bash -c ". ./rca_float; fe '22 / 7 - pi'") = 0.0013
 	test $$(./rca "10 digits fixed ((355 / 113) - pi) q") = 0.0000002668
 
 gentest:
