@@ -1,4 +1,4 @@
-
+#!/bin/sh
 # This shell snippet gives simple access to rca's floating point
 # capability from a POSIX shell.  Use it with "source rca_float".
 #
@@ -16,18 +16,19 @@ _rca_run()    # support routine
 {
     local output exitcode
 
-    export RCA_INIT="$RCA_INIT_DEFAULTS ${RCA_INIT:-}"
-
-    output=$(rca "$*" q 2>&1)
+    output=$(
+        RCA_INIT="$RCA_INIT_DEFAULTS ${RCA_INIT:-}" \
+            rca "$*" q 2>&1
+        )
     exitcode=$?
 
     case $exitcode in
     0|1)
-        echo $output
+        echo "$output"
         return $exitcode ;;
     esac
 
-    echo rca failure: $output >&2
+    echo rca failure: "$output" >&2
     exit $exitcode
 }
 
