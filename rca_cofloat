@@ -1,0 +1,92 @@
+
+# This shell snippet gives simple access to rca's floating point
+# capability from a POSIX shell.  Use it with "source rca_cofloat".
+#
+# Two things disinguish rca_cofloat from rca_float:
+#
+#   1) rca requests are handled by a co-process spawned for the
+#      lifetime of the script, making each calculation about 10x faster.
+#
+#   2) All intermediate results are returned to the script using full
+#      rca precision.  The user's RCA_INIT variable, typically used to
+#      limit the displayed precision, is only applied on request.
+#
+# After including this code, use lines like this to calculate:
+#       foo=$(fe "$bar * pi")
+# or like this for a conditional expression:
+#       if fc "(10 * 3) < $foo"; then ...
+#
+# When ready to present data to the user, or to log it, use
+#	fp "$foo"
+#
+# Use RCA_INIT to set the display format.  Defaults are provided here, but
+# values set externally will override.
+
+# default output format
+: ${RCA_INIT:="5 digits auto"}
+
+# rca will calculate with as much precision as it can.  hopefully,
+# that precision can be maintained for intermediate results by the
+# caller.  when the time comes to present or record a result,
+# the fp() function will print to the desired (in $out_digits)
+# precision.
+
+start_coproc()
+{
+    coproc _RCA { RCA_INIT="$RCA_INIT_DEFAULTS" stdbuf -o0 rca; }
+}
+
+
+# this code, which runs rca as a coprocess, is about 10x faster,
+# which can make a big difference when many operations are
+# involved.  but it's not as well tested, especially with regard
+# to error handling.
+
+RCA_INIT_DEFAULTS="-1digits auto 0separators 1errorexit"
+start_coproc
+
+fe()
+{
+    printf "( %s )\n" "$*" >&"${_RCA[1]}"
+    local result
+    read -r result <&"${_RCA[0]}"
+    printf "%s\n" $result
+
+}
+
+fc()
+{
+    printf "%s\n" "( $* )" >&"${_RCA[1]}"
+    local result norm
+    read -r result <&"${_RCA[0]}"
+    # normalize the format of the result.  we want 0 or 1
+    # to look just like that.  not 1.000 or 0x0, etc.
+    printf -v norm "%g" "$result"
+    case $norm in
+    0) return 1;;
+    1) return 0;;
+    *) printf "error: unexpected result in fc: '%s'\n" "$result" ;;
+    esac
+}
+
+fe_rpn()    # Evaluate an RPN expression.  (Useful for "sum", or "avg".)
+{
+    printf "%s\n" " $* " >&"${_RCA[1]}"
+    local result
+    read -r result <&"${_RCA[0]}"
+    printf "%s\n" $result
+}
+
+fp()
+{
+    # set the user's prefs for printing results, and print
+    printf -- "%s %g p\n" "$RCA_INIT" "$1" >&"${_RCA[1]}"
+    read -r result <&"${_RCA[0]}"
+
+    # restore the defaults
+    printf -- "$RCA_INIT_DEFAULTS \n" >&"${_RCA[1]}"
+    read -r junk <&"${_RCA[0]}"  # discard any status message or autoprinting
+
+    # the formatted result
+    printf "%s\n" $result
+}
