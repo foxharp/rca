@@ -3285,7 +3285,7 @@ trace_stack_dump(int lev, token **tstackp)
 	fprintf(stderr, "\n");
 }
 
-token open_paren_token, chsign_token, nop_token;
+token open_paren_token, chsign_token;
 
 void
 create_infix_support_tokens()
@@ -3294,7 +3294,6 @@ create_infix_support_tokens()
 	 * on, specifically for dealing with infix processing.  */
 	parse_token("(", &open_paren_token, NULL, INFIX);
 	parse_token("chs", &chsign_token, NULL, INFIX);
-	parse_token("nop", &nop_token, NULL, INFIX);
 }
 
 void
@@ -3538,8 +3537,8 @@ shunting_yard(int command)
 						tok = chsign_token;
 						trace(TOK, " subtract is now chs\n");
 					} else {  // add
-						tok = nop_token;
-						trace(TOK, " add is now nop\n");
+						trace(TOK, " ignoring unary plus\n");
+						continue;
 					}
 					goto unary;
 				}
@@ -4762,7 +4761,7 @@ struct oper opers[] = {
 	{"e", push_e,		"Push constant pi or e", Sym },
 	{"lastx", repush,	0, Sym },
 	{"lx", repush,		"Push previous value of x", Sym },
-	{"_<name>", nop,	"Push variable" },
+	{"_<name>", nop,	"Push variable" },  // function unused
 	{"=", assignment,	"Assign variable.  RPN: \"3 = _v\"   infix: \"(_v = 3)\"", 2, 6 },
 	{"variables", showvars, 0 },
 	{"vars", showvars, "Show the current list of variables" },
@@ -4797,7 +4796,7 @@ struct oper opers[] = {
 	{"avg", avg,		"Snapshot, sum or average stack, maybe stop at \"mark\"", Auto },
 	{"mark", mark,		"Mark stack to limit later snap/sum/average" },
 	{"restore", restore,	"Push the snapshot onto current stack", Auto },
-	{"nop", nop,		"Does nothing", 1, 30, 'R' },
+	{"nop", nop,		"Does nothing. At end of line, suppresses output."},
 	{""},
     {"Stack manipulation:"},
 	{"clear", clear,	"Clear stack" },

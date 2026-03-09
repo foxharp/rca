@@ -9,7 +9,7 @@ precedence
  1         ( )
  2   R     ~ ! + - chs negate recip sqrt sin cos tan asin acos atan exp ln
                log2 log10 abs frac int i2mm mm2i ft2m m2ft mi2km km2mi f2c
-               c2f oz2g g2oz oz2ml ml2oz q2l l2q d2r r2d mpg2l100km nop
+               c2f oz2g g2oz oz2ml ml2oz q2l l2q d2r r2d mpg2l100km
  3   R     ^ **
  4         atan2
  5         * x / %

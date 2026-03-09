@@ -998,7 +998,6 @@ clear
 (-3)
  -3
 (+3)
- 3
 (--3)
  error: bad expression sequence, at '(' and '-'
 (+-3)

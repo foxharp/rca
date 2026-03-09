@@ -799,7 +799,8 @@ and
 are the only operators to consume more than 2 stack elements.
 .P
 .B nop
-does nothing.  It exists only to satisfy an internal rca need.
+does nothing.  If used at the end of a line, has the side effect of
+suppressing normal printed output, which can be useful in scripts.
 .P
 The
 .B :
