@@ -34,7 +34,7 @@ _rca_run()    # support routine
         return $exitcode ;;
     esac
 
-    echo rca failure: "$output" >&2
+    echo "rca failure: '$output'" >&2
     exit $exitcode
 }
 
@@ -55,3 +55,7 @@ fe_rpn()    # Evaluate an RPN expression.  (Useful for "sum", or "avg".)
     return 0
 }
 
+fp()
+{
+    echo $1
+}
