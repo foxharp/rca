@@ -142,7 +142,7 @@ versioncheck:
 			-e 's/^ *\( version v[0-9]\+.*\)/\1/p'
 
 clean:
-	rm -f rca rca-norl rca.1 .test docs/index.html.new \
+	rm -f rca rca rca.1 .test docs/index.html.new \
 		docs/rca-man.html.new docs/rca-help.html.new
 
 # debian packaging uses this target, so be sure it always honors
