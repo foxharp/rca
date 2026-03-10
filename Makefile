@@ -84,8 +84,8 @@ html: docs/index.html.new docs/rca-man.html.new docs/rca-help.html.new
 	cp docs/index.html.new /tmp/rca-readme.html
 
 docs/index.html.new: README.md
-	html_preamble >docs/index.html.new
-	gfm README.md >>docs/index.html.new
+	docs/html_preamble >docs/index.html.new
+	docs/gfm README.md >>docs/index.html.new
 
 docs/rca-man.html.new: rca.1
 	MAN_KEEP_FORMATTING=1 MANWIDTH=75 \
