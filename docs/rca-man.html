@@ -462,8 +462,9 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
               <span style="font-weight:bold;">sum</span>, <span style="font-weight:bold;">avg</span>, and <span style="font-weight:bold;">snapshot </span>are the only operators to consume
               more than 2 stack elements.
 
-              <span style="font-weight:bold;">nop </span>does nothing.  It exists only to satisfy an internal
-              rca need.
+              <span style="font-weight:bold;">nop </span>does nothing.  If used at the end of a line, has the
+              side effect of suppressing normal printed output, which can
+              be useful in scripts.
 
               The <span style="font-weight:bold;">: </span>(colon) command does nothing, but signifies to the
               parser that the rest of the line should be interpreted as
@@ -587,7 +588,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        Paul Fox created <span style="font-weight:bold;">rca </span>(formerly called &quot;ca&quot;) very slowly over a
        span of decades, starting in 1993.
 
-                 version v22  v22-5-gd93bc39   Mar 6, 2026         <span style="font-style:italic;">rca</span>(1)
+                       version v23     Mar 10, 2026                <span style="font-style:italic;">rca</span>(1)
 </pre>
 </body>
 </html>

@@ -9,10 +9,10 @@
 </style>
 <div class="markdown-heading"><h1 class="heading-element">
 <em>rca</em>: a rich/RPN calculator</h1><a id="user-content-rca-a-richrpn-calculator" class="anchor" aria-label="Permalink: rca: a rich/RPN calculator" href="#rca-a-richrpn-calculator"><span aria-hidden="true" class="octicon octicon-link"></span></a></div>
-<p><em>rca</em> is simple, yet extremely versatile</p>
+<p><em>rca</em> is simple, yet extremely versatile:</p>
 <ul>
 <li>
-<p>It's a reverse polish notation calculator in the HP tradition</p>
+<p>It's a reverse polish notation calculator in the HP tradition.</p>
 <pre><code>    34 11 *
                                  374
     sto
@@ -34,7 +34,7 @@ RPN input, or in a full-time infix mode (not shown here).</p>
 </code></pre>
 </li>
 <li>
-<p>It runs in either floating point or integer mode</p>
+<p>It runs in either floating point or integer mode.</p>
 <pre><code>    D
      Mode is signed decimal (D).  Integer math with 64 bits.
                                  374
@@ -43,7 +43,7 @@ RPN input, or in a full-time infix mode (not shown here).</p>
 </code></pre>
 </li>
 <li>
-<p>It has the trig and math functions of a scientific calculator</p>
+<p>It has the trig and math functions of a scientific calculator.</p>
 <pre><code>    30 sin 2 ^ 30 cos 2 ^ + sqrt
                                    1.000
 </code></pre>
@@ -54,7 +54,7 @@ RPN input, or in a full-time infix mode (not shown here).</p>
 </li>
 <li>
 <p>It has the word width selection, bitwise operators, and multiple bases
-of a programmer's calculator</p>
+of a programmer's calculator.</p>
 <pre><code>    32 bits H
      Mode is hex (H).  Integer math with 32 bits.
     1 zerofill
@@ -70,7 +70,7 @@ of a programmer's calculator</p>
 </code></pre>
 </li>
 <li>
-<p>It supports variables</p>
+<p>It supports variables.</p>
 <pre><code>    (_a = 7 + 10; _b = 11 + 43)
                                   54
     (_sum = _a + _b)
@@ -82,7 +82,7 @@ of a programmer's calculator</p>
 </code></pre>
 </li>
 <li>
-<p>It can be trivially incorporated into shell scripts</p>
+<p>It can be trivially incorporated into shell scripts.</p>
 <pre><code>    $ source rca_float
     $ foo=$(fe "22 / 7")
     $ echo $foo
@@ -94,7 +94,7 @@ of a programmer's calculator</p>
 <li>
 <p><em>rca</em> is written in C, uses the native floating point library, and
 is maintained in a single source file.  It's not an an arbitrary
-precision calculator like <strong>dc</strong> or <strong>bc</strong>:  it's a convenient,
+precision calculator like <em>dc</em> or <em>bc</em>:  it's a convenient,
 non-programmable, desktop calculator, for typical one-off
 professional and everyday problems.</p>
 </li>
