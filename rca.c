@@ -1969,12 +1969,14 @@ check_int_truncation(ldouble *np, boolean conv)
 }
 
 void
-show_int_truncation(boolean changed, ldouble old_n)
+show_int_truncation(boolean changed, ldouble old_n, char *mark)
 {
 	if (!changed) {
-		p_printf("\n");
+		p_printf("%s\n", mark);
 		return;
 	}
+
+	// don't bother showing mark if we're warning about truncation
 
 	pending_show();
 	if (floating_mode(mode))
@@ -2199,13 +2201,15 @@ calc_align(int binary)
 }
 
 void
-print_n(ldouble *np, int format, boolean conv)
+print_n(ldouble *np, int format, boolean conv, char *mark)
 {
 	ldouble old_n, n;
 	long long ln;
 	long long mask = int_mask;
 	int align;
 	boolean changed;
+
+	if (!mark) mark = "";
 
 	old_n = n = *np;
 
@@ -2223,7 +2227,7 @@ print_n(ldouble *np, int format, boolean conv)
 				align += (int)(eos - dp);
 			}
 		}
-		p_printf("%*s\n", align, pf);
+		p_printf("%*s%s\n", align, pf, mark);
 		return;
 	}
 
@@ -2295,7 +2299,7 @@ print_n(ldouble *np, int format, boolean conv)
 		return;
 	}
 
-	show_int_truncation(changed, old_n);
+	show_int_truncation(changed, old_n, mark);
 	if (changed)
 		*np = n;
 
@@ -2305,7 +2309,18 @@ void
 print_top(int format)
 {
 	if (stack)
-		print_n(&stack->val, format, 0);
+		print_n(&stack->val, format, 0, 0);
+}
+
+void
+printstack_worker(int n, boolean conv, struct num *s)
+{
+
+	if (s->next)
+		printstack_worker(n-1, conv, s->next);
+
+	print_n(&(s->val), mode, conv,
+		(n == stack_mark) ? "         # <-  mark" : "");
 }
 
 void
@@ -2314,10 +2329,7 @@ printstack(boolean conv, struct num *s)
 	if (!s)
 		return;
 
-	if (s->next)
-		printstack(conv, s->next);
-
-	print_n(&(s->val), mode, conv);
+	printstack_worker(stack_count, conv, s);
 }
 
 opreturn
@@ -3743,7 +3755,7 @@ showvars(void)
 	rightalignment = 0;
 	for (v = variables; v->name; v++) {
 		p_printf(" %20s ", v->name);
-		print_n(&v->value, mode, 0);
+		print_n(&v->value, mode, 0, 0);
 	}
 	rightalignment = savealign;
 
@@ -4793,8 +4805,8 @@ struct oper opers[] = {
 	{":", rpnswitch,	"Treat rest of line as RPN. (needed in infix mode)"},
 	{"snapshot", snapshot,	0, 0},
 	{"sum", sum,		0, Auto },
-	{"avg", avg,		"Snapshot, sum or average stack, maybe stop at \"mark\"", Auto },
-	{"mark", mark,		"Mark stack to limit later snap/sum/average" },
+	{"avg", avg,		"Snapshot, sum, or average stack, up to \"mark\"", Auto },
+	{"mark", mark,		"Mark stack, to limit later snap/sum/average" },
 	{"restore", restore,	"Push the snapshot onto current stack", Auto },
 	{"nop", nop,		"Does nothing. At end of line, suppresses output."},
 	{""},
