@@ -1,4 +1,32 @@
 
+v23 changes (03/10/2026)
+
+    repurposed nop() from helping implement unary plus to actually
+    doing nothing.  unary plus doesn't actually need nop().  and by
+    turning "nop" into a silent pseudo-op, it can be used to silence
+    output from a line of input.
+
+    added new script, rca_cofloat.  like rca_float, but faster and
+    more accurate.   also harder to use, and possibly more fragile.
+
+    rca_float:  add caution about accuracy, bump default to 4 digits.
+    fixed bug with ever-growing RCA_INIT value.
+
+    add debian packaging support.  fixed install target to properly
+    honor DESTDIR
+
+    don't fail build due to copyright check, since there's a high
+    chance the builder won't be able to fix it.
+
+    fixed possible array/buffer overruns, found with more gcc warnings
+
+    revised README.  add tools to help create a web-based README that
+    looks like github's.  turns out the easiest way to get "github
+    flavored markdown" is to use a github api and let them format it.
+    then some extra sauce needs to be added to make it look pretty.
+
+
+
 v22 changes   (03/05/2026)
 
     added "echo" toggle command, to explicitly control whether input
