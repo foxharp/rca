@@ -1,0 +1,57 @@
+
+
+Me and HP calculators		    (first posted on reddit, February 2026)
+
+The first calculator in my family was when my dad (a physics prof in
+his mid-fifties) convinced my mother in 1973 that he could pay for the
+just-released HP-35 ($400!) by selling his expensive back volumes of
+Physical Review.  That never happened, but he absolutely loved the
+calculator.  For a guy that had been solving Really Hard Problems for
+forty years using his slide rule, it was nothing short of miraculous.
+He even loved that it got the square root of 4 "wrong" (3.9999...),
+because he well understood accuracy, and precision, and that that
+answer had plenty of both, for the real world.  He wasn't as happy
+that the trig functions only worked with degrees though.  Can't have
+everything!  He used it for a long time.  I still have it -- it worked
+until a few years ago, but not anymore.
+
+I borrowed that HP-35 a lot during the tail end of high school, and
+when I was heading off to study and do something in science or
+engineering, my folks gave me an HP-25C for graduation.  I was
+thrilled.  I remember I took it along on my bike one day, and headed
+across town to a local park by the river.  I sat at a picnic table for
+a couple of hours reading the manual, learning to use it, and writing
+my first program (ever!) on it.  (Then I got to college, and had
+access to "real" computers.  I don't think I ever wrote another
+program on the HP-25.) I loved the form factor, and the keyboard feel.
+As an engineering student, I also loved "ENG" display mode:  much like
+"scientific", which I knew from the HP-35, but with the exponent
+constrained to multiples of 3.  Perfect when calculating picojoules
+from megahertz, or whatever it was I was doing back then.
+
+The HP-25 died too early a death.  By then I was into my career as a
+firmware / embedded / OS-level programmer.  Floating point wasn't even
+on my radar.  When I eventually got a new calculator, the natural
+choice was the HP-16C, with bitwise operations, variable word length,
+multiple bases.  Perfect...  except that I hardly ever used it.
+Somehow I just never really needed what it could do, and reaching for
+a standalone device when I had the entire power of UNIX, the shell,
+and C at my fingertips never felt right.  Not to mention dc, bc, awk,
+etc.  I never really bonded with the HP-16 like I did with the other
+two.  But I do still have it, and it still works, and I think it's
+only on its second set of batteries.  (!)
+
+Anyway, that's my calculator story.  I did apply my skills to writing
+my own, when I decided dc and bc just weren't satisfying my particular
+needs.  Like them, it's text-based, but it's a handy tool.  And of
+course it was influenced by the HPs that I'd used.  I started it a
+long time ago, but have been working on it a lot again lately (as a
+substitute for doom-scrolling, I think -- everyone needs an engrossing
+hobby these days), and I realized that I've incorporated many features
+from every one of those three HP calculators, which is sort of
+amusing, and fitting.  It's "foxharp/rca" on github, but that's not
+really why I wrote all this.  I came across dad's calculator the other
+day, and mainly I just felt like reminiscing.
+
+-pgf
+
