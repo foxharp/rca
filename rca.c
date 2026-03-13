@@ -4457,7 +4457,7 @@ config(void)
 
 /* useful for resetting width from debugger, to generate the
  * (narrower) man page copy of the precedence table. */
-size_t precedence_width = 70;
+size_t precedence_width = 68;
 
 opreturn
 precedence(void)
@@ -4532,7 +4532,7 @@ precedence(void)
 			strcat(prec_ops[op->prec], op->name);
 			linelen[op->prec] += strlen(op->name) + 1;
 			if (linelen[op->prec] > precedence_width) {
-				linelen[op->prec] = 12;
+				linelen[op->prec] = 15;
 				prefix[op->prec] = "\n              ";
 			} else {
 				strcat(prec_ops[op->prec], prefix[op->prec]);
