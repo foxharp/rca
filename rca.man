@@ -609,11 +609,11 @@ If $PAGER is set in the environment, the shell command it names will
 be used to display the help text.  (The command must read the text
 from standard input.)  Otherwise the text will be sent directly to stdout.
 
-\" The
-\" .B state
-\" command will print a verbose summary of
-\" .BR rca 's
-\" current state.
+The
+.B state
+command will print a summary of
+.BR rca 's
+current state.
 
 .SH OPERATOR PRECEDENCE
 Infix evaluation depends on operator precedence and associativity.
@@ -748,45 +748,25 @@ cause an error, if either operand will not fit in a
 .I long
 .IR long .
 .P
-.B sum
-(or
-.BR avg )
-will pop and add (or add and then average) previous entries on the
-stack, stopping when the stack is empty, or when a stack marker
-previously set with the
+.BR sum ,
+.BR avg ,
+and
+.B stddev
+will will calculate the total, mean, or sample standard deviation of
+previous stack entries, stopping when the stack is empty, or just
+before a stack marker (previously set with the
 .B mark
-command is reached.
-The mark would be set before entering the data for a subsequent
-.B sum
-(or
-.BR avg ),
-in order to limit its reach.
-.B N mark
-(i.e., a
-.B mark
-command with an argument of
-.BR N )
-will cause a later
-.B sum
-(or
-.BR avg )
-to include the current top N values,
-plus any more values that have been pushed prior to the sum.
-N cannot be greater than the depth of the stack.
-.B 0 mark
-will cause only subsequent pushes to be summed/averaged.
-.B -1 mark
-will clear the mark.
+command, below) is reached.  The entries used in the calculation are
+all removed from the stack, replaced by the result.
 .P
 .B snapshot
-will make a copy of the stack, which can be retrieved later using the
+will make a copy of some or all of the stack.  The copied entries are
+undisturbed.
 .B restore
-command.
-.B restore
-will push the snapshot on top of the current stack.
+will push the snapshot onto the top of the stack.
 .B mark
-can be used, as described above, to limit the range of the snapshot.
-An exact copy of the stack is ensured by
+can be used, as described below, to limit the range of the snapshot.
+A full exact copy of the stack is ensured by
 .B -1 mark snapshot
 followed by
 .B clear
@@ -794,9 +774,46 @@ followed by
 .P
 .BR sum ,
 .BR avg ,
+.BR stddev ,
 and
 .B snapshot
-are the only operators to consume more than 2 stack elements.
+are the only operators which use more than 2 stack elements.  Since
+the first three consume their stack operands,
+.B snapshot
+and
+.B restore
+can
+be useful if you wish to reuse the data:
+.RS
+.RB " 1
+.B 3 7 10 snapshot avg 0mark restore
+.BR stddev "
+.RE
+will leave
+the average and standard deviation of the given list on the stack.  Setting
+the mark keeps
+.B stdev
+from consuming the calculated average as well as the restored data values.
+.P
+.B N mark
+(i.e., a
+.B mark
+command with an argument of
+.BR N )
+will cause a later
+.BR sum ,
+.BR avg ,
+.BR stddev ,
+or
+.BR snapshot
+to include the current top N values,
+plus any further values that are pushed prior to the operation.
+.B N
+cannot be greater than the depth of the stack.
+.B 0 mark
+will cause only subsequent pushes to be included.
+.B -1 mark
+will clear the mark.
 .P
 .B nop
 does nothing.  If used at the end of a line, has the side effect of

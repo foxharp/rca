@@ -2817,6 +2817,7 @@ mark(void)
 			error(" error: bad mark (%d), max of 0 with empty stack, or, -1 to clear\n", (int)n);
 		else
 			error(" error: bad mark (%d), range between 0 and stack length (%d), or -1 to clear\n", (int)n, stack_count);
+		return BADOP;
 	}
 
 	if (n == -1)
@@ -2853,6 +2854,7 @@ snapshot(void)
 	// copy (as much as we want of the) real stack to snapstack
 	p = stack;
 	snapstack = NULL;
+	int i = 0;
 	int n = stack_count;
 	while (n > stack_mark) {
 		struct num *np;
@@ -2866,7 +2868,9 @@ snapshot(void)
 		// next item from "real" stack
 		p = p->next;
 		n--;
+		i++;
 	}
+	p_printf(" Saved %d stack entries\n", i);
 
 	return GOODOP;
 }
@@ -2875,10 +2879,13 @@ opreturn
 restore(void)
 {
 	struct num *p = snapstack;
+	int i = 0;
 	while (p) {
 		push(p->val);
 		p = p->next;
+		i++;
 	}
+	p_printf(" Restored %d stack entries\n", i);
 	return GOODOP;
 }
 
@@ -2886,25 +2893,45 @@ opreturn
 sum_worker(boolean do_sum)
 {
 	opreturn r;
-	ldouble a, tot = 0, n = 0;
 
 	if (stack_count <= stack_mark) {
-		error(" error: nothing to %s\n", do_sum ? "sum" : "avg");
+		error(" error: empty stack, or at mark?\n");
 		return BADOP;
 	}
 
+	ldouble a, tot = 0, tot_sq = 0;
+	int i = 0;
 	while (stack_count > stack_mark) {
 		if ((r = pop(&a)) == BADOP)
 			break;
 		tot += a;
-		n++;
+		tot_sq += a * a;
+		i++;
 	}
 
-	stack_mark = 0;
 
-	push(do_sum ? tot : (tot/n) );
+	ldouble n = i;
 
-	return r;
+	switch (do_sum) {
+	case 1: // sum
+		push(tot);
+		p_printf(" Summed %d stack entries\n", i);
+		break ;;
+	case 2: // avg
+		push(tot/n);
+		p_printf(" Averaged %d stack entries\n", i);
+		break ;;
+	case 3: // standard deviation
+		push(sqrtl( (n * tot_sq - (tot * tot)) / (n * (n-1))));
+		p_printf(" Sample standard deviation calculated "
+					"for %d stack entries.\n", i);
+		p_printf(" (multiply by sqrt(%d/%d) for "
+					"population standard deviation)\n",
+			i - 1, i);
+		break ;;
+	}
+
+	return GOODOP;
 }
 
 opreturn
@@ -2916,7 +2943,13 @@ sum(void)
 opreturn
 avg(void)
 {
-	return sum_worker(0);
+	return sum_worker(2);
+}
+
+opreturn
+stddev(void)
+{
+	return sum_worker(3);
 }
 
 opreturn
@@ -4803,12 +4836,13 @@ struct oper opers[] = {
 	{")", close_paren,	"Infix grouping", 0, 32 },
 	{";", semicolon,	"Infix separator (in RPN, discards y)", 2, 4 },
 	{":", rpnswitch,	"Treat rest of line as RPN. (needed in infix mode)"},
-	{"snapshot", snapshot,	0, 0},
+	{"mark", mark,		"Mark stack, to limit later snap/sum/average/stddev" },
 	{"sum", sum,		0, Auto },
-	{"avg", avg,		"Snapshot, sum, or average stack, up to \"mark\"", Auto },
-	{"mark", mark,		"Mark stack, to limit later snap/sum/average" },
+	{"avg", avg,		0, Auto },
+	{"stddev", stddev,	"Sum, average, or std.dev. of stack, up to \"mark\"", Auto },
+	{"snapshot", snapshot,	"Save snapshot of stack up to \"mark\"", Auto },
 	{"restore", restore,	"Push the snapshot onto current stack", Auto },
-	{"nop", nop,		"Does nothing. At end of line, suppresses output."},
+	{"nop", nop,		"Does nothing, but at end of line, suppresses output"},
 	{""},
     {"Stack manipulation:"},
 	{"clear", clear,	"Clear stack" },
