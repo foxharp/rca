@@ -128,6 +128,10 @@ struct num {
 struct num *stack;
 int stack_count;
 
+/* the snapshot stack */
+struct num *snapstack;
+
+
 /* for command repeat, like "sum" */
 int stack_mark;
 
@@ -2827,8 +2831,17 @@ mark(void)
 	return GOODOP;
 }
 
-struct num *snapstack;
-
+opreturn
+clearsnapshot(void)
+{
+	// clear existing snapstack
+	struct num *p;
+	while ((p = snapstack)) {
+		snapstack = p->next;
+		free(p);
+	}
+	return GOODOP;
+}
 opreturn
 snapshot(void)
 {
@@ -2845,11 +2858,7 @@ snapshot(void)
 		return BADOP;
 	}
 
-	// clear existing snapstack
-	while ((p = snapstack)) {
-		snapstack = p->next;
-		free(p);
-	}
+	clearsnapshot();
 
 	// copy (as much as we want of the) real stack to snapstack
 	p = stack;
@@ -2870,7 +2879,7 @@ snapshot(void)
 		n--;
 		i++;
 	}
-	p_printf(" Saved %d stack entries\n", i);
+	p_printf(" Made snapshot of %d stack entries\n", i);
 
 	return GOODOP;
 }
@@ -2880,6 +2889,9 @@ restore(void)
 {
 	struct num *p = snapstack;
 	int i = 0;
+
+	stack_mark = stack_count;
+
 	while (p) {
 		push(p->val);
 		p = p->next;
@@ -2898,6 +2910,10 @@ sum_worker(boolean do_sum)
 		error(" error: empty stack, or at mark?\n");
 		return BADOP;
 	}
+
+	// save a  snapshot, but don't overwrite existing
+	if (!snapstack)
+		snapshot();
 
 	ldouble a, tot = 0, tot_sq = 0;
 	int i = 0;
@@ -4886,6 +4902,7 @@ struct oper opers[] = {
 	{"stddev", stddev,	"Sum, average, or std.dev. of stack, up to \"mark\"", Auto },
 	{"snapshot", snapshot,	"Save snapshot of stack up to \"mark\"", Auto },
 	{"restore", restore,	"Push the snapshot onto current stack", Auto },
+	{"clearsnapshot", clearsnapshot, "Discard snapshot" },
 	{"nop", nop,		"Does nothing, but at end of line, suppresses output"},
 	{""},
     {"Stack manipulation:"},
