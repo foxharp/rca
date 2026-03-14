@@ -2401,16 +2401,33 @@ printfloat(void)
 
 // worker for printstate()
 void
-rawprintstack(int n, struct num *s)
+rawprintstack(int n, struct num *s, int is_stack)
 {
-	if (!s) return;
+	if (!s) {
+		p_printf("%16s\n", "<empty>");
+		return;
+	}
 
-	if (s->next)
-		rawprintstack(n-1, s->next);
+	if (is_stack) {
+		if (s->next)
+			rawprintstack(n-1, s->next, is_stack);
+		else
+			p_printf("  %-20s%-24s\n", "as integer", "as float");
+	}
 
-	p_printf(" %#20llx   %#20.20Lg    %La%s\n",
-		ld_to_ll(s->val), s->val, s->val,
-		(n == stack_mark) ? "   <-  mark" : "");
+	p_printf( "  %#-20llx", ld_to_ll(s->val));
+	p_printf(  "%-24.*Lg", max_digits, s->val);
+	if (debug_enabled)
+		p_printf(" %La", s->val);
+	if (is_stack) {
+		if (n == stack_mark)
+			p_printf(" <-  mark");
+		if (n == stack_count)
+			p_printf(" <-  top");
+	}
+	p_printf("\n");
+	if (!is_stack && s->next)
+		rawprintstack(n-1, s->next, is_stack);
 }
 
 opreturn
@@ -2421,34 +2438,44 @@ printstate(void)
 	p_printf("\n");
 	p_printf(" Current mode is %c (%s)\n", mode,
 			floating_mode(mode) ? "floating" : "integer" );
-	p_printf("\n");
-	p_printf(" In floating mode:\n");
-	p_printf("  current display mode is \"%s\", with %d digits\n",
+	p_printf("  - when in floating mode,");
+	p_printf(" display is \"%s\", with %d digits\n",
 		float_specifier, float_digits );
-	p_printf("  max digits is %u\n", max_digits);
-	p_printf("  snapping/rounding is %s\n", do_rounding ? "on" : "off");
-	p_printf("\n");
+	if (!do_rounding)
+		p_printf("  snapping/rounding is off\n");
 
-	p_printf(" In integer modes:\n");
-	p_printf("  current width is %d bits\n", int_width);
-	p_printf("         mask: %s\n", puthex(int_mask));
-	p_printf("     sign bit: %s\n", puthex(int_sign_bit));
-	p_printf("  max integer width is %d bits\n", max_int_width);
-	p_printf("\n");
+	p_printf("  - when in integer modes,");
+	p_printf(" word width is %d bits\n", int_width);
+	p_printf("    mask: %s", puthex(int_mask));
+	p_printf("  sign bit: %s\n", puthex(int_sign_bit) );
+	if (debug_enabled)
+		p_printf("    max integer width is %d bits\n", max_int_width);
+
 
 	s = stack;
-	p_printf(" Stack, bottom comes first:\n");
-	if (!s) {
-		p_printf("%16s\n", "<empty>");
-	} else {
-		p_printf(" %20s   %20s\n",
-		    "long long", "long double ('%#20.20Lg' and '%La')");
-		p_printf("  bottom of stack\n");
-		rawprintstack(stack_count, stack);
-		p_printf("  top of stack\n");
-	}
-	p_printf(" stack count %d, depth of the stack mark is %d\n",
+	p_printf("\n Stack:\n");
+	if (debug_enabled)
+		p_printf("  stack count %d, depth of the stack mark is %d\n",
 			stack_count, stack_count - stack_mark);
+	rawprintstack(stack_count, s, 1);
+
+	s = snapstack;
+	p_printf("\n Snapshot:\n");
+	rawprintstack(stack_count, s, 0);
+
+	p_printf("\n");
+	p_printf(" Locale elements, from locale '%s'%s:\n",
+		locale, locale_modified);
+	p_printf("  decimal '%s', thousands separator '%s', currency '%s'\n",
+		decimal_pt[0] ? decimal_pt : "<none>",
+		thousands_sep[0]? thousands_sep : "<none>",
+		currency[0] ? currency : "<none>");
+	p_printf("\n");
+
+	p_printf(" rca descriptor: f%ui%u\n", LDBL_MANT_DIG, max_int_width);
+
+	if (!debug_enabled)
+		return GOODOP;
 
 	p_printf("\n Build-time constants:\n");
 	p_printf("   sizeof(long long):\t%lu (%d bits)\n", sizeof(long long),
@@ -2457,15 +2484,7 @@ printstate(void)
 					(unsigned long)(8 * sizeof(long double)));
 	p_printf("   LDBL_MANT_DIG: %u\n", LDBL_MANT_DIG);
 	p_printf("   LDBL_EPSILON is %Lg (%La)\n", LDBL_EPSILON, LDBL_EPSILON);
-	p_printf("   LDBL_DIG: %u\n", LDBL_DIG);
-	p_printf("   rca descriptor: f%ui%u\n", LDBL_MANT_DIG, max_int_width);
-	p_printf("\n");
-	p_printf(" Locale elements (from '%s')%s:\n",
-		locale, locale_modified);
-	p_printf("  decimal '%s', thousands separator '%s', currency '%s'\n",
-		decimal_pt[0] ? decimal_pt : "<none>",
-		thousands_sep[0]? thousands_sep : "<none>",
-		currency[0] ? currency : "<none>");
+	p_printf("   LDBL_DIG (max_digits): %u\n", LDBL_DIG);
 	p_printf("\n");
 
 	return GOODOP;
@@ -4759,7 +4778,7 @@ locale_init(void)
 		thousands_sep = ",";
 		grouping = "\003";
 		currency= "$";
-		locale_modified = " with added defaults";
+		locale_modified = ", with added defaults";
 		return;
 	}
 
