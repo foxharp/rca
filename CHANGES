@@ -1,4 +1,23 @@
 
+v24 changes (03/15/2026)
+
+    added new commands for degrees<->degrees.minutesseconds
+    conversions:  "dd2dms" and "dms2dd"
+
+    created new "Variadic" sections in help and man page
+
+    added new standard deviation command:  "stddev"
+
+    augmented stack printouts with the position of mark.  fixed bugs in
+    mark handling, and improved user reporting for variadic
+    (sum/avg/stddev/snapshot) commands.  added new "clearsnapshot"
+    command
+
+    major overhaul of "state" command output.  split some out for
+    debug mode only, reduced verbiage, made friendlier.
+
+
+
 v23 changes (03/10/2026)
 
     repurposed nop() from helping implement unary plus to actually
