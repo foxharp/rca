@@ -19,7 +19,7 @@
   Below, 'x' refers to top-of-stack, 'y' refers to the next value beneath.
   rca's normal exit value reflects the logical value of the top of stack.
 
- Numerical operators with two operands:
+ Numeric operators with two operands:
                  +, -     Add and subtract x and y
               *, or x     Multiply x and y
                  /, %     Divide and modulo of y by x
@@ -29,7 +29,7 @@
             &amp;, |, xor     Bitwise AND, OR, and XOR of y and x
          setb, clearb     Set and clear bit x in y
 
- Numerical operators with one operand:
+ Numeric operators with one operand:
                     ~     Bitwise NOT of x (1's complement)
        chs, or negate     Change sign of x (2's complement)
           recip, sqrt     Reciprocal and square root of x
@@ -45,15 +45,6 @@
  ==, !=, &lt;, &lt;=, &gt;, &gt;=     Arithmetic comparisons
                     !     Logical NOT of x
 
- Constants and storage:
-             sto, rcl     Save to or push from off-stack storage
-                pi, e     Push constant pi or e
-         lastx, or lx     Push previous value of x
-              _&lt;name&gt;     Push variable
-                    =     Assign variable.  RPN: &quot;3 = _v&quot;   infix: &quot;(_v = 3)&quot;
-   variables, or vars     Show the current list of variables
-       clearvariables     Discard all variables
-
  Unit conversions (one operand):
            i2mm, mm2i     inches / millimeters
            ft2m, m2ft     feet / meters
@@ -63,22 +54,36 @@
          oz2ml, ml2oz     US fluid ounces / milliliters
              q2l, l2q     US quarts / liters
              d2r, r2d     degrees / radians
+       dd2dms, dms2dd     decimal degrees / deg.mm.sss
            mpg2l100km     mpg to l/100km and vice versa
 
- Other:
-                 (, )     Infix grouping
-                    ;     Infix separator (in RPN, discards y)
-                    :     Treat rest of line as RPN. (needed in infix mode)
-   snapshot, sum, avg     Snapshot, sum or average stack, maybe stop at &quot;mark&quot;
-                 mark     Mark stack to limit later snap/sum/average
-              restore     Push the snapshot onto current stack
-                  nop     Does nothing. At end of line, suppresses output.
+ Constants and storage:
+             sto, rcl     Save to or push from off-stack storage
+                pi, e     Push constant pi or e
+         lastx, or lx     Push previous value of x
+              _&lt;name&gt;     Push variable
+                    =     Assign variable.  RPN: &quot;3 = _v&quot;   infix: &quot;(_v = 3)&quot;
+   variables, or vars     Show the current list of variables
+       clearvariables     Discard all variables
+
+ Variadics (operate on entire stack, limited by the mark if set):
+     sum, avg, stddev     Total, mean, and standard deviation of entries
+             snapshot     Saves copy of selected entries
+                 mark     Mark the stack, to limit variadics' range
 
  Stack manipulation:
                 clear     Clear stack
                   pop     Pop (and discard) x
          push, or dup     Push (a duplicate of) x
         exch, or swap     Exchange x and y
+              restore     Push a copy of the snapshot, set mark
+        clearsnapshot     Discard snapshot
+
+ Other:
+                 (, )     Infix grouping
+                    ;     Infix separator (in RPN, discards y)
+                    :     Treat rest of line as RPN. (needed in infix mode)
+                  nop     Does nothing, but at end of line, suppresses output
 
  Display:
                     P     Print whole stack according to mode
@@ -109,13 +114,13 @@
      quit, q, or exit     Leave the calculator
                  echo     Toggle echoing input when stdin is a file or pipe
             errorexit     Toggle exiting on error and warning
-                debug     Toggle enabling of debug commands
+                debug     Toggle presence of debug commands
               license     Display the rca copyright and license.
               version     Show program version
                     #     Comment. The rest of the line will be ignored.
 
 
-                                                  version v23     Mar 10, 2026
+                                                  version v24     Mar 15, 2026
 
  Tip:	Use &quot;rca help q | less&quot; to view this help
 </pre>
