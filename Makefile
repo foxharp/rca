@@ -13,15 +13,6 @@ BINDIR  ?= $(PREFIX)/bin
 MANDIR  ?= $(PREFIX)/share/man
 MAN1DIR ?= $(MANDIR)/man1
 
-# if you're using readline, and hitting Enter on an empty line doesn't
-# cause rca to echo the newline, it's due to a bug in some builds of
-# readline 8.2.  uncomment this as a workaround:
-#   CFLAGS += -D READLINE_NO_ECHO_BARE_NL
-
-# temporary.  i have one test host with the bad library
--include ./readline-is-buggy  # (file contains the above CFLAGS change)
-
-
 CFLAGS += -Wall -Wextra -Wfloat-conversion -Wconversion  \
     -Warray-bounds=2 -Wformat-security -Wsign-conversion \
     -Wshift-overflow=2 -Wstrict-overflow=2
@@ -30,7 +21,6 @@ LIBS = -lm
 rca: rca.c
 	gver="$$(git describe --dirty=+ 2>/dev/null || echo '+?')"; \
 	gcc -g -o rca -O2 \
-		$(READLINE_BUG) \
 		$(CFLAGS) -DGITVERSION=\"$${gver}\" \
 		rca.c $(LIBS)
 
@@ -55,6 +45,11 @@ ifeq ($(ENABLE_READLINE_BUILD),YES)
     # some systems might also require libncurses or libtinfo
     LIBS += -lreadline   # -lncurses -ltinfo
     CFLAGS += -D USE_READLINE
+    # if you're using readline, and hitting Enter on an empty line
+    # doesn't cause rca to echo the newline, it's due to a bug in some
+    # builds of readline 8.2.  uncomment this as a workaround:
+    #  CFLAGS += -D READLINE_NO_ECHO_BARE_NL
+
 else ifeq ($(EDITLINE_CHECK),YES)
     $(info --- Building with editline support ---)
     LIBS += -ledit
