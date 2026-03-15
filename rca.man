@@ -670,6 +670,63 @@ is the same as
 .BR 5) .
 \" Even Dennis Ritchie thought C got that one wrong.
 
+.SH VARIADIC OPERATORS
+Variadic operators use all or some of the stack, optionally stopping
+just before reaching a previously set "mark".  They are the only
+operators which use more than two stack elements.  Variadic operators
+cannot be used in an infix expression.
+.P
+.B N mark
+(i.e., the
+.B mark
+command with an argument of
+.BR N )
+will cause a later variadic operation to consider just the current top
+N values, plus any further values that are pushed prior to the
+operation.
+.B N
+cannot be greater than the depth of the stack.
+.B 0 mark
+sets the mark at the current top of stack,
+causing only subsequent pushes to be included by a later variadic.
+.B -1 mark
+will clear the mark.
+.P
+.B snapshot
+is variadic, and will make a copy of the stack up to the mark or
+the end of stack.  The copied entries are undisturbed.  Its complement,
+.BR restore ,
+will set the stack mark at the top of stack, and then push the entire
+saved snapshot.  (The mark is set as a convenience for later
+uses of the restored entries.)
+A full exact copy of the stack is ensured by
+.B -1 mark snapshot
+followed later by
+.B clear
+.BR restore .
+The
+.B clearsnapshot
+command will discard any existing snapshot.
+.P
+.BR sum ,
+.BR avg ,
+and
+.B stddev
+are variadics which calculate the total, the mean, and the sample
+standard deviation of stack entries up to the mark or the end of
+stack.  The entries are removed, and are replaced by the result.  As a
+convenience, these commands will attempt a snapshot before proceeding,
+but won't overwrite an existing snapshot.  Always doing a manual
+snapshot is safest, but it can be skipped if only working with one set
+of data.
+.RS
+.RB " 1
+.B 3 7 10 snapshot avg restore
+.BR stddev "
+.RE
+will leave the average and standard deviation of the given list on the
+stack.
+
 .SH OPERATOR NOTES
 Most operators behave as they are commonly understood to.  A few need
 more specific documentation.
@@ -753,72 +810,6 @@ cause an error, if either operand will not fit in a
 .I long
 .IR long .
 .P
-.BR sum ,
-.BR avg ,
-and
-.B stddev
-will will calculate the total, mean, and sample standard deviation of
-previous stack entries, stopping when the stack is empty, or just
-before a stack marker (previously set with the
-.B mark
-command, below) is reached.  The entries used in the calculation are
-all removed from the stack, replaced by the result.  Because they are
-destructive, these commands will all attempt to save a snapshot of the data
-before proceeding, but won't overwrite an existing snapshot.
-.P
-.B snapshot
-will make a copy of some or all of the stack.  The copied entries are
-undisturbed.
-.B mark
-can be used, as described below, to limit the range of the snapshot.
-.B restore
-will set the stack mark to the top of stack, and then push the
-snapshot onto the the stack.
-A full exact copy of the stack is ensured by
-.B -1 mark snapshot
-followed by
-.B clear
-.BR restore .
-.P
-.BR sum ,
-.BR avg ,
-.BR stddev ,
-and
-.B snapshot
-are the only operators which use more than 2 stack elements.  Since
-the first three consume their stack operands,
-.B snapshot
-and
-.B restore
-can
-be useful if you wish to reuse the data:
-.RS
-.RB " 1
-.B 3 7 10 snapshot avg restore
-.BR stddev "
-.RE
-will leave
-the average and standard deviation of the given list on the stack.
-.P
-.B N mark
-(i.e., a
-.B mark
-command with an argument of
-.BR N )
-will cause a later
-.BR sum ,
-.BR avg ,
-.BR stddev ,
-or
-.BR snapshot
-to include the current top N values,
-plus any further values that are pushed prior to the operation.
-.B N
-cannot be greater than the depth of the stack.
-.B 0 mark
-will cause only subsequent pushes to be included.
-.B -1 mark
-will clear the mark.
 .P
 .B dd2dms
 and
