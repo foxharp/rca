@@ -1098,6 +1098,48 @@ bitwise_not(void)
 	return BADOP;
 }
 
+/*
+ * I wasn't going to include a bitcount operator, until I came across
+ * this, suggested by "the bible" (C Programming Language 2nd Ed.),
+ * and often credited to Brian Kernighan.  The book makes no such
+ * claim, and he later pointed out that it was first published by
+ * Peter Wegner, in CACM 3 (1960), 322.
+ */
+int
+countbits(unsigned long long n)
+{
+	int i = 0;
+
+	while (n > 0) {
+		n &= n - 1;  // always clears the least significant 1
+		i++;
+	}
+	return i;
+}
+
+opreturn
+bitcount(void)
+{
+	ldouble a;
+
+	if (pop(&a)) {
+		if (!isfinite(a)) {
+			push(a);
+			return GOODOP;
+		}
+
+		if (bitwise_operand_too_big(a))
+			return BADOP;
+
+		unsigned long long i = (unsigned long long)ld_to_ll(a);
+		i &= (unsigned long long)int_mask;
+		lpush(countbits(i));
+		lastx = a;
+		return GOODOP;
+	}
+	return BADOP;
+}
+
 opreturn
 chsign(void)
 {
@@ -4878,6 +4920,7 @@ struct oper opers[] = {
 	{""},		// all-null entries cause blank line in output
     {"Numeric operators with one operand:"},
 	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 30, 'R' },
+	{"bitc", bitcount,	"Count of '1' bits in x", 1, 30, 'R' },
 	{"chs", chsign,		0, 1, 30, 'R' },
 	{"negate", chsign,	"Change sign of x (2's complement)", 1, 30, 'R' },
 	{"recip", recip,	0, 1, 30, 'R' },
