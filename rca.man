@@ -91,14 +91,7 @@ but not literally within the program itself with one exception:  the
 (or
 .BR lx )
 operator returns the value that was at the top of stack just previous to the
-most recently executed operator.  (NB: the
-.RB ' ; '
-operator does not terminate an expression.  It separates sub-expressions, which
-do not cause an update to
-.BR lastx .
-So "1 + 2; lx * 3" will not yield 9.  The expressions must be on separate
-lines in full-time infix mode, or be separately parenthesized, as in
-"(1 + 2) (lx * 3)", in RPN mode.)
+most recently executed operator.
 
 .SH INFIX NOTATION
 Infix expressions in
@@ -203,19 +196,18 @@ See the SPECIAL VALUES AND VARIABLES section, below.
 .P
 Multiple sub-expressions separated by
 .RB ' ; '
-(semicolon) can be enclosed in a single pair of parentheses.  The
+(semicolon) can be enclosed in a single pair of parentheses (or share
+a single line, in full-time infix mode).  The
 result of the parenthesized expression is the result of the last such
-sub-expression.  Like ',' in the C language,
-.RB ' ; '
-is implemented as an operator whose result is its right-hand operand -- the
-left-hand operand is evaluated, and the result discarded.  The primary
-use of
+sub-expression.
+The primary use of
 .RB ' ; '
 is likely for expressions which assign to variables.
 See the example in the SPECIAL VALUES AND VARIABLES section, below.
+In RPN
 .RB ' ; '
-is also available in RPN:  when executed, it discards the second-to-top
-stack element, leaving the top undisturbed.
+discards the top stack element, like
+.BR pop .
 .P
 If an error occurs during evaluation of an infix expression,
 evaluation will cease, and the stack will be left as it was at the
@@ -637,7 +629,7 @@ command lists the operators by decreasing precedence.  The 'R'
 denotes those which are right associative.  All others group
 left to right.  (This list has no meaning for RPN.)
 
- \fR 1    \fB  ( )
+ \fR 1    \fB  ( ) ;
  \fR 2  R \fB  ~ ! + - chs negate recip sqrt sin cos tan asin acos
  \fR      \fB   atan exp ln log2 log10 abs frac int i2mm mm2i ft2m
  \fR      \fB   m2ft mi2km km2mi f2c c2f oz2g g2oz oz2ml ml2oz q2l
@@ -655,7 +647,6 @@ left to right.  (This list has no meaning for RPN.)
  \fR 13   \fB  &&
  \fR 14   \fB  ||
  \fR 15   \fB  =
- \fR 16   \fB  ;
  \fR
 
 Like C, Java, JavaScript, and Rust (but unlike Python and bc),
