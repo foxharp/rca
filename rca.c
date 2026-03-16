@@ -1605,7 +1605,9 @@ thaw_lastx(void)
 	if (lastx_is_frozen) {
 		lastx_is_frozen = FALSE;
 		lastx = frozen_lastx;
-		if (stack_count != infix_stacklevel + 1)
+		// infix must add either no or 1 value to the stack
+		int i = stack_count - infix_stacklevel;
+		if (i != 0 && i != 1)
 			error("BUG: stack changed by %d after infix\n",
 				stack_count - infix_stacklevel);
 		infix_stacklevel = -1;
@@ -3453,21 +3455,14 @@ close_paren(void)
 opreturn
 semicolon(void)
 {
-	/* for infix:  similar to the comma operator in C:
-	 *     (y, x) discards y, returns x
-	 * so in RPN (perhaps less useful):
-	 *      y x ;  discards y (i.e., 2nd from top of stack), keeps x
+	/* In infix: (y; x) discards y, returns x
+	 * but does save the discarded y as lastx.
+	 * In RPN (perhaps less useful):
+	 *      y x ;  discards x, just as pop would
 	 */
-	ldouble a, b;
-	if (pop(&b)) {
-		if (pop(&a)) {
-			push(b);
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
+	pop(&lastx);
+	frozen_lastx = lastx;
+	return GOODOP;
 }
 
 boolean
@@ -3477,6 +3472,12 @@ prev_tok_was_operand(token *pt)
 		pt->type == SYMBOLIC ||
 		pt->type == VARIABLE ||
 		(pt->type == OP && pt->val.oper->func == close_paren);
+}
+
+boolean
+prev_tok_was_semicolon(token *pt)
+{
+	return (pt->type == OP && pt->val.oper->func == semicolon);
 }
 
 #define t_op t->val.oper	// shorthands.  don't use unless type == OP
@@ -3560,7 +3561,10 @@ shunting_yard(int command)
 
 		switch (t->type) {
 		case EOL:
-			if (!prev_tok_was_operand(pt)) {
+			if (prev_tok_was_semicolon(pt)) {
+				// ';' is a no-op at EOL
+				free(tpop(&out_stack));
+			} else if (!prev_tok_was_operand(pt)) {
 				expression_error(pt, t);
 				input_ptr = NULL;
 				return BADOP;
@@ -3601,7 +3605,10 @@ shunting_yard(int command)
 			} else if (t_op->func == close_paren) {
 				nesting--;
 
-				if (!prev_tok_was_operand(pt)) {
+				if (prev_tok_was_semicolon(pt)) {
+					// ';' is a no-op if followed by ')'
+					free(tpop(&out_stack));
+				} else if (!prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
 					input_ptr = NULL;
 					return BADOP;
@@ -3626,6 +3633,30 @@ shunting_yard(int command)
 				tp = tpeek(&oper_stack);
 				if (tp && tp_op->operands == 1)
 					tpush(&out_stack, tpop(&oper_stack));
+
+			} else if (t_op->func == semicolon) {
+				if ( pt->type == UNKNOWN ||
+				    (pt->type == OP &&
+					pt_op->func == open_paren)) {
+					// ';' is no-op if it follows '(' or BOL
+					break;
+				} else if (!prev_tok_was_operand(pt)) {
+					expression_error(pt, t);
+					input_ptr = NULL;
+					return BADOP;
+				}
+
+				// Process until matching opening paren
+				while ((tp = tpeek(&oper_stack))) {
+					/* might be a VARIABLE */
+					if (tp->type == OP &&
+						tp_op->func == open_paren) {
+						break;
+					}
+
+					tpush(&out_stack, tpop(&oper_stack));
+				}
+				tpush(&out_stack, t);
 
 			} else if (t_op->operands == 1) { // just one operand
 			unary:
@@ -4931,9 +4962,9 @@ struct oper opers[] = {
 	{""},
     {"Other:"},
 	{"(", open_paren,	0, 0, 32 },
-	{")", close_paren,	"Infix grouping", 0, 32 },
-	{";", semicolon,	"Infix separator (in RPN, discards y)", 2, 4 },
-	{":", rpnswitch,	"Treat rest of line as RPN. (needed in infix mode)"},
+	{";", semicolon,	0, 0, 32 },
+	{")", close_paren,	"Infix expression grouping", 0, 32 },
+	{":", rpnswitch,	"Treat rest of line as RPN. (for infix mode)"},
 	{"nop", nop,		"Does nothing, but at end of line, suppresses output"},
 	{""},
     {"Display:"},

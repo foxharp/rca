@@ -6,7 +6,7 @@ precedence
   top to bottom in order of descending precedence.
  All operators are left-associative, except for those
   in rows marked 'R', which associate right to left.
- 1         ( )
+ 1         ( ) ;
  2   R     ~ ! + - chs negate recip sqrt sin cos tan asin acos atan exp
                ln log2 log10 abs frac int i2mm mm2i ft2m m2ft mi2km km2mi
                f2c c2f oz2g g2oz oz2ml ml2oz q2l l2q d2r r2d dd2dms dms2dd
@@ -24,7 +24,6 @@ precedence
  13        &&
  14        ||
  15        =
- 16        ;
 # ============================================
 # Unary + and - versus binary
 # ============================================
@@ -297,15 +296,19 @@ vars
                    _w  3
                   _w2  3
 (;_w2 = 3 )
- error: bad expression sequence, at '(' and ';'
+ 3
 (_w2 ; = 3 )
  error: bad expression sequence, at ';' and '='
 (_w2 = ; 3 )
  error: bad expression sequence, at '=' and ';'
+(_w2 = 3;)
+ 3
 (_w2 = sin 30)
  0.5
 (_w2 = sin;30)
  error: bad expression sequence, at 'sin' and ';'
+(_w2 = sin 30;)
+ 0.5
 
 # Bitwise AND vs relational
 (1 & 9 < 3)
@@ -434,4 +437,3 @@ vars
  1
 (!(1 > -1))
  0
-
