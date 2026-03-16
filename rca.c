@@ -2209,6 +2209,7 @@ print_n(ldouble *np, int format, boolean conv, char *mark)
 {
 	ldouble old_n, n;
 	long long ln;
+	unsigned long long uln;
 	long long mask = int_mask;
 	int align;
 	boolean changed;
@@ -2269,7 +2270,6 @@ print_n(ldouble *np, int format, boolean conv, char *mark)
 		p_printf("%*s", align, putbinary(ln));
 		break;
 	case 'U':
-		unsigned long long uln;
 		/* convert in two steps, to avoid possibly undefined
 		 * (by the language) negative double to unsigned conversion */
 		ln = ld_to_ll(n) & mask;
@@ -4428,6 +4428,8 @@ config(void)
 	int nondefault = 0;
 	char *starred;
 	struct memfile rp;
+	int *ip;
+	char *cp, *s;
 
 	memfile_open(&rp);
 
@@ -4449,7 +4451,7 @@ config(void)
 
 		switch (cptr->format) {
 		case c_int:
-			int *ip = (int *)(cptr->intstate);
+			ip = (int *)(cptr->intstate);
 			if (*ip != cptr->default_intstate) {
 				starred = "  * ";
 				fprintf(rp.fp, "  %d %s", *ip, cptr->command);
@@ -4458,7 +4460,7 @@ config(void)
 			p_printf("%s%d", starred, *ip);
 			break;
 		case c_chr:
-			char *cp = (char *)(cptr->intstate);
+			cp = (char *)(cptr->intstate);
 			if (*cp != cptr->default_intstate) {
 				starred = "  * ";
 				fprintf(rp.fp, "  %c", *cp);
@@ -4467,7 +4469,7 @@ config(void)
 			p_printf("%s%c", starred, *cp);
 			break;
 		case c_str:
-			char *s = *cptr->stringstate;
+			s = *cptr->stringstate;
 			if (strcmp(s, cptr->default_stringstate) != 0) {
 				starred = "  * ";
 				fprintf(rp.fp, "  %s", s);

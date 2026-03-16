@@ -15,7 +15,7 @@ MAN1DIR ?= $(MANDIR)/man1
 
 CFLAGS += -Wall -Wextra -Wfloat-conversion -Wconversion  \
     -Warray-bounds=2 -Wformat-security -Wsign-conversion \
-    -Wshift-overflow=2 -Wstrict-overflow=2
+    -Wshift-overflow=2 -Wstrict-overflow=2 -pedantic
 LIBS = -lm
 
 rca: rca.c
