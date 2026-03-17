@@ -93,8 +93,9 @@ usage(void)
 int tracing;
 #define TOK 1
 #define EXEC 2
-#define SHUNT 4
-char *tracenames[] = {"tokens", "execution", "shunting", 0};
+#define TWEAK 4
+#define SHUNT 8
+char *tracenames[] = {"tokens", "execution", "tweaking", "shunting", 0};
 
 typedef int boolean;
 #define TRUE 1
@@ -370,6 +371,10 @@ detect_epsilon(void)
 long double
 snap_integer(long double x)
 {
+	static long double min_tol;
+	if (min_tol == 0)
+		min_tol = powl(10.0L, -max_digits);
+
 	if (!isfinite(x))
 		return x;
 
@@ -380,9 +385,15 @@ snap_integer(long double x)
 	long double ulp = fabsl(x - nextafterl(x, INFINITY));
 
 	long double r = roundl(x);
+	trace(TWEAK, "     snap %.*Lg to %.*Lg ?\n", max_digits, x, max_digits, r);
 
-	/* is the closest integer within 2 x ULP ? */
-	if (fabsl(x - r) <= (2.0L * ulp))
+	long double tol = (2.0L*ulp > min_tol) ? (2.0L*ulp) : min_tol;
+
+	trace(TWEAK, "     min_tol is %.*Lg\n", max_digits, min_tol);
+	trace(TWEAK, "     tol is %.*Lg\n", max_digits, tol);
+
+	/* is the closest integer within tolerance ? */
+	if (fabsl(x - r) <= tol)
 		return r;
 
 	return x;
@@ -396,20 +407,27 @@ ldouble
 tweak(ldouble x)
 {
 	char buf[TEMP_BUFSIZE];
+	trace(TWEAK, " tweaking got %.*Lg (%La) ...\n", max_digits, x, x);
 
 	if (!do_rounding || x == 0.0L || !isfinite(x))
 		return x;
 
 	ldouble s = snap_integer(x);
-	if (x != s)
+	if (x != s) {
+		trace(TWEAK, "     snapped to %.*Lg (%La)\n", max_digits, s, s);
 		return s;
+	}
 
 	/* use printf to round to max_digits significant digits.
 	 * it's as good as any other method, and we don't particularly
 	 * care about speed.  */
 	snprintf(buf, sizeof(buf), "%.*Lg", max_digits, x);
+	trace(TWEAK, "     x is %.*Lg, rounding buf is %s\n", max_digits, x, buf);
 
-	return strtold(buf, NULL);
+	ldouble rx = strtold(buf, NULL);
+	if (rx != x)
+		trace(TWEAK, "     rounded to %.*Lg (%La)\n", max_digits, rx, rx);
+	return rx;
 }
 
 /* we snap/round a) any display of a float value, and b) the operands
@@ -419,9 +437,9 @@ tweak(ldouble x)
 ldouble
 cmp_tweak(ldouble x)
 {
-	trace(EXEC, " tweaking got %.*Lg (%La) ...\n", max_digits, x, x);
+	trace(TWEAK, " cmp_tweak got %.*Lg (%La) ...\n", max_digits, x, x);
 	x = tweak(x);
-	trace(EXEC, "     returned %.*Lg (%La)\n", max_digits, x, x);
+	trace(TWEAK, "     cmp_tweak returned %.*Lg (%La)\n", max_digits, x, x);
 	return(x);
 }
 
