@@ -3595,10 +3595,17 @@ shunting_yard(int command)
 				tpush(&out_stack, pt);
 		}
 
+		//  ':' is bound to rpnswitch()
 		if (t->type == OP && t_op->func == rpnswitch) {
-			//  ':' is bound to rpnswitch()
-			putback_token(t);
-			t->type = EOL;
+			if (command || nesting) {
+				error(" error: '%s' unavailable in parenthesized expression\n",
+					t_op->name);
+				input_ptr = NULL;
+				return BADOP;
+			} else if (prev_tok_was_operand(pt)) {
+				putback_token(t);
+				break;
+			}
 		}
 
 		switch (t->type) {
@@ -3796,6 +3803,7 @@ shunting_yard(int command)
 	if (nesting != 0) {
 		error(" error: %s parentheses\n",
 			nesting < 0 ? "extra" : "missing");
+		input_ptr = NULL;
 		return BADOP;
 	}
 
