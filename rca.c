@@ -70,6 +70,8 @@ char licensetext[] = \
 #include <errno.h>
 #include <locale.h>
 
+#include <mpdecimal.h>
+
 #if defined(USE_EDITLINE)
 # include <editline/readline.h>
 #elif defined(USE_READLINE)
@@ -88,6 +90,9 @@ usage(void)
 	fprintf(stderr, "  Use \"%s help\" for documentation.\n", progname);
 	exit(1);
 }
+
+mpd_context_t context, *ctx = &context;
+
 
 /* debug logging support, runtime controllable */
 int tracing;
@@ -121,7 +126,8 @@ ldouble e =  2.718281828459045235360287471352662497L;
  * be revisited, but since the FP mantissa is usually as big as the integer
  * word size these days (64 bits), it's probably fine.  */
 struct num {
-	ldouble val;
+	// ldouble val;
+	mpd_t *mpd;
 	struct num *next;
 };
 
@@ -138,6 +144,9 @@ int stack_mark;
 
 /* for catching infix bugs */
 int infix_stacklevel;
+
+int infix_mode;
+int debug_enabled;
 
 
 /* all user input is either a number or a command operator.
@@ -169,12 +178,11 @@ struct oper opers[];
 /* tokens are typed -- currently numbers, operators, symbolic, and line-ends */
 typedef struct token {
 	int type;
-	union {
-		ldouble val;   /* NUMERIC: simple value */
-		oper *oper;    /* OP or SYMBOLIC points into opers table */
-		char *varname; /* VARIABLE: variable's name, malloced */
-		char *str;     /* UNKNOWN: points to input buffer, for errors */
-	} val;
+	ldouble val;   /* NUMERIC: simple value */
+	char *valstr;  /* NUMERIC: string representation of value */
+	oper *oper;    /* OP or SYMBOLIC points into opers table */
+	char *varname; /* VARIABLE: variable's name, malloced */
+	char *str;     /* UNKNOWN: points to input buffer, for errors */
 	int imode;	    /* input mode: if NUMERIC, how was it entered?  */
 	int alloced;	    /* should this token be freed or not? */
 	struct token *next; /* for stacking tokens when infix processing */
@@ -247,9 +255,7 @@ boolean rightalignment = 1;
 int max_int_width;
 int int_width;
 long long int_sign_bit;
-long long int_mask;
-long long int_max;
-long long int_min;
+long long int_mask = ~0;
 #define LONGLONG_BITS (sizeof(long long) * 8)
 
 /* these are filled in from the locale, if possible, otherwise
@@ -463,12 +469,23 @@ integer_adjust(long long n)
 }
 
 void
-push(ldouble n)
+mpush(mpd_t *a )
 {
 	struct num *p;
 
 	p = (struct num *)safe_calloc(sizeof(struct num));
+	p->mpd = a;
+	p->next = stack;
+	stack = p;
+	stack_count++;
+}
 
+void
+push(ldouble n)
+{
+    (void) n; // fixme
+    fprintf(stderr, "empty push() called!\n");
+#if 0
 	if (floating_mode(mode) || !isfinite(n)) {
 		p->val = n;
 		trace(EXEC, " pushed %La (%Lg)\n", n, n);
@@ -479,10 +496,8 @@ push(ldouble n)
 			trace(EXEC, " pushed masked/extended %lld/0x%llx\n", ll, ll);
 		}
 	}
+#endif
 
-	p->next = stack;
-	stack = p;
-	stack_count++;
 }
 
 void
@@ -491,29 +506,54 @@ lpush(long long l)
        push(integer_adjust(l));
 }
 
+void
+spush(ldouble n, char *s)
+{
+	mpd_t *a;
+
+	if (n != strtold(s, NULL))
+		trace(TOK,  " %Lg doesn't match %s\n", n, s);
+
+	a = mpd_new(ctx);
+	mpd_set_string(a, s, ctx);
+
+	mpush(a);
+}
+
 boolean
 peek(ldouble *f)
 {
 	if (!stack)
 		return FALSE;
 
-	*f = stack->val;
+	(void) f;
+	// *f = stack->val;
 	return TRUE;
 }
 
 boolean
 pop(ldouble *f)
 {
-	struct num *p;
+	(void) f;
+	// struct num *p;
+    fprintf(stderr, "empty pop() called!\n");
+    return 0;
+}
 
-	p = stack;
+boolean
+mpop(mpd_t **a)
+{
+
+	struct num *p = stack;
 	if (!p) {
 		error(" empty stack\n");
 		return FALSE;
 	}
-	*f = p->val;
+	*a = p->mpd;
 	stack = p->next;
-	trace(EXEC, " popped %La (%Lg)\n", *f, *f);
+	char *s = mpd_to_sci(p->mpd, 0);
+	trace(EXEC, " popped %s\n", s);
+	free(s);
 	free(p);
 	stack_count--;
 
@@ -529,6 +569,7 @@ pop(ldouble *f)
 	return TRUE;
 }
 
+#if 0
 opreturn
 toggler(boolean *control, char *descrip, char *yes, char *no)
 {
@@ -550,7 +591,6 @@ toggler(boolean *control, char *descrip, char *yes, char *no)
 	return GOODOP;
 }
 
-int infix_mode;
 opreturn
 infixmode(void)
 {
@@ -572,8 +612,6 @@ enable_errexit(void)
 		"enabled", "disabled");
 }
 
-int debug_enabled;
-
 opreturn
 debug(void)
 {
@@ -592,6 +630,7 @@ assignment(void)
 	return GOODOP;
 }
 
+#endif
 boolean
 are_finite(ldouble a, ldouble b)
 {
@@ -600,9 +639,12 @@ are_finite(ldouble a, ldouble b)
 
 	return 0;
 }
+
+
 opreturn
 add(void)
 {
+#if 0
 	ldouble a, b;
 
 	if (pop(&b)) {
@@ -619,7 +661,30 @@ add(void)
 		push(b);
 	}
 	return BADOP;
+#else
+	mpd_t *a, *b;
+
+	if (mpop(&b)) {
+		if (mpop(&a)) {
+			if (1 || floating_mode(mode) /*  || !are_finite(a,b) */) {
+				mpd_add(a, a, b, ctx);
+				mpush(a);
+			} else {
+			    ;
+			//	long long i = ld_to_ll(a), j = ld_to_ll(b);
+			//	lpush(i + j);
+			}
+			// lastx = b;
+			mpd_del(b);
+			return GOODOP;
+		}
+		mpush(b);
+	}
+	return BADOP;
+#endif
 }
+
+#if 0
 
 opreturn
 subtract(void)
@@ -1116,6 +1181,7 @@ bitwise_not(void)
 	return BADOP;
 }
 
+#if 0
 /*
  * I wasn't going to include a bitcount operator, until I came across
  * this, suggested by "the bible" (C Programming Language 2nd Ed.),
@@ -1157,6 +1223,7 @@ bitcount(void)
 	}
 	return BADOP;
 }
+#endif
 
 opreturn
 chsign(void)
@@ -1612,6 +1679,7 @@ logical_not(void)
 	}
 	return BADOP;
 }
+#endif
 
 opreturn
 clear(void)
@@ -1624,6 +1692,7 @@ clear(void)
 	return GOODOP;
 }
 
+#if 0
 opreturn
 rolldown(void)			// aka "pop"
 {
@@ -1643,6 +1712,7 @@ enter(void)
 	}
 	return BADOP;
 }
+#endif
 
 // during an infix evaluation, lastx needs to kept at its pre-infix value.
 boolean lastx_is_frozen = 0;
@@ -1674,6 +1744,7 @@ thaw_lastx(void)
 	}
 }
 
+#if 0
 opreturn
 repush(void)			// aka "lastx"
 {
@@ -1699,6 +1770,8 @@ exchange(void)
 	}
 	return BADOP;
 }
+
+#endif
 
 
 /* descriptor for an open_memstream() FILE pointer */
@@ -2065,7 +2138,6 @@ min(int a, int b)
 	return (a < b) ? a : b;
 }
 
-
 /* adjust the %e (scientific) format string to put it in engineering
  * format, where the exponent of 10 is always a multiple of 3 */
 int
@@ -2150,18 +2222,21 @@ convert_eng_format(char *buf)
 }
 
 char *
-print_floating(ldouble n, int format)
+print_floating(mpd_t *m, int format)
 {
 	char buf[TEMP_BUFSIZE];
 
 	m_file_start();
 	fputc(' ', mp.fp);
 
-	if (!isfinite(n)) {
-		// let printf do its nan/inf thing
-		fprintf(mp.fp, "%Lg", n);
+	if (!mpd_isfinite(m)) {
+		char *s = mpd_to_sci(m, 0);
+		fprintf(mp.fp, "%s", s);
+		free(s);
 
-	} else if (format == 'R') {
+	} else
+#if 0
+	if (format == 'R') {
 
 		raw_hex_input_ok = TRUE;
 
@@ -2175,16 +2250,23 @@ print_floating(ldouble n, int format)
 		// 1 digit per 4 bits, and 1 of them is before the decimal
 		fprintf(mp.fp, "%.*La", (LDBL_MANT_DIG + 3)/4 - 1, n);
 
-	} else if (format == 'F' && float_specifier[0] == 'a') { // 'a'uto
+	} else
+#endif
+	if (format == 'F' && float_specifier[0] == 'a') { // 'a'uto
 
-		int fdigs = (float_digits < 1) ? 1 : float_digits;
+		// int fdigs = (float_digits < 1) ? 1 : float_digits;
 
 		// simple:  "auto" uses %g directly
-		snprintf(buf, sizeof(buf), "%.*Lg", fdigs, n);
+		char *s = mpd_to_sci(m, 0);
+		// snprintf(buf, sizeof(buf), "%.*Lg", fdigs, s);
+		snprintf(buf, sizeof(buf), "%s", s);
+		free(s);
 		add_digit_grouping(buf);
 		fputs(buf, mp.fp);
 
-	} else if (format == 'F' && float_specifier[0] == 'f') { // 'f'ixed
+	}
+#if 0
+	else if (format == 'F' && float_specifier[0] == 'f') { // 'f'ixed
 
 		int decimals, leadingdigits = 0;
 		char *p;
@@ -2241,6 +2323,7 @@ print_floating(ldouble n, int format)
 		}
 
 	}
+#endif
 
 	m_file_finish();
 
@@ -2267,9 +2350,9 @@ calc_align(int binary)
 }
 
 void
-print_n(ldouble *np, int format, boolean conv, char *mark)
+print_n(mpd_t *m, int format, boolean conv, char *mark)
 {
-	ldouble old_n, n;
+	ldouble old_n, n = 0;
 	long long ln;
 	unsigned long long uln;
 	long long mask = int_mask;
@@ -2278,12 +2361,11 @@ print_n(ldouble *np, int format, boolean conv, char *mark)
 
 	if (!mark) mark = "";
 
-	old_n = n = *np;
+	// old_n = n = *np;
 
 	if (floating_mode(format) || !isfinite(n)) {
 		char *pf;
-		n = tweak(n);
-		pf = print_floating(n, format);
+		pf = print_floating(m, format);
 		align = 0;
 		if (rightalignment) {
 			char *eos, *dp;
@@ -2365,9 +2447,11 @@ print_n(ldouble *np, int format, boolean conv, char *mark)
 		return;
 	}
 
-	show_int_truncation(changed, old_n, mark);
+#if NOPE
+	// show_int_truncation(changed, old_n, mark);
 	if (changed)
 		*np = n;
+#endif
 
 }
 
@@ -2375,7 +2459,7 @@ void
 print_top(int format)
 {
 	if (stack)
-		print_n(&stack->val, format, 0, 0);
+		print_n(stack->mpd, format, 0, 0);
 }
 
 void
@@ -2385,7 +2469,7 @@ printstack_worker(int n, boolean conv, struct num *s)
 	if (s->next)
 		printstack_worker(n-1, conv, s->next);
 
-	print_n(&(s->val), mode, conv,
+	print_n(s->mpd, mode, conv,
 		(n == stack_mark) ? "         # <-  mark" : "");
 }
 
@@ -2461,6 +2545,7 @@ printfloat(void)
 	return GOODOP;
 }
 
+#if 0
 // worker for printstate()
 void
 rawprintstack(int n, struct num *s, int is_stack)
@@ -2551,6 +2636,7 @@ printstate(void)
 
 	return GOODOP;
 }
+#endif
 
 static char *
 mode2name(void)
@@ -2660,6 +2746,7 @@ modefloat(void)
 	return GOODOP;
 }
 
+#if 0
 opreturn
 separators(void)
 {
@@ -2741,6 +2828,7 @@ digits(void)
 
 	return GOODOP;
 }
+#endif
 
 void
 setup_width(int bits)
@@ -2763,15 +2851,12 @@ setup_width(int bits)
 
 	if (int_width == LONGLONG_BITS) {
 		int_mask = ~0;
-		int_max = LLONG_MAX;
-		int_min = LLONG_MIN;
 	} else {
 		int_mask = (1LL << int_width) - 1;
-		int_max = int_mask >> 1;
-		int_min = int_sign_bit;
 	}
 }
 
+#if 0
 void
 mask_stack(void)
 {
@@ -3404,28 +3489,31 @@ tclear(token **tstackp)
 
 	while (t) {
 		nt = t->next;
-		if (t->type == VARIABLE && t->val.varname)
-			free(t->val.varname);
+		if (t->type == VARIABLE && t->varname)
+			free(t->varname);
+		if (t->type == NUMERIC && t->valstr)
+			free(t->valstr);
 		free(t);
 		t = nt;
 	}
 }
+#endif
 
 void
 sprint_token(char *s, size_t slen, token *t)
 {
 	switch (t->type) {
 	case NUMERIC:
-		snprintf(s, slen, "'%.*Lg'", max_digits, t->val.val);
+		snprintf(s, slen, "'%.*Lg' '%s'", max_digits, t->val, t->valstr);
 		break;
 	case SYMBOLIC:
-		snprintf(s, slen, "'%s'", t->val.oper->name);
+		snprintf(s, slen, "'%s'", t->oper->name);
 		break;
 	case VARIABLE:
-		snprintf(s, slen, "'%s'", t->val.varname);
+		snprintf(s, slen, "'%s'", t->varname);
 		break;
 	case OP:
-		snprintf(s, slen, "'%s'", t->val.oper->name);
+		snprintf(s, slen, "'%s'", t->oper->name);
 		break;
 	case EOL:
 		snprintf(s, slen, "'EOL'");
@@ -3450,6 +3538,7 @@ trace_show_tok(int lev, token *t)
 	fprintf(stderr, " %s ", buf);
 }
 
+#if 0
 void
 trace_stack_dump(int lev, token **tstackp)
 {
@@ -3531,18 +3620,18 @@ prev_tok_was_operand(token *pt)
 	return pt->type == NUMERIC ||
 		pt->type == SYMBOLIC ||
 		pt->type == VARIABLE ||
-		(pt->type == OP && pt->val.oper->func == close_paren);
+		(pt->type == OP && pt->oper->func == close_paren);
 }
 
 boolean
 prev_tok_was_semicolon(token *pt)
 {
-	return (pt->type == OP && pt->val.oper->func == semicolon);
+	return (pt->type == OP && pt->oper->func == semicolon);
 }
 
-#define t_op t->val.oper	// shorthands.  don't use unless type == OP
-#define pt_op pt->val.oper
-#define tp_op tp->val.oper
+#define t_op t->oper	// shorthands.  don't use unless type == OP
+#define pt_op pt->oper
+#define tp_op tp->oper
 
 void shunt(token *t)
 {
@@ -3647,7 +3736,7 @@ shunting_yard(int command)
 			/* do nothing now.  we need to know what comes
 			 * next:  "r1 = 3" is very different than "r1 + 3" */
 			trace(SHUNT, " delaying classification of %s\n",
-					t->val.varname);
+					t->varname);
 			break;
 		case NUMERIC:
 		case SYMBOLIC:
@@ -3891,6 +3980,7 @@ rounding(void)
 	return toggler(&do_rounding, "Float snapping/rounding is now",
 		"on", "off");
 }
+#endif
 
 void
 exitret(void)
@@ -3899,7 +3989,9 @@ exitret(void)
 	if (!stack)
 		exit(2);  // exit 2 on empty stack
 
+#if 0
 	pop(&a);
+#endif
 
 	exit(a == 0);  // flip exit status, per unix convention
 
@@ -3917,6 +4009,7 @@ quit(void)
 	return GOODOP; // not reached
 }
 
+#if 0
 typedef struct {
     ldouble value;
     char *name;
@@ -3992,7 +4085,7 @@ dynamic_var(token *t)
 {
 	dynvar *v;
 
-	v = findvar(t->val.varname);
+	v = findvar(t->varname);
 	if (!v) {
 		error(" error: out of space for variables\n");
 		return 0;
@@ -4012,6 +4105,7 @@ dynamic_var(token *t)
 	}
 	return 1;
 }
+#endif
 
 size_t stralnum(char *s, char **endptr)
 {
@@ -4070,7 +4164,9 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 		if (isalnum(*np))
 			goto unknown;
 
-		t->val.val = dd * sign;
+		t->val = dd * sign;
+		t->valstr = safe_calloc((size_t)(np - p));
+		strncpy(t->valstr, p, (size_t)(np - p));
 		t->type = NUMERIC;
 		t->imode = 'H';
 
@@ -4085,7 +4181,9 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 
 		t->type = NUMERIC;
 		t->imode = 'B';
-		t->val.val = (ldouble)ln * sign;
+		t->val = (ldouble)ln * sign;
+		t->valstr = safe_calloc((size_t)(np - p));
+		strncpy(t->valstr, p, (size_t)(np - p));
 
 	} else if (*p == '0' && (*(p + 1) == 'o' || *(p + 1) == 'O')) {
 		// octal, leading "0o"
@@ -4098,7 +4196,9 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 
 		t->type = NUMERIC;
 		t->imode = 'O';
-		t->val.val = (ldouble)ln * sign;
+		t->val = (ldouble)ln * sign;
+		t->valstr = safe_calloc((size_t)(np - p));
+		strncpy(t->valstr, p, (size_t)(np - p));
 
 	} else if (isdigit(*p) || match_dp(p)) {
 		// decimal
@@ -4112,12 +4212,14 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 
 		t->type = NUMERIC;
 		t->imode = 'D';
-		t->val.val = dd * sign;
+		t->val = dd * sign;
+		t->valstr = safe_calloc((size_t)(np - p));
+		strncpy(t->valstr, p, (size_t)(np - p));
 	} else if (*p == '_' && isalnum(*(p+1))) {
 		// variable
 		n = stralnum(p, &np);
 		t->type = VARIABLE;
-		t->val.varname = strndup(p,n);
+		t->varname = strndup(p,n);
 	} else {
 
 	    is_oper:
@@ -4142,7 +4244,7 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 			np = p + n;
 		} else {
 			error(" error: illegal character in input\n");
-			t->val.str = p;
+			t->str = p;
 			t->type = UNKNOWN;
 			if (nextp) *nextp = np;
 			return 0;
@@ -4166,7 +4268,7 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 			matchlen = strlen(op->name);
 			if (n == matchlen && !strncmp(op->name, p, matchlen)) {
 				np = p + matchlen;
-				t->val.oper = op;
+				t->oper = op;
 				if (op->operands == Sym) // like "pi", "recall"
 					t->type = SYMBOLIC;
 				else
@@ -4179,7 +4281,7 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 		unknown:
 			error(" error: unrecognized input '%s'\n",
 				strtok(p, " \t\n"));
-			t->val.str = p;
+			t->str = p;
 			t->type = UNKNOWN;
 			if (nextp) *nextp = np;
 			return 0;
@@ -4467,6 +4569,8 @@ read_token(token *t, int parsing_rpn)
 /* the opers[] and config[] tables don't initialize everything explicitly */
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 
+#if 0
+
 #define c_int 0
 #define c_chr 1
 #define c_str 2
@@ -4733,6 +4837,7 @@ license(void)
 	p_printf("%s\n", licensetext);
 	return GOODOP;
 }
+#endif
 
 /* in addition to "release", at the top of the source, the Makefile
  * may pass a -DGITVERSION=...  */
@@ -4927,6 +5032,7 @@ struct oper opers[] = {
 //        |    |                |  |  |         (# of operands and precedence
 //        V    V                V  V  V           are used only by infix code)
 	{"+", add,		0, 2, 24 },
+#if 0
 	{"-", subtract,		"Add and subtract x and y", 2, 24 },
 	{"*", multiply,		0, 2, 26 },
 	{"x", multiply,		"Multiply x and y", 2, 26 },
@@ -4946,7 +5052,7 @@ struct oper opers[] = {
 	{""},		// all-null entries cause blank line in output
     {"Numeric operators with one operand:"},
 	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 30, 'R' },
-	{"bitc", bitcount,	"Count of '1' bits in x", 1, 30, 'R' },
+	// {"bitc", bitcount,	"Count of '1' bits in x", 1, 30, 'R' },
 	{"chs", chsign,		0, 1, 30, 'R' },
 	{"negate", chsign,	"Change sign of x (2's complement)", 1, 30, 'R' },
 	{"recip", recip,	0, 1, 30, 'R' },
@@ -5019,8 +5125,10 @@ struct oper opers[] = {
 	{"snapshot", snapshot,	"Saves copy of selected entries", Auto },
 	{"mark", mark,		"Mark the stack, to limit variadics' range" },
 	{""},
+#endif
     {"Stack manipulation:"},
 	{"clear", clear,	"Clear stack" },
+#if 0
 	{"pop", rolldown,	"Pop (and discard) x", Auto },
 	{"push", enter,		0, Auto },
 	{"dup", enter,		"Push (a duplicate of) x", Auto },
@@ -5036,6 +5144,7 @@ struct oper opers[] = {
 	{":", rpnswitch,	"Treat rest of line as RPN. (for infix mode)"},
 	{"nop", nop,		"Does nothing, but at end of line, suppresses output"},
 	{""},
+#endif
     {"Display:"},
 	{"P", printall,		"Print whole stack according to mode" },
 	{"p", printone,		"Print x according to mode" },
@@ -5045,6 +5154,7 @@ struct oper opers[] = {
 	{"h", printhex,		0 },
 	{"o", printoct,		0 },
 	{"b", printbin,		"     hex, octal, or binary" },
+#if 0
 	{"automatic", automatic, 0, Auto },
 	{"auto", automatic,	"Select general purpose floating display format", Auto },
 	{"engineering", engineering, 0, Auto },
@@ -5081,19 +5191,24 @@ struct oper opers[] = {
 	{"tracing", tracetoggle,"Set tracing level", 0, 0, 'D'},
 	{"commands", commands,	"Show raw command table", 0, 0, 'D'},
 	{"", 0, 0, 0, 0, 'D'},
+#endif
     {"Housekeeping:"},
 	{"?", help,		0 },
 	{"help", help,		"Show this list (using $PAGER, if set)" },
+#if 0
 	{"config", config,	"Show current configuration settings" },
 	{"state", printstate,	"Show calculator state"},
 	{"precedence", precedence, "List infix operator precedence" },
 	{"quit", quit,		0 },
+#endif
 	{"q", quit,		0 },
 	{"exit", quit,		"Leave the calculator" },
+#if 0
 	{"echo", enable_echo,	"Toggle echoing input when stdin is a file or pipe" },
 	{"errorexit", enable_errexit,	"Toggle exiting on error and warning" },
 	{"debug", debug,	"Toggle presence of debug commands" },
 	{"license", license,	"Display the rca copyright and license." },
+#endif
 	{"version", version,	"Show program version" },
 	{"#", help,		"Comment. The rest of the line will be ignored." },
 	{""},
@@ -5114,7 +5229,7 @@ do_autoprint(token *pt)
 	 * numeric, we'll print the top of stack.  */
 	switch (pt->type) {
 	case OP:
-		if (pt->val.oper->operands == 0)  // pseudo op
+		if (pt->oper->operands == 0)  // pseudo op
 			return;
 		// 1, 2, Auto (-2) continue.  Sym (-1) is parsed as SYMBOLIC
 		break;
@@ -5147,6 +5262,9 @@ main(int argc, char *argv[])
 	token *t = &tok;	// permanent pointers to tok and prevtok
 	token *pt = &prevtok;
 
+	mpd_init(&context, 20);
+	context.traps = 0;
+
 	pt->type = UNKNOWN;
 
 	char *pn = strrchr(argv[0], '/');
@@ -5159,11 +5277,12 @@ main(int argc, char *argv[])
 	locale_init();
 
 	setup_width(0);
+#if 0
 
 	create_infix_support_tokens();
 
 	config_read_defaults();
-
+#endif
 	/* we simply loop forever, either pushing operands or
 	 * executing operators.  the special end-of-line token lets us
 	 * do reasonable autoprinting, if the last thing on the line
@@ -5171,21 +5290,25 @@ main(int argc, char *argv[])
 	 */
 	while (1) {
 
+#if 0
 		/* use up tokens created by infix processing first */
 		token *tt;
 		if ((tt = tpop(&infix_rpn_queue))) {
 			tok = *tt;
 			free(tt);
 			freeze_lastx();
-		} else { /* otherwise get tokens from input as usual */
+		} else
+#endif
+		{ /* otherwise get tokens from input as usual */
 			if (!read_token(&tok, RPN))
 				continue;
 			thaw_lastx();
 			// in infix mode, check the first token on a line...
+#if 0
 			if (infix_mode && pt->type == EOL) {
 				// ...to see if it's anything but ':'
 				if ( ! (t->type == OP &&
-						t->val.oper->func == rpnswitch)) {
+						t->oper->func == rpnswitch)) {
 					putback_token(t);
 					shunting_yard(0);
 					continue;
@@ -5194,6 +5317,7 @@ main(int argc, char *argv[])
 				 * start of the line.  we ignore it,
 				 * and now consume tokens as usual */
 			}
+#endif
 		}
 
 		if (t->type != EOL && t->type != OP) {
@@ -5203,22 +5327,25 @@ main(int argc, char *argv[])
 
 		switch (t->type) {
 		case NUMERIC:
-			trace(EXEC,  " numeric %Lg\n", t->val.val);
-			push(t->val.val);
+			trace(EXEC,  " numeric %Lg %s\n", t->val, t->valstr);
+			spush(t->val, t->valstr);
+			if (t->valstr) free(t->valstr);
 			break;
 		case VARIABLE:
-			trace(EXEC, " variable %s\n", t->val.varname);
+			trace(EXEC, " variable %s\n", t->varname);
+#if 0
 			dynamic_var(t);
-			free(t->val.varname);
+#endif
+			free(t->varname);
 			break;
 		case SYMBOLIC:
 		case OP:
-			trace(EXEC, " invoking %s\n", t->val.oper->name);
-			if (t->val.oper->func == quit)
+			trace(EXEC, " invoking %s\n", t->oper->name);
+			if (t->oper->func == quit)
 				pending_show();
 			else
 				pending_clear();
-			(t->val.oper->func) ();
+			(t->oper->func) ();
 			break;
 		case EOL:
 			do_autoprint(pt);
@@ -5227,7 +5354,7 @@ main(int argc, char *argv[])
 		default:
 		case UNKNOWN:
 			// I think this is unreachable
-			error(" error: unrecognized input '%s'\n", t->val.str);
+			error(" error: unrecognized input '%s'\n", t->str);
 			break;
 		}
 		if (variable_write_enable)

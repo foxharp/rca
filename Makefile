@@ -16,11 +16,15 @@ MAN1DIR ?= $(MANDIR)/man1
 CFLAGS += -Wall -Wextra -Wfloat-conversion -Wconversion  \
     -Warray-bounds=2 -Wformat-security -Wsign-conversion \
     -Wshift-overflow=2 -Wstrict-overflow=2 -pedantic
-LIBS = -lm
+
+CFLAGS += -I /usr/local/mpdecimal/include
+LIBS += -L/usr/local/mpdecimal/lib -Wl,-Bstatic -lmpdec -Wl,-Bdynamic
+
+LIBS += -lm
 
 rca: rca.c
 	gver="$$(git describe --dirty=+ 2>/dev/null || echo '+?')"; \
-	gcc -g -o rca -O2 \
+	gcc -g -o rca \
 		$(CFLAGS) -DGITVERSION=\"$${gver}\" \
 		rca.c $(LIBS)
 
