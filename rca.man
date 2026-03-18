@@ -256,10 +256,10 @@ calculated which are
 .I almost
 correct (like .99999999999... instead of 1), but not quite.
 .B rca
-tries to help by "snapping" values that are very close to integers to
-those integers, and by rounding when the precision limits of the
-floating point representation are reached.  See also the DATA TYPES,
-OVERFLOW, ACCURACY section, below.
+tries to help (for display only) by "snapping" values that are very
+close to integers to those integers, and by rounding based on the
+user's display precision.
+See also the DATA TYPES, OVERFLOW, ACCURACY section, below.
 .P
 Floating point printing can be controlled by the
 .BR automatic ,
@@ -905,11 +905,13 @@ that should be 0 may instead have a very tiny value, or two numbers which
 should be equal may differ by an insignificant amount.
 .B rca
 helps by adjusting displayed values, and values being compared to one
-another:  first, values very close to an integer are forced to that
-integer.  Then, values are rounded to
-.BR rca 's
-maximum precision (again, usually 18 digits).  The internal representation
-of these values remains unchanged --
+another.  First, values within 10e-N of an integer are forced to that
+integer.  Then, values are rounded to N significant digits.  'N' in
+both cases is chosen to be midway between the user's precision (configured
+with the
+.B digits
+command) and the maximum precision available.  The internal
+representation of these values remains unchanged --
 .I only
 the printed output (or the comparison) is affected.
 
