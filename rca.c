@@ -368,35 +368,51 @@ detect_epsilon(void)
 #endif
 
 
-long double
-snap_integer(long double x)
+/* snap to integer, if close enough */
+ldouble
+snap_it(long double x, int digits)
 {
-	static long double min_tol;
-	if (min_tol == 0)
-		min_tol = powl(10.0L, -max_digits);
-
 	if (!isfinite(x))
 		return x;
 
-	/* "unit in the last place" is the distance between
-	 * representable floats at at the magnitude of x.  we use this
-	 * to choose the "snapping region" (tolerance) when deciding
-	 * to turn x into the closest integer */
-	long double ulp = fabsl(x - nextafterl(x, INFINITY));
-
 	long double r = roundl(x);
-	trace(TWEAK, "     snap %.*Lg to %.*Lg ?\n", max_digits, x, max_digits, r);
+	trace(TWEAK, " snap %.*Lg to %.*Lg ?\n", max_digits, x, max_digits, r);
 
-	long double tol = (2.0L*ulp > min_tol) ? (2.0L*ulp) : min_tol;
-
-	trace(TWEAK, "     min_tol is %.*Lg\n", max_digits, min_tol);
-	trace(TWEAK, "     tol is %.*Lg\n", max_digits, tol);
+	long double tol = powl(10.0L, -digits);
+	trace(TWEAK, "  snap tolerance is %.*Lg\n", max_digits, tol);
 
 	/* is the closest integer within tolerance ? */
 	if (fabsl(x - r) <= tol)
 		return r;
 
 	return x;
+}
+
+/* round to some number of digits */
+ldouble
+round_it(long double x, int digits)
+{
+	long double scale;
+
+	if (!isfinite(x) || x == 0.0L)
+		return x;
+
+	if (float_specifier[0] == 'f') {  // fixed number of decimal places
+		scale = powl(10.0L, digits);
+	} else {
+		int exp10 = (int)floorl(log10l(fabsl(x)));
+		scale = powl(10.0L, digits - 1 - exp10);
+		if (scale == 0 || !isfinite(scale))
+			return x;
+	}
+
+	trace(TWEAK, "  rounding scale is %Lg\n", scale);
+
+	long double y = x * scale;
+	if (!isfinite(y))
+		return x;
+
+	return roundl(y) / scale;
 }
 
 /* try and take care of small floating point detritus, by snapping
@@ -406,28 +422,33 @@ snap_integer(long double x)
 ldouble
 tweak(ldouble x)
 {
-	char buf[TEMP_BUFSIZE];
-	trace(TWEAK, " tweaking got %.*Lg (%La) ...\n", max_digits, x, x);
+	ldouble n;
+	char *which = 0;
 
-	if (!do_rounding || x == 0.0L || !isfinite(x))
+	if (!do_rounding)
 		return x;
 
-	ldouble s = snap_integer(x);
-	if (x != s) {
-		trace(TWEAK, "     snapped to %.*Lg (%La)\n", max_digits, s, s);
-		return s;
+	if (!isfinite(x))
+		return x;
+
+	trace(TWEAK, " tweaking got %.*Lg (%La) ...\n", max_digits, x, x);
+
+	int digits = (float_digits + max_digits) / 2;
+	n = snap_it(x, digits);
+	if (n != x) {
+		which = "snapped";
+	} else {
+		n = round_it(x, digits);
+		if (n != x)
+			which = "rounded";
+	}
+	if (which) {
+		trace(TWEAK, "     %s to %.*Lg (%La)\n",
+			which, max_digits, n, n);
+		return (n == 0) ? 0 : n; // don't return -0
 	}
 
-	/* use printf to round to max_digits significant digits.
-	 * it's as good as any other method, and we don't particularly
-	 * care about speed.  */
-	snprintf(buf, sizeof(buf), "%.*Lg", max_digits, x);
-	trace(TWEAK, "     x is %.*Lg, rounding buf is %s\n", max_digits, x, buf);
-
-	ldouble rx = strtold(buf, NULL);
-	if (rx != x)
-		trace(TWEAK, "     rounded to %.*Lg (%La)\n", max_digits, rx, rx);
-	return rx;
+	return n;
 }
 
 /* we snap/round a) any display of a float value, and b) the operands
