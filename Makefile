@@ -137,8 +137,9 @@ versioncheck:
 			-e 's/^ *\( version v[0-9]\+.*\)/\1/p'
 
 clean:
-	rm -f rca rca rca.1 .test docs/index.html.new \
+	rm -f rca rca rca.1 docs/index.html.new \
 		docs/rca-man.html.new docs/rca-help.html.new
+	rm -fr tests/tmp
 
 # debian packaging uses this target, so be sure it always honors
 # DESTDIR and INSTALL correctly
@@ -171,25 +172,28 @@ gentest:
 # keep valgrind optional for gentest:  it messes with floating point,
 # so we can't use it all the time.  remove XX to enable.  only look
 # for memory errors if you use it here, not math errors.
+	mkdir -p tests/tmp
 	egrep -v '^ ' tests/f64i64/gentests.txt | \
 		( RUNVG="valgrind -q --leak-check=full"; \
 		  which XXvalgrind >/dev/null || RUNVG=; \
 		  $$RUNVG ./rca 1echo 2>&1 \
-		) | tee .test | \
+		) | tee tests/tmp/gentests.txt | \
 		diff -u tests/$(ID)/gentests.txt -
 
 optest:
 # optest doesn't test actual math at all, so always use valgrind if available
+	mkdir -p tests/tmp
 	egrep -v '^ ' tests/f64i64/optests.txt | \
 		( RUNVG="valgrind -q --leak-check=full"; \
 		  which valgrind >/dev/null || RUNVG=; \
 		  $$RUNVG ./rca 1echo 2>&1 \
-		) | tee .test | \
+		) | tee tests/tmp/optests.txt | \
 		diff -u tests/$(ID)/optests.txt -
 
 tweaktest:
+	mkdir -p tests/tmp
 	egrep -v '^ ' tests/f64i64/tweaktests.txt | \
-		./rca 1echo 2>&1 | tee .test | \
+		./rca 1echo 2>&1 | tee tests/tmp/tweaktests.txt | \
 		diff -u tests/$(ID)/tweaktests.txt -
 
 .PHONY: clean all gentest optest tweaktest html htmldiff htmlmv \
