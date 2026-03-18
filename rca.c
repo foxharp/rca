@@ -264,7 +264,7 @@ char *locale_modified = "";  // indicates if we've changed the locale info
 boolean raw_hex_input_ok;
 
 /* if true, perform snapping and rounding of float values */
-boolean do_rounding = 1;
+boolean tweaking = 1;
 
 /* the most recent top-of-stack */
 ldouble lastx;
@@ -404,7 +404,7 @@ tweak(ldouble x)
 	ldouble n;
 	char *which = 0;
 
-	if (!do_rounding)
+	if (!tweaking)
 		return x;
 
 	if (!isfinite(x))
@@ -2503,7 +2503,7 @@ printstate(void)
 	p_printf("  - when in floating mode,");
 	p_printf(" display is \"%s\", with %d digits\n",
 		float_specifier, float_digits );
-	if (!do_rounding)
+	if (!tweaking)
 		p_printf("  snapping/rounding is off\n");
 
 	p_printf("  - when in integer modes,");
@@ -2873,12 +2873,12 @@ tweakit(void)
 	if (!pop(&a))
 		return BADOP;
 
-	boolean r = do_rounding;
-	do_rounding = 1;
+	boolean r = tweaking;
+	tweaking = 1;
 
 	push(cmp_tweak(a));  // use cmp_tweak -- it does tracing
 
-	do_rounding = r;
+	tweaking = r;
 
 	return GOODOP;
 }
@@ -3881,7 +3881,7 @@ tracetoggle(void)
 opreturn
 rounding(void)
 {
-	return toggler(&do_rounding, "Float snapping/rounding is now",
+	return toggler(&tweaking, "Float snapping/rounding is now",
 		"on", "off");
 }
 
@@ -4485,7 +4485,7 @@ struct config {
 	{ "errorexit",		c_int, &exit_on_error },
 	{ "", c_none },
 	{ "debug",		c_int, &debug_enabled },
-	{ "rounding",		c_int, &do_rounding },
+	{ "rounding",		c_int, &tweaking },
 	{ "tracing",		c_int, &tracing },
 	{ 0 }
 };
