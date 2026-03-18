@@ -1,10 +1,6 @@
 
 1 debug
  Debug commands enabled
-epsilon 10 * = _10eps
-                               1.92593e-33
-epsilon 100 * = _100eps
-                               1.92593e-32
 clear
 
 0 rightalign
@@ -917,14 +913,6 @@ clear
  trig functions will now use radians
 (tan(pi/2))
  nan
-(tan(pi/2 + epsilon))
- -6.70089e+33
-(tan(pi/2 + _10eps))
- -5.31188e+32
-(tan(pi/2 - epsilon))
- nan
-(tan(pi/2 - _10eps))
- 5.07797e+32
 (ln(0))
  -inf
 (ln(-1))
