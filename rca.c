@@ -118,8 +118,11 @@ typedef unsigned long long ull_t;
 int g_argc;
 char **g_argv;
 
-ldouble pi = 3.141592653589793238462643383279502884L;
-ldouble e =  2.718281828459045235360287471352662497L;
+char *pi_val = "3.1415926535897932384626433832795028841971693993751"
+	       "058209749445923078164062862089986280348253421170679";
+
+ldouble e_val =  2.718281828459045235360287471352662497L;
+mpd_t *pi, *e;
 
 /* internal representation of operands on the stack.  numbers are always
  * stored as long doubles, even when we're in integer mode.  this could
@@ -146,7 +149,7 @@ int stack_mark;
 int infix_stacklevel;
 
 int infix_mode;
-int debug_enabled;
+int debug_enabled = 1;
 
 
 /* all user input is either a number or a command operator.
@@ -179,9 +182,9 @@ struct oper opers[];
 typedef struct token {
 	int type;
 	ldouble val;   /* NUMERIC: simple value */
-	char *valstr;  /* NUMERIC: string representation of value */
+	mpd_t *mpd;    /* NUMERIC: libmpdecimal number */
+	char *valstr;  /* string of value for NUMERIC and VARIABLE */
 	oper *oper;    /* OP or SYMBOLIC points into opers table */
-	char *varname; /* VARIABLE: variable's name, malloced */
 	char *str;     /* UNKNOWN: points to input buffer, for errors */
 	int imode;	    /* input mode: if NUMERIC, how was it entered?  */
 	int alloced;	    /* should this token be freed or not? */
@@ -278,7 +281,7 @@ boolean raw_hex_input_ok;
 boolean do_rounding = 1;
 
 /* the most recent top-of-stack */
-ldouble lastx;
+mpd_t *lastx;
 
 /* counting state variable, which allows variables to be read/write */
 int variable_write_enable;
@@ -291,6 +294,32 @@ int parse_token(char *p, token *t, char **nextp, int whichparse);
 void putback_token(token *t);
 #define RPN 1
 #define INFIX 0
+
+void
+mpd_stuff(void)
+{
+	mpd_init(&context, 20);
+	context.traps = 0;
+	pi = mpd_new(ctx);
+	mpd_set_string(pi, pi_val, ctx);
+}
+
+void
+mpd_free_before_copy(mpd_t **resultp, const mpd_t *a, mpd_context_t *ctx)
+{
+	// if (resultp) mpd_del(*resultp);
+	if (!resultp) mpd_new(ctx);
+	mpd_copy(*resultp, a, ctx);
+}
+
+void
+mpd_free_before_move(mpd_t **resultp, mpd_t *a, mpd_context_t *ctx)
+{
+	(void)ctx;
+	if (*resultp) mpd_del(*resultp);
+	*resultp = a;
+}
+
 
 long long
 ld_to_ll(long double n)
@@ -475,9 +504,22 @@ mpush(mpd_t *a )
 
 	p = (struct num *)safe_calloc(sizeof(struct num));
 	p->mpd = a;
+	if (tracing & EXEC)
+		mpd_fprint(stderr, a);
+
 	p->next = stack;
 	stack = p;
 	stack_count++;
+}
+
+void
+mpush_copy(mpd_t *a)
+{
+    mpd_t *n;
+
+    n = mpd_new(ctx);
+    mpd_copy(n, a, ctx);
+    mpush(n);
 }
 
 void
@@ -506,20 +548,17 @@ lpush(long long l)
        push(integer_adjust(l));
 }
 
-void
-spush(ldouble n, char *s)
+boolean
+mpeek(mpd_t **f)
 {
-	mpd_t *a;
+	if (!stack)
+		return FALSE;
 
-	if (n != strtold(s, NULL))
-		trace(TOK,  " %Lg doesn't match %s\n", n, s);
+	(void)f;
+	// mpd_copy(*f, stack->mpd, ctx);
 
-	a = mpd_new(ctx);
-	mpd_set_string(a, s, ctx);
-
-	mpush(a);
+	return TRUE;
 }
-
 boolean
 peek(ldouble *f)
 {
@@ -532,7 +571,7 @@ peek(ldouble *f)
 }
 
 boolean
-pop(ldouble *f)
+xxxpop(ldouble *f)
 {
 	(void) f;
 	// struct num *p;
@@ -569,25 +608,29 @@ mpop(mpd_t **a)
 	return TRUE;
 }
 
-#if 0
 opreturn
 toggler(boolean *control, char *descrip, char *yes, char *no)
 {
-	ldouble n;
+	mpd_t *m;
+	uint64_t u;
 
-	if (!pop(&n))
+	if (!mpop(&m))
 		return BADOP;
 
-	if (n != 0 && n != 1) {
-		push(n);
+	u = mpd_get_u64(m, ctx);
+
+	if (u != 0 && u != 1) {
+		mpush(m);
 		error(" error: toggle commands only take 0/1 as an argument\n");
 		return BADOP;
 	}
 
-	*control = (n != 0);
+	*control = (u != 0);
 
 	if (descrip)
-		p_printf(" %s %s\n", descrip, n ? yes : no);
+		p_printf(" %s %s\n", descrip, u ? yes : no);
+
+	mpd_del(m);
 	return GOODOP;
 }
 
@@ -619,6 +662,7 @@ debug(void)
 		"enabled", "disabled");
 }
 
+#if 0
 opreturn
 assignment(void)
 {
@@ -664,31 +708,26 @@ add(void)
 #else
 	mpd_t *a, *b;
 
-	if (mpop(&b)) {
-		if (mpop(&a)) {
-			if (1 || floating_mode(mode) /*  || !are_finite(a,b) */) {
-				mpd_add(a, a, b, ctx);
-				mpush(a);
-			} else {
-			    ;
-			//	long long i = ld_to_ll(a), j = ld_to_ll(b);
-			//	lpush(i + j);
-			}
-			// lastx = b;
-			mpd_del(b);
-			return GOODOP;
-		}
-		mpush(b);
+	if (!mpop(&b)) {
+		return BADOP;
 	}
-	return BADOP;
+	if (!mpop(&a)) {
+		mpush(b);
+		return BADOP;
+	}
+
+	mpd_add(a, a, b, ctx);
+	mpush(a);
+	mpd_free_before_move(&lastx, b, ctx);
+
+	return GOODOP;
 #endif
 }
-
-#if 0
 
 opreturn
 subtract(void)
 {
+#if 0
 	ldouble a, b;
 
 	if (pop(&b)) {
@@ -705,11 +744,30 @@ subtract(void)
 		push(b);
 	}
 	return BADOP;
+#else
+	mpd_t *a, *b;
+
+	if (!mpop(&b)) {
+		return BADOP;
+	}
+	if (!mpop(&a)) {
+		mpush(b);
+		return BADOP;
+	}
+
+	mpd_sub(a, a, b, ctx);
+	mpush(a);
+	mpd_free_before_move(&lastx, b, ctx);
+
+	return GOODOP;
+#endif
 }
+
 
 opreturn
 multiply(void)
 {
+#if 0
 	ldouble a, b;
 
 	if (pop(&b)) {
@@ -726,11 +784,29 @@ multiply(void)
 		push(b);
 	}
 	return BADOP;
+#else
+	mpd_t *a, *b;
+
+	if (!mpop(&b)) {
+		return BADOP;
+	}
+	if (!mpop(&a)) {
+		mpush(b);
+		return BADOP;
+	}
+
+	mpd_mul(a, a, b, ctx);
+	mpush(a);
+	mpd_free_before_move(&lastx, b, ctx);
+
+	return GOODOP;
+#endif
 }
 
 opreturn
 divide(void)
 {
+#if 0
 	ldouble a, b;
 
 	if (pop(&b)) {
@@ -750,8 +826,26 @@ divide(void)
 		push(b);
 	}
 	return BADOP;
+#else
+	mpd_t *a, *b;
+
+	if (!mpop(&b)) {
+		return BADOP;
+	}
+	if (!mpop(&a)) {
+		mpush(b);
+		return BADOP;
+	}
+
+	mpd_div(a, a, b, ctx);
+	mpush(a);
+	mpd_free_before_move(&lastx, b, ctx);
+
+	return GOODOP;
+#endif
 }
 
+#if 0
 opreturn
 modulo(void)
 {
@@ -1294,6 +1388,7 @@ trig_no_sense(void)
 	return BADOP;
 }
 
+#endif
 boolean trig_degrees = 1;  // work in degrees by default
 
 opreturn
@@ -1302,6 +1397,8 @@ use_degrees(void)
 	return toggler(&trig_degrees, "trig functions will now use",
 		"degrees", "radians");
 }
+
+#if 0
 
 ldouble
 to_degrees(ldouble angle)
@@ -1684,10 +1781,19 @@ logical_not(void)
 opreturn
 clear(void)
 {
-	ldouble scrap;
+	mpd_t *scrap;
 
-	if (peek(&lastx))
-		while(stack) pop(&scrap);
+#if FIXME
+	if (mpeek(&lastx))
+#else
+	if (mpeek(&scrap))
+#endif
+	{
+		while(stack) {
+			mpop(&scrap);
+			mpd_del(scrap);
+		}
+	}
 
 	return GOODOP;
 }
@@ -1716,14 +1822,20 @@ enter(void)
 
 // during an infix evaluation, lastx needs to kept at its pre-infix value.
 boolean lastx_is_frozen = 0;
-ldouble frozen_lastx;
+mpd_t *frozen_lastx;
 
 void
 freeze_lastx(void)
 {
 	if (!lastx_is_frozen) {
-		if (!peek(&frozen_lastx))
+		mpd_t *t;
+		if (!mpeek(&t)) {
+			if (frozen_lastx)
+				mpd_del(frozen_lastx);
 			frozen_lastx = 0;
+		} else {
+			mpd_free_before_copy(&frozen_lastx, t, ctx);
+		}
 		lastx_is_frozen = TRUE;
 		infix_stacklevel = stack_count;
 	}
@@ -1735,6 +1847,7 @@ thaw_lastx(void)
 	if (lastx_is_frozen) {
 		lastx_is_frozen = FALSE;
 		lastx = frozen_lastx;
+		frozen_lastx = 0;
 		// infix must add either no or 1 value to the stack
 		int i = stack_count - infix_stacklevel;
 		if (i != 0 && i != 1)
@@ -1744,16 +1857,19 @@ thaw_lastx(void)
 	}
 }
 
-#if 0
 opreturn
 repush(void)			// aka "lastx"
 {
+	mpd_t *t = mpd_new(ctx);
 	if (lastx_is_frozen)
-		push(frozen_lastx);
+		mpd_copy(t, frozen_lastx, ctx);
 	else
-		push(lastx);
+		mpd_copy(t, lastx, ctx);
+	mpush(t);
 	return GOODOP;
 }
+
+#if 0
 
 opreturn
 exchange(void)
@@ -2354,7 +2470,8 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 {
 	ldouble old_n, n = 0;
 	long long ln;
-	unsigned long long uln;
+	// unsigned long long uln;
+	uint64_t u;
 	long long mask = int_mask;
 	int align;
 	boolean changed;
@@ -2399,28 +2516,30 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 	 * format, etc */
 	switch (format) {
 	case 'H':
+#if 0
 		ln = ld_to_ll(n) & mask;
 		align = calc_align(0);
 		p_printf("%*s", align, puthex(ln));
+#else
+		u = mpd_get_u64(m, ctx);
+		align = calc_align(0);
+		p_printf("%*s", align, puthex((ll_t)u));
+#endif
 		break;
 	case 'O':
-		ln = ld_to_ll(n) & mask;
+		u = mpd_get_u64(m, ctx);
 		align = calc_align(0);
-		p_printf("%*s", align, putoct(ln));
+		p_printf("%*s", align, putoct((ll_t)u));
 		break;
 	case 'B':
-		ln = ld_to_ll(n) & mask;
-		align = calc_align(1);
-		p_printf("%*s", align, putbinary(ln));
+		u = mpd_get_u64(m, ctx);
+		align = calc_align(0);
+		p_printf("%*s", align, putbinary((ll_t)u));
 		break;
 	case 'U':
-		/* convert in two steps, to avoid possibly undefined
-		 * (by the language) negative double to unsigned conversion */
-		ln = ld_to_ll(n) & mask;
-		uln = (unsigned long long)ln;
-		/* for decimal, worst case width is like octal's */
+		u = mpd_get_u64(m, ctx);
 		align = calc_align(0);
-		p_printf("%*s", align, putunsigned(uln));
+		p_printf("%*s", align, putunsigned(u));
 		break;
 	case 'D':
 		ln = ld_to_ll(n);
@@ -2447,6 +2566,7 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 		return;
 	}
 
+	p_printf("%s\n", mark);
 #if NOPE
 	// show_int_truncation(changed, old_n, mark);
 	if (changed)
@@ -2746,13 +2866,13 @@ modefloat(void)
 	return GOODOP;
 }
 
-#if 0
 opreturn
 separators(void)
 {
 	if (!thousands_sep[0] || grouping[0] == CHAR_MAX) {
-		ldouble discard;
-		pop(&discard);
+		mpd_t *discard;
+		mpop(&discard);
+		mpd_del(discard);
 		p_printf(" No separator support in locale, "
 			"numeric separators are disabled\n");
 		digitseparators = 0;
@@ -2765,6 +2885,7 @@ separators(void)
 	return GOODOP;
 }
 
+#if 0
 void
 float_mode_messages(int both)
 {
@@ -2899,6 +3020,8 @@ width(void)
 
 	return GOODOP;
 }
+#endif
+
 
 opreturn
 zerof(void)
@@ -2914,6 +3037,7 @@ rightalign(void)
 		"on", "off");
 }
 
+#if 0
 /* for store/recall */
 ldouble offstack;
 
@@ -2935,14 +3059,16 @@ recall(void)
 	push(offstack);
 	return GOODOP;
 }
+#endif
 
 opreturn
 push_pi(void)
 {
-	push(pi);
+	mpush_copy(pi);
 	return GOODOP;
 }
 
+#if 0
 opreturn
 push_e(void)
 {
@@ -3489,10 +3615,10 @@ tclear(token **tstackp)
 
 	while (t) {
 		nt = t->next;
-		if (t->type == VARIABLE && t->varname)
-			free(t->varname);
-		if (t->type == NUMERIC && t->valstr)
+		if (t->valstr) {
 			free(t->valstr);
+			t->valstr = 0;
+		}
 		free(t);
 		t = nt;
 	}
@@ -3504,13 +3630,13 @@ sprint_token(char *s, size_t slen, token *t)
 {
 	switch (t->type) {
 	case NUMERIC:
-		snprintf(s, slen, "'%.*Lg' '%s'", max_digits, t->val, t->valstr);
+		snprintf(s, slen, "'%s'", t->valstr);
 		break;
 	case SYMBOLIC:
 		snprintf(s, slen, "'%s'", t->oper->name);
 		break;
 	case VARIABLE:
-		snprintf(s, slen, "'%s'", t->varname);
+		snprintf(s, slen, "'%s'", t->valstr);
 		break;
 	case OP:
 		snprintf(s, slen, "'%s'", t->oper->name);
@@ -3736,7 +3862,7 @@ shunting_yard(int command)
 			/* do nothing now.  we need to know what comes
 			 * next:  "r1 = 3" is very different than "r1 + 3" */
 			trace(SHUNT, " delaying classification of %s\n",
-					t->varname);
+					t->valstr);
 			break;
 		case NUMERIC:
 		case SYMBOLIC:
@@ -3946,6 +4072,8 @@ open_paren(void)
 	return shunting_yard(1);
 }
 
+#endif
+
 opreturn
 autop(void)
 {
@@ -3956,13 +4084,16 @@ autop(void)
 opreturn
 tracetoggle(void)
 {
-	ldouble wanttracing;
+	mpd_t *m;
+	uint64_t u;
 
-	if (!pop(&wanttracing))
+	if (!mpop(&m))
 		return BADOP;
 
+	u = mpd_get_u64(m, ctx);
+
 	// tracing is a bitmap of desired "feature" trace
-	tracing = (int)wanttracing;
+	tracing = (int)u;
 
 	p_printf(" internal tracing now set to %d", tracing);
 	for (int i = 0; tracenames[i]; i++) {
@@ -3980,20 +4111,21 @@ rounding(void)
 	return toggler(&do_rounding, "Float snapping/rounding is now",
 		"on", "off");
 }
-#endif
 
 void
 exitret(void)
 {
-	ldouble a = 0;
 	if (!stack)
 		exit(2);  // exit 2 on empty stack
 
-#if 0
-	pop(&a);
-#endif
+	mpd_t *m;
+	uint64_t u;
 
-	exit(a == 0);  // flip exit status, per unix convention
+	mpop(&m);
+
+	u = mpd_get_u64(m, ctx);
+
+	exit(u == 0);  // flip exit status, per unix convention
 
 }
 
@@ -4085,7 +4217,7 @@ dynamic_var(token *t)
 {
 	dynvar *v;
 
-	v = findvar(t->varname);
+	v = findvar(t->valstr);
 	if (!v) {
 		error(" error: out of space for variables\n");
 		return 0;
@@ -4150,30 +4282,34 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 
 	if (*p == '0' && (*(p + 1) == 'x' || *(p + 1) == 'X')) {
 		// hex, leading "0x"
+#if 0
 		long double dd;
 		if (raw_hex_input_ok) {
 			// will accept floating hex like 0xc.90fdaa22168c23cp-2
 			dd = strtold(p, &np);
 		} else {
+#endif
 			// accept simple hex integers only
 			unsigned long long u = strtoull(p, &np, 16);
-			dd = (ldouble)u;
+#if 0
 		}
+#endif
 
 		/* be strict about what comes next */
 		if (isalnum(*np))
 			goto unknown;
 
-		t->val = dd * sign;
-		t->valstr = safe_calloc((size_t)(np - p));
-		strncpy(t->valstr, p, (size_t)(np - p));
 		t->type = NUMERIC;
 		t->imode = 'H';
+		// t->val = u * sign;
+		t->valstr = strndup(p,(size_t)(np - p));
+		t->mpd = mpd_new(ctx);
+		mpd_set_i64(t->mpd, (int64_t)((ll_t)u * sign), ctx);
 
 	} else if (*p == '0' && (*(p + 1) == 'b' || *(p + 1) == 'B')) {
 		// binary, leading "0b"
 		p += 2;
-		unsigned long long ln = strtoull(p, &np, 2);
+		unsigned long long u = strtoull(p, &np, 2);
 
 		/* be strict about what comes next */
 		if (np == p || isalnum(*np))
@@ -4181,14 +4317,15 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 
 		t->type = NUMERIC;
 		t->imode = 'B';
-		t->val = (ldouble)ln * sign;
-		t->valstr = safe_calloc((size_t)(np - p));
-		strncpy(t->valstr, p, (size_t)(np - p));
+		// t->val = (ldouble)u * sign;
+		t->valstr = strndup(p,(size_t)(np -p));
+		t->mpd = mpd_new(ctx);
+		mpd_set_i64(t->mpd, (int64_t)((ll_t)u * sign), ctx);
 
 	} else if (*p == '0' && (*(p + 1) == 'o' || *(p + 1) == 'O')) {
 		// octal, leading "0o"
 		p += 2;
-		unsigned long long ln = strtoull(p, &np, 8);
+		unsigned long long u = strtoull(p, &np, 8);
 
 		/* be strict about what comes next */
 		if (np == p || isalnum(*np))
@@ -4196,13 +4333,16 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 
 		t->type = NUMERIC;
 		t->imode = 'O';
-		t->val = (ldouble)ln * sign;
-		t->valstr = safe_calloc((size_t)(np - p));
-		strncpy(t->valstr, p, (size_t)(np - p));
+		// t->val = (ldouble)u * sign;
+		t->valstr = strndup(p,(size_t)(np -p));
+		t->mpd = mpd_new(ctx);
+		mpd_set_i64(t->mpd, (int64_t)((ll_t)u * sign), ctx);
 
 	} else if (isdigit(*p) || match_dp(p)) {
 		// decimal
-		long double dd = strtold(p, &np);
+		// long double dd = strtold(p, &np);
+
+		(void)strtold(p, &np);
 
 		/* don't be strict about what comes next.  mistakes are
 		 * less likely when entering decimal. this makes 3k or 18w
@@ -4210,16 +4350,20 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 		if (p == np)
 			goto unknown;
 
+		if (sign < 0)
+			p--;    // cover your eyes.  really.
+
 		t->type = NUMERIC;
 		t->imode = 'D';
-		t->val = dd * sign;
-		t->valstr = safe_calloc((size_t)(np - p));
-		strncpy(t->valstr, p, (size_t)(np - p));
+		// t->val = dd * sign;
+		t->valstr = strndup(p,(size_t)(np -p));
+		t->mpd = mpd_new(ctx);
+		mpd_set_string(t->mpd, t->valstr, ctx);
 	} else if (*p == '_' && isalnum(*(p+1))) {
 		// variable
 		n = stralnum(p, &np);
 		t->type = VARIABLE;
-		t->varname = strndup(p,n);
+		t->valstr = strndup(p,n);
 	} else {
 
 	    is_oper:
@@ -4569,7 +4713,6 @@ read_token(token *t, int parsing_rpn)
 /* the opers[] and config[] tables don't initialize everything explicitly */
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 
-#if 0
 
 #define c_int 0
 #define c_chr 1
@@ -4695,6 +4838,7 @@ config(void)
 	return GOODOP;
 }
 
+#if 0
 /* useful for resetting width from debugger, to generate the
  * (narrower) man page copy of the precedence table. */
 size_t precedence_width = 68;
@@ -5032,12 +5176,12 @@ struct oper opers[] = {
 //        |    |                |  |  |         (# of operands and precedence
 //        V    V                V  V  V           are used only by infix code)
 	{"+", add,		0, 2, 24 },
-#if 0
 	{"-", subtract,		"Add and subtract x and y", 2, 24 },
 	{"*", multiply,		0, 2, 26 },
 	{"x", multiply,		"Multiply x and y", 2, 26 },
-	{"/", divide,		0, 2, 26 },
-	{"%", modulo,		"Divide and modulo of y by x", 2, 26 },
+	{"/", divide,		"Divide y by x", 2, 26 },
+#if 0
+	{"%", modulo,		"Modulo of y by x", 2, 26 },
 	{"^", y_to_the_x,	0, 2, 28, 'R'},
 	{"**", y_to_the_x,	"Raise y to the x'th power", 2, 28, 'R'},
 	{">>", rshift,		0, 2, 22 },
@@ -5108,10 +5252,12 @@ struct oper opers[] = {
     {"Constants and storage:"},
 	{"sto", store,		0, 0 },
 	{"rcl", recall,		"Save to or push from off-stack storage", Sym },
-	{"pi", push_pi,		0, Sym },
 	{"e", push_e,		"Push constant pi or e", Sym },
+#endif
+	{"pi", push_pi,		0, Sym },
 	{"lastx", repush,	0, Sym },
 	{"lx", repush,		"Push previous value of x", Sym },
+#if 0
 	{"_<name>", nop,	"Push variable" },  // function unused
 	{"=", assignment,	"Assign variable.  RPN: \"3 = _v\"   infix: \"(_v = 3)\"", 2, 6 },
 	{"variables", showvars, 0 },
@@ -5161,6 +5307,7 @@ struct oper opers[] = {
 	{"eng", engineering,	"Select engineering style floating display format", Auto },
 	{"fixed", fixedpoint,	"Select fixed decimal floating display format", Auto },
 	{"digits", digits,	"Number of digits for floating formats", Auto },
+#endif
 	{""},
     {"Modes:"},
 	{"F", modefloat,	0 },
@@ -5168,8 +5315,10 @@ struct oper opers[] = {
 	{"H", modehex,		0 },
 	{"O", modeoct,		0 },
 	{"B", modebin,		"Switch to floating, decimal, hex, octal, binary mode" },
+#if 0
 	{"width", width,	0, Auto },
 	{"bits", width,		"Set effective word size for integer modes", Auto },
+#endif
 	{"zerofill", zerof,	0, Auto },
 	{"zf", zerof,		"Toggle left-fill with zeros in H, O, and B modes", Auto },
 	{"rightalign", rightalign, 0, Auto },
@@ -5183,30 +5332,35 @@ struct oper opers[] = {
 	{"infix", infixmode,	"Toggle running mainly in infix, or in rpn" },
 	{""},
     {"Debug support:", 0, 0, 0, 0, 'D'}, // hidden until "1 debug"
+#if 0
 	{"raw", printrawhex,	"Print x as raw floating hex", 0, 0, 'D'},
 	{"Raw", moderawhex,	"Switch to raw floating hex mode", 0, 0, 'D'},
 	{"epsilon", push_epsilon,"Push constant epsilon", Sym, 0, 'D'},
 	{"tweak", tweakit,	"Push snapped/rounded value", 1, 30, 'D'},
 	{"rounding", rounding,	"Toggle snapping and rounding of floats", 0, 0, 'D'},
-	{"tracing", tracetoggle,"Set tracing level", 0, 0, 'D'},
-	{"commands", commands,	"Show raw command table", 0, 0, 'D'},
-	{"", 0, 0, 0, 0, 'D'},
 #endif
+	{"tracing", tracetoggle,"Set tracing level", 0, 0, 'D'},
+#if 0
+	{"commands", commands,	"Show raw command table", 0, 0, 'D'},
+#endif
+	{"", 0, 0, 0, 0, 'D'},
     {"Housekeeping:"},
 	{"?", help,		0 },
 	{"help", help,		"Show this list (using $PAGER, if set)" },
-#if 0
 	{"config", config,	"Show current configuration settings" },
+#if 0
 	{"state", printstate,	"Show calculator state"},
 	{"precedence", precedence, "List infix operator precedence" },
-	{"quit", quit,		0 },
 #endif
+	{"quit", quit,		0 },
 	{"q", quit,		0 },
 	{"exit", quit,		"Leave the calculator" },
 #if 0
 	{"echo", enable_echo,	"Toggle echoing input when stdin is a file or pipe" },
 	{"errorexit", enable_errexit,	"Toggle exiting on error and warning" },
+#endif
 	{"debug", debug,	"Toggle presence of debug commands" },
+#if 0
 	{"license", license,	"Display the rca copyright and license." },
 #endif
 	{"version", version,	"Show program version" },
@@ -5262,8 +5416,7 @@ main(int argc, char *argv[])
 	token *t = &tok;	// permanent pointers to tok and prevtok
 	token *pt = &prevtok;
 
-	mpd_init(&context, 20);
-	context.traps = 0;
+	mpd_stuff();
 
 	pt->type = UNKNOWN;
 
@@ -5328,15 +5481,21 @@ main(int argc, char *argv[])
 		switch (t->type) {
 		case NUMERIC:
 			trace(EXEC,  " numeric %Lg %s\n", t->val, t->valstr);
-			spush(t->val, t->valstr);
-			if (t->valstr) free(t->valstr);
+			mpush(t->mpd);
+			if (t->valstr) {
+				free(t->valstr);
+				t->valstr = 0;
+			}
 			break;
 		case VARIABLE:
-			trace(EXEC, " variable %s\n", t->varname);
+			trace(EXEC, " variable %s\n", t->valstr);
 #if 0
 			dynamic_var(t);
 #endif
-			free(t->varname);
+			if (t->valstr) {
+				free(t->valstr);
+				t->valstr = 0;
+			}
 			break;
 		case SYMBOLIC:
 		case OP:
