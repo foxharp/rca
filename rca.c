@@ -212,11 +212,6 @@ void p_printf(const char *fmt, ...);
  * grouping information, we will decorate numbers, like "1,333,444" */
 boolean digitseparators = 1;
 
-/* this was initially used in controlling floating point error, and to
- * calculate the maximum displayed precision, but now it's simply
- * available as a symbolic constant, for use in tests, mainly.  */
-long double epsilon = LDBL_EPSILON;
-
 /* float_digits may represent either the total displayed precision, or
  * the number of digits after the decimal, depending on float_specifier.
  * it will be capped at max_digits.  */
@@ -351,22 +346,6 @@ error(const char *fmt, ...)
 	if (exit_on_error)
 		exit(4);
 }
-
-#ifdef CORRECT_BUT_UNNECESSARY
-/* epsilon and max_digits now come from float.h constants */
-void
-detect_epsilon(void)
-{
-	epsilon = 1.0L;
-
-	while ((1.0L + epsilon / 2.0L) > 1.0L)
-		epsilon /= 2.0L;
-
-	// round up to significant digit
-	max_digits = (int)(-log10l(epsilon)); // 18 for 64-bit mantissa
-}
-#endif
-
 
 /* snap to integer, if close enough */
 ldouble
@@ -2887,13 +2866,6 @@ push_e(void)
 }
 
 opreturn
-push_epsilon(void)
-{
-	push(epsilon);
-	return GOODOP;
-}
-
-opreturn
 tweakit(void)
 {
 	ldouble a;
@@ -5096,7 +5068,6 @@ struct oper opers[] = {
     {"Debug support:", 0, 0, 0, 0, 'D'}, // hidden until "1 debug"
 	{"raw", printrawhex,	"Print x as raw floating hex", 0, 0, 'D'},
 	{"Raw", moderawhex,	"Switch to raw floating hex mode", 0, 0, 'D'},
-	{"epsilon", push_epsilon,"Push constant epsilon", Sym, 0, 'D'},
 	{"tweak", tweakit,	"Push snapped/rounded value", 1, 30, 'D'},
 	{"rounding", rounding,	"Toggle snapping and rounding of floats", 0, 0, 'D'},
 	{"tracing", tracetoggle,"Set tracing level", 0, 0, 'D'},

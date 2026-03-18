@@ -4,14 +4,6 @@
 # q2l, l2q, xor, clearb, setb, precision, separators, e, pi
 # RPN expressions used where convenient.  Infix-only tests are wrapped in ( ... ).
 
-1 debug
- Debug commands enabled
-epsilon 10 * = _10eps
-                               1.0842e-18
-epsilon 100 * = _100eps
-                               1.0842e-17
-epsilon 1000 * = _1000eps
-                               1.0842e-16
 clear
 
 0 rightalign
@@ -117,37 +109,6 @@ e 5 ln ^ 5 ==
  1
 
 # =============================
-# Very tiny differences — should be absorbed
-# =============================
-
-1 epsilon + 1 ==
- 1
-
-1 epsilon chs + 1 ==
- 1
-
-1 _10eps + 1 ==
- 1
-
-1 _10eps chs + 1 ==
- 0
-
-1 _10eps + _10eps + 1 ==
- 1
-
-1 _100eps + 1 ==
- 0
-
-1 _1000eps + 1 ==
- 0
-
-10 _1000eps + 10 ==
- 0
-
-10 1e-15 + 10 ==
- 0
-
-# =============================
 # Do NOT over-canonicalize — these must remain distinct
 # =============================
 
@@ -219,17 +180,6 @@ automatic
 
 0.1 0.2 + negate -0.3 ==
  1
-
-_1000eps chs 0 ==
- 0
-
-_100eps chs 0 ==
- 0
-
-_10eps chs 0 ==
- 0
-_10eps tweak chs 0 ==
- 0
 
 # =============================
 # Stress loop (clear, simple round-trip)
