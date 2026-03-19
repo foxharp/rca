@@ -5410,12 +5410,10 @@ struct oper opers[] = {
     {"Unit conversions (one operand):"},
 	{"i2mm", units_in_mm,	0, 1, 30, 'R' },
 	{"mm2i", units_mm_in,	"inches / millimeters", 1, 30, 'R' },
-#if 0
 	{"ft2m", units_ft_m,	0, 1, 30, 'R' },
 	{"m2ft", units_m_ft,	"feet / meters", 1, 30, 'R' },
 	{"mi2km", units_mi_km,	0, 1, 30, 'R' },
 	{"km2mi", units_km_mi,	"miles / kilometers", 1, 30, 'R' },
-#endif
 	{"f2c", units_F_C,	0, 1, 30, 'R' },
 	{"c2f", units_C_F,	"degrees F/C", 1, 30, 'R' },
 	{"oz2g", units_oz_g,	0, 1, 30, 'R' },
