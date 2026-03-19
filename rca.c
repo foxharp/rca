@@ -3399,10 +3399,10 @@ units_mm_in(void)
 #endif
 }
 
-#if 0
 opreturn
 units_ft_m(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -3412,11 +3412,15 @@ units_ft_m(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	return unit_worker(DIV, "3.28084", 0);
+#endif
 }
 
 opreturn
 units_m_ft(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -3426,8 +3430,10 @@ units_m_ft(void)
 		return GOODOP;
 	}
 	return BADOP;
-}
+#else
+	return unit_worker(MUL, "3.28084", 0);
 #endif
+}
 
 opreturn
 units_F_C(void)
@@ -3467,10 +3473,10 @@ units_C_F(void)
 #endif
 }
 
-#if 0
 opreturn
 units_l_qt(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -3480,11 +3486,15 @@ units_l_qt(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	return unit_worker(MUL, "1.05669", 0);
+#endif
 }
 
 opreturn
 units_qt_l(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -3494,11 +3504,15 @@ units_qt_l(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	return unit_worker(DIV, "1.05669", 0);
+#endif
 }
 
 opreturn
 units_oz_g(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -3508,11 +3522,15 @@ units_oz_g(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	return unit_worker(MUL, "28.3495", 0);
+#endif
 }
 
 opreturn
 units_g_oz(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -3522,11 +3540,15 @@ units_g_oz(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	return unit_worker(DIV, "28.3495", 0);
+#endif
 }
 
 opreturn
 units_oz_ml(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -3536,11 +3558,15 @@ units_oz_ml(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	return unit_worker(MUL, "29.5735", 0);
+#endif
 }
 
 opreturn
 units_ml_oz(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -3550,11 +3576,15 @@ units_ml_oz(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	return unit_worker(DIV, "29.5735", 0);
+#endif
 }
 
 opreturn
 units_mi_km(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -3564,11 +3594,15 @@ units_mi_km(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	return unit_worker(MUL, "1.609344", 0);
+#endif
 }
 
 opreturn
 units_km_mi(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -3578,8 +3612,12 @@ units_km_mi(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	return unit_worker(DIV, "1.609344", 0);
+#endif
 }
 
+#if 0
 opreturn
 units_deg_rad(void)
 {
@@ -3681,6 +3719,9 @@ units_dms_dd(void)
 	}
 	return BADOP;
 }
+#endif
+
+#if 0
 
 token *out_stack, *oper_stack, *infix_rpn_queue;
 
@@ -5377,13 +5418,13 @@ struct oper opers[] = {
 #endif
 	{"f2c", units_F_C,	0, 1, 30, 'R' },
 	{"c2f", units_C_F,	"degrees F/C", 1, 30, 'R' },
-#if 0
 	{"oz2g", units_oz_g,	0, 1, 30, 'R' },
 	{"g2oz", units_g_oz,	"US ounces / grams", 1, 30, 'R' },
 	{"oz2ml", units_oz_ml,	0, 1, 30, 'R' },
 	{"ml2oz", units_ml_oz,	"US fluid ounces / milliliters", 1, 30, 'R' },
 	{"q2l", units_qt_l,	0, 1, 30, 'R' },
 	{"l2q", units_l_qt,	"US quarts / liters", 1, 30, 'R' },
+#if 0
 	{"d2r", units_deg_rad,	0, 1, 30, 'R' },
 	{"r2d", units_rad_deg,	"degrees / radians", 1, 30, 'R' },
 	{"dd2dms", units_dd_dms, 0, 1, 30, 'R' },
