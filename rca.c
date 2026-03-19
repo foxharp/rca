@@ -121,8 +121,7 @@ char **g_argv;
 char *pi_val = "3.1415926535897932384626433832795028841971693993751"
 	       "058209749445923078164062862089986280348253421170679";
 
-ldouble e_val =  2.718281828459045235360287471352662497L;
-mpd_t *pi, *e;
+mpd_t *pi, *e, *one, *zero;
 
 /* internal representation of operands on the stack.  numbers are always
  * stored as long doubles, even when we're in integer mode.  this could
@@ -231,7 +230,8 @@ long double epsilon = LDBL_EPSILON;
 /* float_digits may represent either the total displayed precision, or
  * the number of digits after the decimal, depending on float_specifier.
  * it will be capped at max_digits.  */
-int max_digits = LDBL_DIG;
+#define DIGITS 20
+int max_digits = DIGITS;
 int float_digits = 6;
 char *float_specifier = "automatic"; // or "engineering" or "fixed decimal"
 /* NB:  If we save/restore externally, values should be written using
@@ -277,11 +277,9 @@ char *locale_modified = "";  // indicates if we've changed the locale info
  * floating hex output (with "raw" or "Raw") */
 boolean raw_hex_input_ok;
 
-/* if true, perform snapping and rounding of float values */
-boolean do_rounding = 1;
-
 /* the most recent top-of-stack */
 mpd_t *lastx;
+mpd_t *frozen_lastx;
 
 /* counting state variable, which allows variables to be read/write */
 int variable_write_enable;
@@ -298,17 +296,38 @@ void putback_token(token *t);
 void
 mpd_stuff(void)
 {
-	mpd_init(&context, 20);
+	mpd_init(&context, DIGITS);
 	context.traps = 0;
+
+	one = mpd_new(ctx);
+	mpd_set_i64(one, 1, ctx);
+
+	zero = mpd_new(ctx);
+	mpd_set_i64(zero, 0, ctx);
+
+	lastx = mpd_new(ctx);
+	mpd_copy(lastx, zero, ctx);
+
+	frozen_lastx = mpd_new(ctx);
+	mpd_copy(frozen_lastx, zero, ctx);
+
+	e = mpd_new(ctx);
+	mpd_exp(e, one, ctx);
+
 	pi = mpd_new(ctx);
 	mpd_set_string(pi, pi_val, ctx);
+
 }
+
+void trace_mpd(int level, char *msg, const mpd_t *t);
 
 void
 mpd_free_before_copy(mpd_t **resultp, const mpd_t *a, mpd_context_t *ctx)
 {
 	// if (resultp) mpd_del(*resultp);
-	if (!resultp) mpd_new(ctx);
+	if (!*resultp) *resultp = mpd_new(ctx);
+	trace_mpd(EXEC, "got new", *resultp);
+	trace_mpd(EXEC, "copying", a);
 	mpd_copy(*resultp, a, ctx);
 }
 
@@ -316,10 +335,17 @@ void
 mpd_free_before_move(mpd_t **resultp, mpd_t *a, mpd_context_t *ctx)
 {
 	(void)ctx;
+	trace_mpd(EXEC, "freed", *resultp);
+	trace_mpd(EXEC, "moving", a);
 	if (*resultp) mpd_del(*resultp);
 	*resultp = a;
 }
 
+void
+set_lastx(mpd_t *a)
+{
+	mpd_free_before_copy(&lastx, a, ctx);
+}
 
 long long
 ld_to_ll(long double n)
@@ -374,6 +400,17 @@ trace(int level, const char *fmt, ...)
 }
 
 void
+trace_mpd(int level, char *msg, const mpd_t *t)
+{
+	if ((tracing & level) == 0)
+		return;
+	fprintf(stderr, "%s: (%p)", msg, (void*)t);
+	mpd_fprint(stderr, t);
+	fprintf(stderr, "\n");
+}
+
+
+void
 error(const char *fmt, ...)
 {
 	fflush(stdout);
@@ -385,97 +422,6 @@ error(const char *fmt, ...)
 
 	if (exit_on_error)
 		exit(4);
-}
-
-#ifdef CORRECT_BUT_UNNECESSARY
-/* epsilon and max_digits now come from float.h constants */
-void
-detect_epsilon(void)
-{
-	epsilon = 1.0L;
-
-	while ((1.0L + epsilon / 2.0L) > 1.0L)
-		epsilon /= 2.0L;
-
-	// round up to significant digit
-	max_digits = (int)(-log10l(epsilon)); // 18 for 64-bit mantissa
-}
-#endif
-
-
-long double
-snap_integer(long double x)
-{
-	static long double min_tol;
-	if (min_tol == 0)
-		min_tol = powl(10.0L, -max_digits);
-
-	if (!isfinite(x))
-		return x;
-
-	/* "unit in the last place" is the distance between
-	 * representable floats at at the magnitude of x.  we use this
-	 * to choose the "snapping region" (tolerance) when deciding
-	 * to turn x into the closest integer */
-	long double ulp = fabsl(x - nextafterl(x, INFINITY));
-
-	long double r = roundl(x);
-	trace(EXEC, "     snap %.*Lg to %.*Lg ?\n", max_digits, x, max_digits, r);
-
-	long double tol = (2.0L*ulp > min_tol) ? (2.0L*ulp) : min_tol;
-
-	trace(EXEC, "     min_tol is %.*Lg\n", max_digits, min_tol);
-	trace(EXEC, "     tol is %.*Lg\n", max_digits, tol);
-
-	/* is the closest integer within tolerance ? */
-	if (fabsl(x - r) <= tol)
-		return r;
-
-	return x;
-}
-
-/* try and take care of small floating point detritus, by snapping
- * numbers that are very close to integers, and by rounding to our max
- * precision.
- */
-ldouble
-tweak(ldouble x)
-{
-	char buf[TEMP_BUFSIZE];
-	trace(TWEAK, " tweaking got %.*Lg (%La) ...\n", max_digits, x, x);
-
-	if (!do_rounding || x == 0.0L || !isfinite(x))
-		return x;
-
-	ldouble s = snap_integer(x);
-	if (x != s) {
-		trace(TWEAK, "     snapped to %.*Lg (%La)\n", max_digits, s, s);
-		return s;
-	}
-
-	/* use printf to round to max_digits significant digits.
-	 * it's as good as any other method, and we don't particularly
-	 * care about speed.  */
-	snprintf(buf, sizeof(buf), "%.*Lg", max_digits, x);
-	trace(TWEAK, "     rounding buf is %s\n", buf);
-
-	ldouble rx = strtold(buf, NULL);
-	if (rx != x)
-		trace(TWEAK, "     rounded to %.*Lg (%La)\n", max_digits, rx, rx);
-	return rx;
-}
-
-/* we snap/round a) any display of a float value, and b) the operands
- * of any comparison between floats.  cmp_tweak() differs from tweak()
- * only because we don't want tracing every time we display a number.
- * */
-ldouble
-cmp_tweak(ldouble x)
-{
-	trace(TWEAK, " cmp_tweak got %.*Lg (%La) ...\n", max_digits, x, x);
-	x = tweak(x);
-	trace(TWEAK, "     cmp_tweak returned %.*Lg (%La)\n", max_digits, x, x);
-	return(x);
 }
 
 /* in integer mode, a) long longs might be a different size than
@@ -504,12 +450,11 @@ mpush(mpd_t *a )
 
 	p = (struct num *)safe_calloc(sizeof(struct num));
 	p->mpd = a;
-	if (tracing & EXEC)
-		mpd_fprint(stderr, a);
-
+	if (a == lastx) abort();
 	p->next = stack;
 	stack = p;
 	stack_count++;
+	trace_mpd(EXEC, "mpushed", a);
 }
 
 void
@@ -554,8 +499,7 @@ mpeek(mpd_t **f)
 	if (!stack)
 		return FALSE;
 
-	(void)f;
-	// mpd_copy(*f, stack->mpd, ctx);
+	*f = stack->mpd;
 
 	return TRUE;
 }
@@ -570,14 +514,16 @@ peek(ldouble *f)
 	return TRUE;
 }
 
+#if 0
 boolean
-xxxpop(ldouble *f)
+pop(ldouble *f)
 {
 	(void) f;
 	// struct num *p;
     fprintf(stderr, "empty pop() called!\n");
     return 0;
 }
+#endif
 
 boolean
 mpop(mpd_t **a)
@@ -590,9 +536,7 @@ mpop(mpd_t **a)
 	}
 	*a = p->mpd;
 	stack = p->next;
-	char *s = mpd_to_sci(p->mpd, 0);
-	trace(EXEC, " popped %s\n", s);
-	free(s);
+	trace_mpd(EXEC, " popped", p->mpd);
 	free(p);
 	stack_count--;
 
@@ -662,7 +606,6 @@ debug(void)
 		"enabled", "disabled");
 }
 
-#if 0
 opreturn
 assignment(void)
 {
@@ -674,7 +617,6 @@ assignment(void)
 	return GOODOP;
 }
 
-#endif
 boolean
 are_finite(ldouble a, ldouble b)
 {
@@ -839,7 +781,8 @@ divide(void)
 
 	mpd_div(a, a, b, ctx);
 	mpush(a);
-	mpd_free_before_move(&lastx, b, ctx);
+	mpd_free_before_copy(&lastx, b, ctx);
+	mpd_del(b);
 
 	return GOODOP;
 #endif
@@ -880,10 +823,12 @@ int_pow(long long base, long long exp)
 	}
 	return result;
 }
+#endif
 
 opreturn
 y_to_the_x(void)
 {
+#if 0
 	ldouble a, b;
 
 	if (pop(&b)) {
@@ -900,11 +845,30 @@ y_to_the_x(void)
 		push(b);
 	}
 	return BADOP;
+#else
+	mpd_t *a, *b;
+
+	if (!mpop(&b)) {
+		return BADOP;
+	}
+	if (!mpop(&a)) {
+		mpush(b);
+		return BADOP;
+	}
+
+	mpd_pow(a, a, b, ctx);
+	mpush(a);
+	mpd_free_before_move(&lastx, b, ctx);
+
+	return GOODOP;
+
+#endif
 }
 
 opreturn
 e_to_the_x(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -913,8 +877,21 @@ e_to_the_x(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	mpd_t *a;
+	if (!mpop(&a))
+		return BADOP;
+
+	set_lastx(a);
+	mpd_exp(a, a, ctx);
+
+	mpush(a);
+
+	return GOODOP;
+#endif
 }
 
+#if 0
 /* This is poorly named.  The goal it to report whether the two
  * arguments are both finite (i.e., useful), and if not, to propagate
  * the nan, or inf, in that order, as the final result of the operation.  */
@@ -1274,6 +1251,7 @@ bitwise_not(void)
 	}
 	return BADOP;
 }
+#endif
 
 #if 0
 /*
@@ -1322,6 +1300,7 @@ bitcount(void)
 opreturn
 chsign(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -1330,7 +1309,19 @@ chsign(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	mpd_t *a;
+	if (!mpop(&a))
+		return BADOP;
+
+	set_lastx(a);
+	mpd_copy_negate(a, a, ctx);
+	mpush(a);
+
+	return GOODOP;
+#endif
 }
+
 
 opreturn
 nop(void)
@@ -1347,6 +1338,7 @@ rpnswitch(void)
 opreturn
 absolute(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -1355,23 +1347,38 @@ absolute(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	mpd_t *a;
+	if (!mpop(&a))
+		return BADOP;
+
+	set_lastx(a);
+	mpd_copy_abs(a, a, ctx);
+	mpush(a);
+
+	return GOODOP;
+
+#endif
 }
 
 opreturn
 recip(void)
 {
-	ldouble a;
+	mpd_t *a;
 
-	if (pop(&a)) {
-		push(1.0 / a);
-		return GOODOP;
-	}
-	return BADOP;
+	if (!mpop(&a))
+		return BADOP;
+
+	set_lastx(a);
+	mpd_div(a, one, a, ctx);
+	mpush(a);
+	return GOODOP;
 }
 
 opreturn
 squarert(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -1379,8 +1386,22 @@ squarert(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	mpd_t *a;
+	if (!mpop(&a))
+		return BADOP;
+
+	set_lastx(a);
+	mpd_sqrt(a, a, ctx);
+
+	mpush(a);
+
+	return GOODOP;
+
+#endif
 }
 
+#if 0
 opreturn
 trig_no_sense(void)
 {
@@ -1577,28 +1598,63 @@ log_worker(int which)
 	}
 	return BADOP;
 }
-
-opreturn
-log_natural(void)
-{
-	return log_worker(0);
-}
+#endif
 
 opreturn
 log_base2(void)
 {
-	return log_worker(2);
+	mpd_t *a;
+	static mpd_t *ln2;
+
+	if (!ln2) {
+		ln2 = mpd_new(ctx);
+		mpd_add(ln2, one, one, ctx);
+		mpd_ln(ln2, ln2, ctx);
+	}
+
+	if (!mpop(&a))
+		return BADOP;
+
+	set_lastx(a);
+	mpd_ln(a, a, ctx);
+	mpd_div(a, a, ln2, ctx);
+	mpush(a);
+
+	return GOODOP;
+}
+
+opreturn
+log_natural(void)
+{
+	mpd_t *a;
+	if (!mpop(&a))
+		return BADOP;
+
+	set_lastx(a);
+	mpd_ln(a, a, ctx);
+	mpush(a);
+
+	return GOODOP;
 }
 
 opreturn
 log_base10(void)
 {
-	return log_worker(10);
+	mpd_t *a;
+	if (!mpop(&a))
+		return BADOP;
+
+	set_lastx(a);
+	mpd_log10(a, a, ctx);
+	mpush(a);
+
+	return GOODOP;
 }
 
 opreturn
 fraction(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -1614,11 +1670,27 @@ fraction(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	mpd_t *a, *t;
+	if (!mpop(&a))
+		return BADOP;
+
+	t = mpd_new(ctx);
+
+	set_lastx(a);
+	mpd_trunc(t, a, ctx);
+	mpd_sub(a, a, t, ctx);
+	mpush(a);
+	mpd_del(t);
+
+	return GOODOP;
+#endif
 }
 
 opreturn
 integer(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -1634,8 +1706,20 @@ integer(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	mpd_t *a;
+	if (!mpop(&a))
+		return BADOP;
+
+	set_lastx(a);
+	mpd_trunc(a, a, ctx);
+	mpush(a);
+
+	return GOODOP;
+#endif
 }
 
+#if 0
 opreturn
 logical_and(void)
 {
@@ -1798,31 +1882,33 @@ clear(void)
 	return GOODOP;
 }
 
-#if 0
 opreturn
 rolldown(void)			// aka "pop"
 {
-	pop(&lastx);
+	mpd_t *b;
+	if (!mpop(&b))
+		return BADOP;
+	mpd_free_before_move(&lastx, b, ctx);
 	return GOODOP;
 }
 
 opreturn
 enter(void)
 {
-	ldouble a;
+	mpd_t *a;
 
-	if (pop(&a)) {
-		push(a);
-		push(a);
+	if (mpop(&a)) {
+		mpush(a);
+		mpd_t *n = mpd_new(ctx);
+		mpd_copy(n, a, ctx);
+		mpush(n);
 		return GOODOP;
 	}
 	return BADOP;
 }
-#endif
 
 // during an infix evaluation, lastx needs to kept at its pre-infix value.
 boolean lastx_is_frozen = 0;
-mpd_t *frozen_lastx;
 
 void
 freeze_lastx(void)
@@ -1860,34 +1946,29 @@ thaw_lastx(void)
 opreturn
 repush(void)			// aka "lastx"
 {
-	mpd_t *t = mpd_new(ctx);
 	if (lastx_is_frozen)
-		mpd_copy(t, frozen_lastx, ctx);
+		mpush_copy(frozen_lastx);
 	else
-		mpd_copy(t, lastx, ctx);
-	mpush(t);
+		mpush_copy(lastx);
+
 	return GOODOP;
 }
-
-#if 0
 
 opreturn
 exchange(void)
 {
-	ldouble a, b;
+	mpd_t *a, *b;
 
-	if (pop(&b)) {
-		if (pop(&a)) {
-			push(b);
-			push(a);
+	if (mpop(&b)) {
+		if (mpop(&a)) {
+			mpush(b);
+			mpush(a);
 			return GOODOP;
 		}
-		push(b);
+		mpush(b);
 	}
 	return BADOP;
 }
-
-#endif
 
 
 /* descriptor for an open_memstream() FILE pointer */
@@ -2337,9 +2418,41 @@ convert_eng_format(char *buf)
 	return 1;
 }
 
-char *
-print_floating(mpd_t *m, int format)
+void
+zero_pad_exponent(char *s)
 {
+	char *e = strchr(s, 'e');
+
+	if (!e) e = strchr(s, 'E');
+	if (!e) return;
+
+	char *p = e + 1;
+
+	/* optional sign */
+	if (*p == '+' || *p == '-')
+		p++;
+
+	/* count digits */
+	char *digits = p;
+	size_t len = 0;
+
+	while (isdigit((unsigned char)*p)) {
+		len++;
+		p++;
+	}
+
+	if (len >= 2)
+		return;
+
+	/* shift right to make room for leading zero */
+	memmove(digits + 1, digits, len + 1);
+	digits[0] = '0';
+}
+
+char *
+print_floating(mpd_t *m)
+{
+	char fmt[30];
 	char buf[TEMP_BUFSIZE];
 
 	m_file_start();
@@ -2349,97 +2462,52 @@ print_floating(mpd_t *m, int format)
 		char *s = mpd_to_sci(m, 0);
 		fprintf(mp.fp, "%s", s);
 		free(s);
+	} else if (float_specifier[0] == 'a') { // 'a'uto
+		// first construct the format string
+		snprintf(fmt, sizeof fmt, ".%dg",
+			(float_digits < 1) ? 1 : float_digits);
 
-	} else
-#if 0
-	if (format == 'R') {
-
-		raw_hex_input_ok = TRUE;
-
-		/* NB:  This printing format is accurate and exact,
-		 * but there can be at least 4 different normalizations
-		 * (combinations of first digit and exponent) that all
-		 * represent the same number.  What is printed may
-		 * vary from machine to machine because printf may
-		 * canonicalize the mantissa differently.  */
-
-		// 1 digit per 4 bits, and 1 of them is before the decimal
-		fprintf(mp.fp, "%.*La", (LDBL_MANT_DIG + 3)/4 - 1, n);
-
-	} else
-#endif
-	if (format == 'F' && float_specifier[0] == 'a') { // 'a'uto
-
-		// int fdigs = (float_digits < 1) ? 1 : float_digits;
-
-		// simple:  "auto" uses %g directly
-		char *s = mpd_to_sci(m, 0);
-		// snprintf(buf, sizeof(buf), "%.*Lg", fdigs, s);
+		// use it to get fixed notation
+		char *s = mpd_format(m, fmt, ctx);
 		snprintf(buf, sizeof(buf), "%s", s);
 		free(s);
+
+		zero_pad_exponent(buf);
 		add_digit_grouping(buf);
 		fputs(buf, mp.fp);
 
-	}
-#if 0
-	else if (format == 'F' && float_specifier[0] == 'f') { // 'f'ixed
+	} else if (float_specifier[0] == 'f') { // 'f'ixed
 
-		int decimals, leadingdigits = 0;
-		char *p;
+		// first construct the format string
+		snprintf(fmt, sizeof fmt, ".%df", float_digits);
 
-		/* The goal is to reduce the number of non-significant
-		 * digits shown.  If decimals is set to 6, then 123e12
-		 * would show "123,000,000,000,000.000000" which is
-		 * showing more than max_digits significant digits.  As
-		 * long as some of the excess digits are beyond the
-		 * decimal point, we can trim some from that end.  So the
-		 * code below gives us "123,000,000,000,000.000".  But that
-		 * only works for a while.  If the number gets 1e6 times
-		 * bigger, then we have this: "123,000,000,000,000,000,000",
-		 * and we're back to showing more than we should.  (At that
-		 * point the user should be switching to %g mode.)
-		 */
-		snprintf(buf, sizeof(buf), "%.*Lf", float_digits, n);
+		// use it to get fixed notation
+		char *s = mpd_format(m, fmt, ctx);
+		snprintf(buf, sizeof(buf), "%s", s);
+		free(s);
 
-		for (p = buf; *p && !match_dp(p); p++) {
-			if (isdigit(*p))
-				leadingdigits++;
-		}
-
-		// in "0.34", the 0 doesn't count toward significant digits
-		if (leadingdigits == 1 && *buf == '0')
-			leadingdigits = 0;
-
-		if (p) { /* found a decimal point */
-			decimals = min(float_digits, max_digits - leadingdigits);
-			if (decimals <= 0) decimals = 0;
-
-			snprintf(buf, sizeof(buf), "%.*Lf", decimals, n);
-		}
 		add_digit_grouping(buf);
 		fputs(buf, mp.fp);
 
-	} else if (format == 'F' && float_specifier[0] == 'e') { // "eng"
+	} else if (float_specifier[0] == 'e') { // "eng"
 
+		// first construct the format string
 		int fdigs = (float_digits < 3) ? 3 : float_digits;
+		snprintf(fmt, sizeof fmt, ".%de", fdigs - 1);
 
-		/* %e format is easy to dissect, so we start there.
-		 * our float_digits is a count of all the digits.  but
-		 * the %e "precision" value is just the number of
-		 * decimals.  there's exactly one non-fraction digit,
-		 * so subtract 1 to specify the %e fraction length */
-		snprintf(buf, sizeof(buf), "%.*Le", fdigs-1, n);
+		// use it to get scientific notation
+		char *s = mpd_format(m, fmt, ctx);
+		snprintf(buf, sizeof(buf), "%s", s);
+		free(s);
 
-		/* Do text manipulation to renormalize.  */
+		// convert it to engineering format
 		if (!convert_eng_format(buf)) {
 			error(" BUG: parse error in engineering format\n");
 		} else {
 			add_digit_grouping(buf);
 			fputs(buf, mp.fp);
 		}
-
 	}
-#endif
 
 	m_file_finish();
 
@@ -2475,6 +2543,7 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 	long long mask = int_mask;
 	int align;
 	boolean changed;
+	trace_mpd(EXEC, "in print_n", m);
 
 	if (!mark) mark = "";
 
@@ -2482,7 +2551,8 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 
 	if (floating_mode(format) || !isfinite(n)) {
 		char *pf;
-		pf = print_floating(m, format);
+
+		pf = print_floating(m);
 		align = 0;
 		if (rightalignment) {
 			char *eos, *dp;
@@ -2708,8 +2778,6 @@ printstate(void)
 	p_printf("  - when in floating mode,");
 	p_printf(" display is \"%s\", with %d digits\n",
 		float_specifier, float_digits );
-	if (!do_rounding)
-		p_printf("  snapping/rounding is off\n");
 
 	p_printf("  - when in integer modes,");
 	p_printf(" word width is %d bits\n", int_width);
@@ -2885,7 +2953,6 @@ separators(void)
 	return GOODOP;
 }
 
-#if 0
 void
 float_mode_messages(int both)
 {
@@ -2927,20 +2994,24 @@ fixedpoint(void)
 opreturn
 digits(void)
 {
-	ldouble digits;
-	char *limited = "";
+	mpd_t *m;
+	int i;
 
-	if (!pop(&digits))
+	if (!mpop(&m))
 		return BADOP;
 
+	i = (int)mpd_get_u32(m, ctx);
+
+	char *limited = "";
+
 	// but it can't be greater than our maximum precision
-	if (digits > max_digits || digits < 0) {
-		digits = max_digits;
+	if (i > max_digits || i < 0) {
+		i = max_digits;
 		limited = "the maximum of ";
 	}
 
 	// the 3 formats (auto/fixed/eng) may set their own mimimums
-	float_digits = (int)digits;
+	float_digits = i;
 
 	p_printf(" Floating formats configured for %s%d digit%s.\n", limited,
 		float_digits, float_digits == 1 ? "" : "s");
@@ -2949,7 +3020,6 @@ digits(void)
 
 	return GOODOP;
 }
-#endif
 
 void
 setup_width(int bits)
@@ -3037,17 +3107,16 @@ rightalign(void)
 		"on", "off");
 }
 
-#if 0
 /* for store/recall */
-ldouble offstack;
+mpd_t *offstack;
 
 opreturn
 store(void)
 {
-	ldouble a;
+	mpd_t *a;
 
-	if (peek(&a)) {
-		offstack = a;
+	if (mpeek(&a)) {
+		mpd_free_before_copy(&offstack, a, ctx);
 		return GOODOP;
 	}
 	return BADOP;
@@ -3056,10 +3125,9 @@ store(void)
 opreturn
 recall(void)
 {
-	push(offstack);
+	mpush_copy(offstack);
 	return GOODOP;
 }
-#endif
 
 opreturn
 push_pi(void)
@@ -3068,45 +3136,22 @@ push_pi(void)
 	return GOODOP;
 }
 
-#if 0
 opreturn
 push_e(void)
 {
-	push(e);
-	return GOODOP;
-}
-
-opreturn
-push_epsilon(void)
-{
-	push(epsilon);
-	return GOODOP;
-}
-
-opreturn
-tweakit(void)
-{
-	ldouble a;
-
-	if (!pop(&a))
-		return BADOP;
-
-	boolean r = do_rounding;
-	do_rounding = 1;
-
-	push(cmp_tweak(a));  // use cmp_tweak -- it does tracing
-
-	do_rounding = r;
-
+	mpush_copy(e);
 	return GOODOP;
 }
 
 opreturn
 mark(void)
 {
-	ldouble n;
-	if (!pop(&n))
+	mpd_t *m;
+	int64_t n;
+	if (!mpop(&m))
 		return BADOP;
+
+	n = mpd_get_i64(m, ctx);
 
 	if (n > stack_count || n < -1) {
 		if (stack_count == 0)
@@ -3130,6 +3175,7 @@ clearsnapshot(void)
 	struct num *p;
 	while ((p = snapstack)) {
 		snapstack = p->next;
+		mpd_del(p->mpd);
 		free(p);
 	}
 	return GOODOP;
@@ -3160,9 +3206,10 @@ snapshot(void)
 	while (n > stack_mark) {
 		struct num *np;
 
-		// push p->val on snapstack
+		// push a new copy of the entry on snapstack
 		np = (struct num *)safe_calloc(sizeof(struct num));
-		np->val = p->val;
+		np->mpd = mpd_new(ctx);
+		mpd_copy(np->mpd, p->mpd, ctx);
 		np->next = snapstack;
 		snapstack = np;
 
@@ -3185,7 +3232,7 @@ restore(void)
 	stack_mark = stack_count;
 
 	while (p) {
-		push(p->val);
+		mpush(p->mpd);
 		p = p->next;
 		i++;
 	}
@@ -3207,28 +3254,38 @@ sum_worker(boolean do_sum)
 	if (!snapstack)
 		snapshot();
 
-	ldouble a, tot = 0, tot_sq = 0;
+	mpd_t *a;
+	mpd_t *tot, *tot_sq;
+	tot = mpd_new(ctx);
+	mpd_set_i64(tot, 0, ctx);
+	tot_sq = mpd_new(ctx);
+	mpd_set_i64(tot_sq, 0, ctx);
 	int i = 0;
 	while (stack_count > stack_mark) {
-		if ((r = pop(&a)) == BADOP)
+		if ((r = mpop(&a)) == BADOP)
 			break;
-		tot += a;
-		tot_sq += a * a;
+		// tot += a;
+		mpd_add(tot, tot, a, ctx);
+		// tot_sq += a * a;
+		mpd_mul(a, a, a, ctx);
+		mpd_add(tot_sq, tot_sq, a, ctx);
 		i++;
 	}
 
 
-	ldouble n = i;
+	mpd_set_i64(a, i, ctx);
 
 	switch (do_sum) {
 	case 1: // sum
-		push(tot);
+		mpush(tot);
 		p_printf(" Summed %d stack entries\n", i);
 		break ;;
 	case 2: // avg
-		push(tot/n);
+		mpd_div(a, tot, a, ctx);
+		mpush(a);
 		p_printf(" Averaged %d stack entries\n", i);
 		break ;;
+#if 0
 	case 3: // standard deviation
 		push(sqrtl( (n * tot_sq - (tot * tot)) / (n * (n-1))));
 		p_printf(" Sample standard deviation calculated "
@@ -3237,6 +3294,7 @@ sum_worker(boolean do_sum)
 					"population standard deviation)\n",
 			i - 1, i);
 		break ;;
+#endif
 	}
 
 	return GOODOP;
@@ -3254,15 +3312,61 @@ avg(void)
 	return sum_worker(2);
 }
 
+#if 0
 opreturn
 stddev(void)
 {
 	return sum_worker(3);
 }
+#endif
+
+opreturn
+unit_worker( int muldiv, char *factor, char *offset)
+{
+
+#define MUL '*'
+#define DIV '/'
+
+	mpd_t *a;
+	static mpd_t *f, *o;
+
+	if (!f) {
+		f = mpd_new(ctx);
+		o = mpd_new(ctx);
+	}
+
+
+	if (!mpop(&a))
+		return BADOP;
+
+	set_lastx(a);
+
+	mpd_set_string(f, factor, ctx);
+	if (offset)
+		mpd_set_string(o, offset, ctx);
+
+
+	switch (muldiv) {
+	case MUL:
+		mpd_mul(a, a, f, ctx);
+		if (offset)
+			mpd_add(a, a, o, ctx);
+		break;
+	case DIV:
+		if (offset)
+			mpd_sub(a, a, o, ctx);
+		mpd_div(a, a, f, ctx);
+		break;
+	}
+	mpush(a);
+
+	return GOODOP;
+}
 
 opreturn
 units_in_mm(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -3272,11 +3376,15 @@ units_in_mm(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	return unit_worker(MUL, "25.4", 0);
+#endif
 }
 
 opreturn
 units_mm_in(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -3286,8 +3394,12 @@ units_mm_in(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	return unit_worker(DIV, "25.4", 0);
+#endif
 }
 
+#if 0
 opreturn
 units_ft_m(void)
 {
@@ -3315,10 +3427,12 @@ units_m_ft(void)
 	}
 	return BADOP;
 }
+#endif
 
 opreturn
 units_F_C(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -3329,11 +3443,15 @@ units_F_C(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	return unit_worker(DIV, "1.8", "32.0");
+#endif
 }
 
 opreturn
 units_C_F(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -3344,8 +3462,12 @@ units_C_F(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	return unit_worker(MUL, "1.8", "32.0");
+#endif
 }
 
+#if 0
 opreturn
 units_l_qt(void)
 {
@@ -3436,7 +3558,7 @@ units_mi_km(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		a /= 0.6213712;
+		a *= 1.609344;
 		push(a);
 		lastx = a;
 		return GOODOP;
@@ -3450,7 +3572,7 @@ units_km_mi(void)
 	ldouble a;
 
 	if (pop(&a)) {
-		a *= 0.6213712;
+		a /= 1.609344;
 		push(a);
 		lastx = a;
 		return GOODOP;
@@ -3485,6 +3607,7 @@ units_rad_deg(void)
 	}
 	return BADOP;
 }
+#endif
 
 
 opreturn
@@ -3492,6 +3615,7 @@ units_mpg_l100km(void)
 {
 	/* the same formula converts back and
 	 * forth between mpg and liters/100km */
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -3501,8 +3625,21 @@ units_mpg_l100km(void)
 		return GOODOP;
 	}
 	return BADOP;
+#else
+	mpd_t *t;
+	int r;
+	r = unit_worker(DIV, "235.214583", 0);
+	if (r != GOODOP)
+		return r;
+	// could just call recip(), but that will change lastx
+	mpop(&t);
+	mpd_div(t, one, t, ctx);
+	mpush(t);
+	return GOODOP;
+#endif
 }
 
+#if 0
 opreturn
 units_dd_dms(void)
 {
@@ -4105,13 +4242,6 @@ tracetoggle(void)
 	return GOODOP;
 }
 
-opreturn
-rounding(void)
-{
-	return toggler(&do_rounding, "Float snapping/rounding is now",
-		"on", "off");
-}
-
 void
 exitret(void)
 {
@@ -4141,9 +4271,8 @@ quit(void)
 	return GOODOP; // not reached
 }
 
-#if 0
 typedef struct {
-    ldouble value;
+    mpd_t *mpd;
     char *name;
 } dynvar;
 
@@ -4165,6 +4294,8 @@ clearvars(void)
 	dynvar *v;
 
 	for (v = variables; v->name; v++) {
+		mpd_del(v->mpd);
+		v->mpd = 0;
 		free(v->name);
 		v->name = 0;
 	}
@@ -4189,7 +4320,7 @@ showvars(void)
 	rightalignment = 0;
 	for (v = variables; v->name; v++) {
 		p_printf(" %20s ", v->name);
-		print_n(&v->value, mode, 0, 0);
+		print_n(v->mpd, mode, 0, 0);
 	}
 	rightalignment = savealign;
 
@@ -4207,6 +4338,8 @@ findvar(char *name)
 	}
 	if (v < variables + NVAR-1) {
 		v->name = strdup(name);
+		v->mpd = mpd_new(ctx);
+		mpd_set_i64(v->mpd, 0, ctx);
 		return v;
 	}
 	return 0;
@@ -4225,19 +4358,20 @@ dynamic_var(token *t)
 
 	/* if we were preceded by '=', set our value */
 	if (variable_write_enable) {
-		ldouble a;
-		if (!peek(&a)) {
+		mpd_t *a;
+		if (!mpeek(&a)) {
 			trace(EXEC, " nothing to assign\n");
 			return 0;
 		}
-		trace(EXEC, " assigning %Lg to %s\n", a, v->name);
-		v->value = a;
+		// trace(EXEC, " assigning %Lg to %s\n", a, v->name);
+		if (!v->mpd)
+			v->mpd  = mpd_new(ctx);
+		mpd_copy(v->mpd, a, ctx);
 	} else {
-		push(v->value);
+		mpush_copy(v->mpd);
 	}
 	return 1;
 }
-#endif
 
 size_t stralnum(char *s, char **endptr)
 {
@@ -4739,7 +4873,6 @@ struct config {
 	{ "errorexit",		c_int, &exit_on_error },
 	{ "", c_none },
 	{ "debug",		c_int, &debug_enabled },
-	{ "rounding",		c_int, &do_rounding },
 	{ "tracing",		c_int, &tracing },
 	{ 0 }
 };
@@ -4838,7 +4971,6 @@ config(void)
 	return GOODOP;
 }
 
-#if 0
 /* useful for resetting width from debugger, to generate the
  * (narrower) man page copy of the precedence table. */
 size_t precedence_width = 68;
@@ -4981,7 +5113,6 @@ license(void)
 	p_printf("%s\n", licensetext);
 	return GOODOP;
 }
-#endif
 
 /* in addition to "release", at the top of the source, the Makefile
  * may pass a -DGITVERSION=...  */
@@ -5182,8 +5313,10 @@ struct oper opers[] = {
 	{"/", divide,		"Divide y by x", 2, 26 },
 #if 0
 	{"%", modulo,		"Modulo of y by x", 2, 26 },
+#endif
 	{"^", y_to_the_x,	0, 2, 28, 'R'},
 	{"**", y_to_the_x,	"Raise y to the x'th power", 2, 28, 'R'},
+#if 0
 	{">>", rshift,		0, 2, 22 },
 	{"<<", lshift,		"Shift y right/left by x bits (logical shift)", 2, 22 },
 	{"ror", rotateright,	0, 2, 22 },
@@ -5197,10 +5330,12 @@ struct oper opers[] = {
     {"Numeric operators with one operand:"},
 	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 30, 'R' },
 	// {"bitc", bitcount,	"Count of '1' bits in x", 1, 30, 'R' },
+#endif
 	{"chs", chsign,		0, 1, 30, 'R' },
 	{"negate", chsign,	"Change sign of x (2's complement)", 1, 30, 'R' },
 	{"recip", recip,	0, 1, 30, 'R' },
 	{"sqrt", squarert,	"Reciprocal and square root of x", 1, 30, 'R' },
+#if 0
 	{"sin", sine,		0, 1, 30, 'R' },
 	{"cos", cosine,		0, 1, 30, 'R' },
 	{"tan", tangent,	"", 1, 30, 'R' },
@@ -5208,6 +5343,7 @@ struct oper opers[] = {
 	{"acos", acosine,	0, 1, 30, 'R' },
 	{"atan", atangent,	"Trig functions", 1, 30, 'R' },
 	{"atan2", atangent2,	"Arctan of y/x (2 operands)", 2, 27 },
+#endif
 	{"exp", e_to_the_x,	"Raise e to the x'th power", 1, 30, 'R' },
 	{"ln", log_natural,	0, 1, 30, 'R' },
 	{"log2", log_base2,	0, 1, 30, 'R' },
@@ -5217,6 +5353,7 @@ struct oper opers[] = {
 	{"frac", fraction,	0, 1, 30, 'R' },
 	{"int", integer,	"Absolute value, fractional and integer parts of x", 1, 30, 'R' },
 	{""},
+#if 0
     {"Logical operators (mostly two operands):"},
 	{"&&", logical_and,	0, 2, 10 },
 	{"||", logical_or,	"Logical AND and OR", 2, 8 },
@@ -5228,15 +5365,19 @@ struct oper opers[] = {
 	{">=", is_ge,		"Arithmetic comparisons", 2, 14 },
 	{"!", logical_not,	"Logical NOT of x", 1, 30, 'R'},
 	{""},
+#endif
     {"Unit conversions (one operand):"},
 	{"i2mm", units_in_mm,	0, 1, 30, 'R' },
 	{"mm2i", units_mm_in,	"inches / millimeters", 1, 30, 'R' },
+#if 0
 	{"ft2m", units_ft_m,	0, 1, 30, 'R' },
 	{"m2ft", units_m_ft,	"feet / meters", 1, 30, 'R' },
 	{"mi2km", units_mi_km,	0, 1, 30, 'R' },
 	{"km2mi", units_km_mi,	"miles / kilometers", 1, 30, 'R' },
+#endif
 	{"f2c", units_F_C,	0, 1, 30, 'R' },
 	{"c2f", units_C_F,	"degrees F/C", 1, 30, 'R' },
+#if 0
 	{"oz2g", units_oz_g,	0, 1, 30, 'R' },
 	{"g2oz", units_g_oz,	"US ounces / grams", 1, 30, 'R' },
 	{"oz2ml", units_oz_ml,	0, 1, 30, 'R' },
@@ -5247,17 +5388,16 @@ struct oper opers[] = {
 	{"r2d", units_rad_deg,	"degrees / radians", 1, 30, 'R' },
 	{"dd2dms", units_dd_dms, 0, 1, 30, 'R' },
 	{"dms2dd", units_dms_dd,"decimal degrees / deg.mm.sss", 1, 30, 'R' },
+#endif
 	{"mpg2l100km", units_mpg_l100km, "mpg to l/100km and vice versa", 1, 30, 'R' },
 	{""},
     {"Constants and storage:"},
 	{"sto", store,		0, 0 },
 	{"rcl", recall,		"Save to or push from off-stack storage", Sym },
 	{"e", push_e,		"Push constant pi or e", Sym },
-#endif
 	{"pi", push_pi,		0, Sym },
 	{"lastx", repush,	0, Sym },
 	{"lx", repush,		"Push previous value of x", Sym },
-#if 0
 	{"_<name>", nop,	"Push variable" },  // function unused
 	{"=", assignment,	"Assign variable.  RPN: \"3 = _v\"   infix: \"(_v = 3)\"", 2, 6 },
 	{"variables", showvars, 0 },
@@ -5267,14 +5407,14 @@ struct oper opers[] = {
     {"Variadics (operate on entire stack, limited by the mark if set):"},
 	{"sum", sum,		0, Auto },
 	{"avg", avg,		0, Auto },
+#if 0
 	{"stddev", stddev,	"Total, mean, and standard deviation of entries", Auto },
+#endif
 	{"snapshot", snapshot,	"Saves copy of selected entries", Auto },
 	{"mark", mark,		"Mark the stack, to limit variadics' range" },
 	{""},
-#endif
     {"Stack manipulation:"},
 	{"clear", clear,	"Clear stack" },
-#if 0
 	{"pop", rolldown,	"Pop (and discard) x", Auto },
 	{"push", enter,		0, Auto },
 	{"dup", enter,		"Push (a duplicate of) x", Auto },
@@ -5282,15 +5422,16 @@ struct oper opers[] = {
 	{"swap", exchange,	"Exchange x and y", Auto },
 	{"restore", restore,	"Push a copy of the snapshot, set mark", Auto },
 	{"clearsnapshot", clearsnapshot, "Discard snapshot" },
+#if 0
 	{""},
     {"Other:"},
 	{"(", open_paren,	0, 0, 32 },
 	{";", semicolon,	0, 0, 32 },
 	{")", close_paren,	"Infix expression grouping", 0, 32 },
+#endif
 	{":", rpnswitch,	"Treat rest of line as RPN. (for infix mode)"},
 	{"nop", nop,		"Does nothing, but at end of line, suppresses output"},
 	{""},
-#endif
     {"Display:"},
 	{"P", printall,		"Print whole stack according to mode" },
 	{"p", printone,		"Print x according to mode" },
@@ -5300,22 +5441,20 @@ struct oper opers[] = {
 	{"h", printhex,		0 },
 	{"o", printoct,		0 },
 	{"b", printbin,		"     hex, octal, or binary" },
-#if 0
 	{"automatic", automatic, 0, Auto },
 	{"auto", automatic,	"Select general purpose floating display format", Auto },
 	{"engineering", engineering, 0, Auto },
 	{"eng", engineering,	"Select engineering style floating display format", Auto },
 	{"fixed", fixedpoint,	"Select fixed decimal floating display format", Auto },
 	{"digits", digits,	"Number of digits for floating formats", Auto },
-#endif
 	{""},
     {"Modes:"},
 	{"F", modefloat,	0 },
+#if 0
 	{"D", modedec,		0 },
 	{"H", modehex,		0 },
 	{"O", modeoct,		0 },
 	{"B", modebin,		"Switch to floating, decimal, hex, octal, binary mode" },
-#if 0
 	{"width", width,	0, Auto },
 	{"bits", width,		"Set effective word size for integer modes", Auto },
 #endif
@@ -5332,17 +5471,8 @@ struct oper opers[] = {
 	{"infix", infixmode,	"Toggle running mainly in infix, or in rpn" },
 	{""},
     {"Debug support:", 0, 0, 0, 0, 'D'}, // hidden until "1 debug"
-#if 0
-	{"raw", printrawhex,	"Print x as raw floating hex", 0, 0, 'D'},
-	{"Raw", moderawhex,	"Switch to raw floating hex mode", 0, 0, 'D'},
-	{"epsilon", push_epsilon,"Push constant epsilon", Sym, 0, 'D'},
-	{"tweak", tweakit,	"Push snapped/rounded value", 1, 30, 'D'},
-	{"rounding", rounding,	"Toggle snapping and rounding of floats", 0, 0, 'D'},
-#endif
 	{"tracing", tracetoggle,"Set tracing level", 0, 0, 'D'},
-#if 0
 	{"commands", commands,	"Show raw command table", 0, 0, 'D'},
-#endif
 	{"", 0, 0, 0, 0, 'D'},
     {"Housekeeping:"},
 	{"?", help,		0 },
@@ -5350,19 +5480,15 @@ struct oper opers[] = {
 	{"config", config,	"Show current configuration settings" },
 #if 0
 	{"state", printstate,	"Show calculator state"},
-	{"precedence", precedence, "List infix operator precedence" },
 #endif
+	{"precedence", precedence, "List infix operator precedence" },
 	{"quit", quit,		0 },
 	{"q", quit,		0 },
 	{"exit", quit,		"Leave the calculator" },
-#if 0
 	{"echo", enable_echo,	"Toggle echoing input when stdin is a file or pipe" },
 	{"errorexit", enable_errexit,	"Toggle exiting on error and warning" },
-#endif
 	{"debug", debug,	"Toggle presence of debug commands" },
-#if 0
 	{"license", license,	"Display the rca copyright and license." },
-#endif
 	{"version", version,	"Show program version" },
 	{"#", help,		"Comment. The rest of the line will be ignored." },
 	{""},
@@ -5489,9 +5615,7 @@ main(int argc, char *argv[])
 			break;
 		case VARIABLE:
 			trace(EXEC, " variable %s\n", t->valstr);
-#if 0
 			dynamic_var(t);
-#endif
 			if (t->valstr) {
 				free(t->valstr);
 				t->valstr = 0;
