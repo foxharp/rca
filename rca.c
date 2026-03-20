@@ -79,6 +79,18 @@ char licensetext[] = \
 # include <readline/history.h>
 #endif
 
+#include <valgrind/memcheck.h>
+
+void
+valgrind(int n)
+{
+	(void)n;
+#if 1
+	fprintf(stderr, "invoking valgrind leak check %d\n", n);
+	VALGRIND_DO_LEAK_CHECK;
+#endif
+}
+
 /* who are we? */
 char *progname;
 
@@ -95,7 +107,7 @@ mpd_context_t context, *ctx = &context;
 
 
 /* debug logging support, runtime controllable */
-int tracing;
+int tracing = 15;
 #define TOK 1
 #define EXEC 2
 #define TWEAK 4
@@ -180,7 +192,7 @@ struct oper opers[];
 /* tokens are typed -- currently numbers, operators, symbolic, and line-ends */
 typedef struct token {
 	int type;
-	ldouble val;   /* NUMERIC: simple value */
+	// ldouble val;   /* NUMERIC: simple value */
 	mpd_t *mpd;    /* NUMERIC: libmpdecimal number */
 	char *valstr;  /* string of value for NUMERIC and VARIABLE */
 	oper *oper;    /* OP or SYMBOLIC points into opers table */
@@ -324,9 +336,12 @@ void trace_mpd(int level, char *msg, const mpd_t *t);
 void
 mpd_free_before_copy(mpd_t **resultp, const mpd_t *a, mpd_context_t *ctx)
 {
-	// if (resultp) mpd_del(*resultp);
+	if (*resultp) {
+	    trace_mpd(EXEC, "mpd_del'ing", *resultp);
+	    mpd_del(*resultp);
+	    *resultp = 0;
+	}
 	if (!*resultp) *resultp = mpd_new(ctx);
-	trace_mpd(EXEC, "got new", *resultp);
 	trace_mpd(EXEC, "copying", a);
 	mpd_copy(*resultp, a, ctx);
 }
@@ -336,8 +351,8 @@ mpd_free_before_move(mpd_t **resultp, mpd_t *a, mpd_context_t *ctx)
 {
 	(void)ctx;
 	trace_mpd(EXEC, "freed", *resultp);
-	trace_mpd(EXEC, "moving", a);
 	if (*resultp) mpd_del(*resultp);
+	trace_mpd(EXEC, "moving", a);
 	*resultp = a;
 }
 
@@ -467,6 +482,7 @@ mpush_copy(mpd_t *a)
     mpush(n);
 }
 
+#if 0
 void
 push(ldouble n)
 {
@@ -486,12 +502,15 @@ push(ldouble n)
 #endif
 
 }
+#endif
 
+#if 0
 void
 lpush(long long l)
 {
        push(integer_adjust(l));
 }
+#endif
 
 boolean
 mpeek(mpd_t **f)
@@ -536,7 +555,7 @@ mpop(mpd_t **a)
 	}
 	*a = p->mpd;
 	stack = p->next;
-	trace_mpd(EXEC, " popped", p->mpd);
+	trace_mpd(EXEC, " mpopped", p->mpd);
 	free(p);
 	stack_count--;
 
@@ -1915,11 +1934,14 @@ freeze_lastx(void)
 {
 	if (!lastx_is_frozen) {
 		mpd_t *t;
+#if NOPE
 		if (!mpeek(&t)) {
 			if (frozen_lastx)
 				mpd_del(frozen_lastx);
 			frozen_lastx = 0;
 		} else {
+#endif
+		if (mpeek(&t)) {
 			mpd_free_before_copy(&frozen_lastx, t, ctx);
 		}
 		lastx_is_frozen = TRUE;
@@ -1932,7 +1954,8 @@ thaw_lastx(void)
 {
 	if (lastx_is_frozen) {
 		lastx_is_frozen = FALSE;
-		lastx = frozen_lastx;
+		set_lastx(frozen_lastx);
+		mpd_del(frozen_lastx);
 		frozen_lastx = 0;
 		// infix must add either no or 1 value to the stack
 		int i = stack_count - infix_stacklevel;
@@ -2042,7 +2065,8 @@ p_printf(const char *fmt, ...)  // short for pending_printf()
 		memfile_open(&pp);
 
 	va_start(ap, fmt);
-	vfprintf(pp.fp, fmt, ap);
+	// vfprintf(pp.fp, fmt, ap);
+	vfprintf(stderr, fmt, ap);
 	va_end(ap);
 	// ensure it's always null-terminated
 	fputc('\0', pp.fp);
@@ -2740,6 +2764,7 @@ printfloat(void)
 void
 rawprintstack(int n, struct num *s, int is_stack)
 {
+#if 0
 	if (!s) {
 		p_printf("%16s\n", "<empty>");
 		return;
@@ -2765,6 +2790,7 @@ rawprintstack(int n, struct num *s, int is_stack)
 	p_printf("\n");
 	if (!is_stack && s->next)
 		rawprintstack(n-1, s->next, is_stack);
+#endif
 }
 
 opreturn
@@ -2787,6 +2813,7 @@ printstate(void)
 		p_printf("    max integer width is %d bits\n", max_int_width);
 
 
+#if 0
 	s = stack;
 	p_printf("\n Stack:\n");
 	if (debug_enabled)
@@ -2797,6 +2824,7 @@ printstate(void)
 	s = snapstack;
 	p_printf("\n Snapshot:\n");
 	rawprintstack(stack_count, s, 0);
+#endif
 
 	p_printf("\n");
 	p_printf(" Locale elements, from locale '%s'%s:\n",
@@ -2809,6 +2837,7 @@ printstate(void)
 
 	p_printf(" rca descriptor: f%ui%u\n", LDBL_MANT_DIG, max_int_width);
 
+#if 0
 	if (!debug_enabled)
 		return GOODOP;
 
@@ -2822,6 +2851,7 @@ printstate(void)
 	p_printf("   LDBL_DIG (max_digits): %u\n", LDBL_DIG);
 	p_printf("\n");
 
+#endif
 	return GOODOP;
 }
 #endif
@@ -3001,6 +3031,7 @@ digits(void)
 		return BADOP;
 
 	i = (int)mpd_get_u32(m, ctx);
+	mpd_del(m);
 
 	char *limited = "";
 
@@ -3152,6 +3183,7 @@ mark(void)
 		return BADOP;
 
 	n = mpd_get_i64(m, ctx);
+	mpd_del(m);
 
 	if (n > stack_count || n < -1) {
 		if (stack_count == 0)
@@ -3243,7 +3275,6 @@ restore(void)
 opreturn
 sum_worker(boolean do_sum)
 {
-	opreturn r;
 
 	if (stack_count <= stack_mark) {
 		error(" error: empty stack, or at mark?\n");
@@ -3254,35 +3285,41 @@ sum_worker(boolean do_sum)
 	if (!snapstack)
 		snapshot();
 
-	mpd_t *a;
+	mpd_t *a, *n;
 	mpd_t *tot, *tot_sq;
+	n = mpd_new(ctx);
 	tot = mpd_new(ctx);
 	mpd_set_i64(tot, 0, ctx);
 	tot_sq = mpd_new(ctx);
 	mpd_set_i64(tot_sq, 0, ctx);
 	int i = 0;
 	while (stack_count > stack_mark) {
-		if ((r = mpop(&a)) == BADOP)
-			break;
+		if (!mpop(&a)) {
+			fprintf(stderr, "bailing in sum_worker\n");
+			goto error_out;
+		}
 		// tot += a;
 		mpd_add(tot, tot, a, ctx);
 		// tot_sq += a * a;
 		mpd_mul(a, a, a, ctx);
 		mpd_add(tot_sq, tot_sq, a, ctx);
+		mpd_del(a);
 		i++;
 	}
+	mpd_set_i64(n, i, ctx);
 
-
-	mpd_set_i64(a, i, ctx);
+valgrind(27);
 
 	switch (do_sum) {
 	case 1: // sum
 		mpush(tot);
+		tot = 0;
 		p_printf(" Summed %d stack entries\n", i);
 		break ;;
 	case 2: // avg
-		mpd_div(a, tot, a, ctx);
-		mpush(a);
+		mpd_div(n, tot, n, ctx);
+		mpush(n);
+		n = 0;
 		p_printf(" Averaged %d stack entries\n", i);
 		break ;;
 #if 0
@@ -3296,6 +3333,11 @@ sum_worker(boolean do_sum)
 		break ;;
 #endif
 	}
+    error_out:
+	if (n) mpd_del(n);
+	if (tot) mpd_del(tot);
+	if (tot_sq) mpd_del(tot_sq);
+valgrind(28);
 
 	return GOODOP;
 }
@@ -3721,8 +3763,6 @@ units_dms_dd(void)
 }
 #endif
 
-#if 0
-
 token *out_stack, *oper_stack, *infix_rpn_queue;
 
 char *
@@ -3757,6 +3797,9 @@ tpush(token **tstackp, token *tok)
 		*t = *tok;
 		t->alloced = 1;
 	}
+	// fixme: valstr isn't interesting on oper stack
+	// fprintf(stderr, "tpush pushing '%s' to %s\n",
+	//	t->valstr?t->valstr:"null", stackname(tstackp));
 
 	t->next = *tstackp;
 	*tstackp = t;
@@ -3778,6 +3821,9 @@ tpop(token **tstackp)
 		return NULL;
 	}
 
+	// fixme: valstr isn't interesting on oper stack
+	// fprintf(stderr, "tpush popping '%s' from %s\n",
+	// 	rt->valstr ? rt->valstr:"null", stackname(tstackp) );
 	*tstackp = (*tstackp)->next;
 
 	return rt;
@@ -3794,14 +3840,18 @@ tclear(token **tstackp)
 	while (t) {
 		nt = t->next;
 		if (t->valstr) {
+			// fprintf(stderr, "tclear freeing '%s'\n", t->valstr);
 			free(t->valstr);
 			t->valstr = 0;
+		}
+		if (t->mpd) {
+			mpd_del(t->mpd);
+			t->mpd = 0;
 		}
 		free(t);
 		t = nt;
 	}
 }
-#endif
 
 void
 sprint_token(char *s, size_t slen, token *t)
@@ -3842,7 +3892,6 @@ trace_show_tok(int lev, token *t)
 	fprintf(stderr, " %s ", buf);
 }
 
-#if 0
 void
 trace_stack_dump(int lev, token **tstackp)
 {
@@ -3908,13 +3957,16 @@ close_paren(void)
 opreturn
 semicolon(void)
 {
-	/* In infix: (y; x) discards y, returns x
-	 * but does save the discarded y as lastx.
+	/* In infix: (x; y) discards x
+	 * but does save it as lastx.
 	 * In RPN (perhaps less useful):
 	 *      y x ;  discards x, just as pop would
 	 */
-	pop(&lastx);
-	frozen_lastx = lastx;
+	mpd_t *a;
+	mpop(&a);
+	mpd_free_before_copy(&lastx, a, ctx);
+	mpd_free_before_copy(&frozen_lastx, a, ctx);
+	mpd_del(a);
 	return GOODOP;
 }
 
@@ -3969,11 +4021,16 @@ shunting_yard(int command)
 	token *tp; // used for tpeek()
 	opreturn open_paren(void);
 
+	bzero(&tok, sizeof(tok));
+	bzero(&prevtok, sizeof(tok));
+
+valgrind(20);
 	int nesting;
 
 	tclear(&out_stack);
 	tclear(&oper_stack);
 
+valgrind(21);
 	trace(TOK,("\n infix tokens: "));
 
 	if (command) {
@@ -3985,6 +4042,7 @@ shunting_yard(int command)
 	}
 
 	while (1) {
+valgrind(25);
 		trace(SHUNT,("\n"));
 		trace_stack_dump(SHUNT,&oper_stack);
 		trace_stack_dump(SHUNT,&out_stack);
@@ -4184,6 +4242,9 @@ shunting_yard(int command)
 
 		default:
 		case UNKNOWN:
+	trace(SHUNT, "\n at UNKNOWN:\n");
+	trace_stack_dump(SHUNT,&oper_stack);
+	trace_stack_dump(SHUNT,&out_stack);
 			input_ptr = NULL;
 			return BADOP;
 		}
@@ -4250,7 +4311,6 @@ open_paren(void)
 	return shunting_yard(1);
 }
 
-#endif
 
 opreturn
 autop(void)
@@ -4269,6 +4329,7 @@ tracetoggle(void)
 		return BADOP;
 
 	u = mpd_get_u64(m, ctx);
+	mpd_del(m);
 
 	// tracing is a bitmap of desired "feature" trace
 	tracing = (int)u;
@@ -4295,6 +4356,7 @@ exitret(void)
 	mpop(&m);
 
 	u = mpd_get_u64(m, ctx);
+	mpd_del(m);
 
 	exit(u == 0);  // flip exit status, per unix convention
 
@@ -4532,6 +4594,7 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 		t->imode = 'D';
 		// t->val = dd * sign;
 		t->valstr = strndup(p,(size_t)(np -p));
+    fprintf(stderr, "NUMERIC valstr is %s %p\n", t->valstr, t->valstr);
 		t->mpd = mpd_new(ctx);
 		mpd_set_string(t->mpd, t->valstr, ctx);
 	} else if (*p == '_' && isalnum(*(p+1))) {
@@ -4598,7 +4661,7 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 		}
 		if (!op->name) {
 		unknown:
-			error(" error: unrecognized input '%s'\n",
+			error(" error: Unrecognized input '%s'\n",
 				strtok(p, " \t\n"));
 			t->str = p;
 			t->type = UNKNOWN;
@@ -4850,6 +4913,8 @@ int
 read_token(token *t, int parsing_rpn)
 {
 	char *next_input_ptr;
+
+	bzero(t, sizeof(token));
 
 	if (putback.type != UNKNOWN) {
 		*t = putback;
@@ -5461,13 +5526,11 @@ struct oper opers[] = {
 	{"swap", exchange,	"Exchange x and y", Auto },
 	{"restore", restore,	"Push a copy of the snapshot, set mark", Auto },
 	{"clearsnapshot", clearsnapshot, "Discard snapshot" },
-#if 0
 	{""},
     {"Other:"},
 	{"(", open_paren,	0, 0, 32 },
 	{";", semicolon,	0, 0, 32 },
 	{")", close_paren,	"Infix expression grouping", 0, 32 },
-#endif
 	{":", rpnswitch,	"Treat rest of line as RPN. (for infix mode)"},
 	{"nop", nop,		"Does nothing, but at end of line, suppresses output"},
 	{""},
@@ -5595,12 +5658,10 @@ main(int argc, char *argv[])
 	locale_init();
 
 	setup_width(0);
-#if 0
 
 	create_infix_support_tokens();
-
 	config_read_defaults();
-#endif
+
 	/* we simply loop forever, either pushing operands or
 	 * executing operators.  the special end-of-line token lets us
 	 * do reasonable autoprinting, if the last thing on the line
@@ -5608,21 +5669,21 @@ main(int argc, char *argv[])
 	 */
 	while (1) {
 
-#if 0
 		/* use up tokens created by infix processing first */
 		token *tt;
 		if ((tt = tpop(&infix_rpn_queue))) {
+valgrind(1);
 			tok = *tt;
 			free(tt);
+valgrind(2);
 			freeze_lastx();
-		} else
-#endif
-		{ /* otherwise get tokens from input as usual */
+valgrind(3);
+		} else { /* otherwise get tokens from input as usual */
+valgrind(4);
 			if (!read_token(&tok, RPN))
 				continue;
 			thaw_lastx();
 			// in infix mode, check the first token on a line...
-#if 0
 			if (infix_mode && pt->type == EOL) {
 				// ...to see if it's anything but ':'
 				if ( ! (t->type == OP &&
@@ -5635,7 +5696,6 @@ main(int argc, char *argv[])
 				 * start of the line.  we ignore it,
 				 * and now consume tokens as usual */
 			}
-#endif
 		}
 
 		if (t->type != EOL && t->type != OP) {
@@ -5645,12 +5705,13 @@ main(int argc, char *argv[])
 
 		switch (t->type) {
 		case NUMERIC:
-			trace(EXEC,  " numeric %Lg %s\n", t->val, t->valstr);
+			trace(EXEC,  " numeric %s\n", t->valstr);
 			mpush(t->mpd);
 			if (t->valstr) {
 				free(t->valstr);
 				t->valstr = 0;
 			}
+valgrind(5);
 			break;
 		case VARIABLE:
 			trace(EXEC, " variable %s\n", t->valstr);
@@ -5659,6 +5720,7 @@ main(int argc, char *argv[])
 				free(t->valstr);
 				t->valstr = 0;
 			}
+valgrind(6);
 			break;
 		case SYMBOLIC:
 		case OP:
@@ -5667,16 +5729,21 @@ main(int argc, char *argv[])
 				pending_show();
 			else
 				pending_clear();
+valgrind(17);
 			(t->oper->func) ();
+valgrind(7);
 			break;
 		case EOL:
 			do_autoprint(pt);
 			pending_show();
+valgrind(8);
 			break;
 		default:
 		case UNKNOWN:
 			// I think this is unreachable
-			error(" error: unrecognized input '%s'\n", t->str);
+			error(" error:  unrecognized input '%s'\n", t->str);
+valgrind(9);
+	trace_show_tok(TOK, t);
 			break;
 		}
 		if (variable_write_enable)
