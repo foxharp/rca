@@ -198,9 +198,8 @@ Multiple sub-expressions separated by
 .RB ' ; '
 (semicolon) can be enclosed in a single pair of parentheses (or share
 a single line, in full-time infix mode).  The
-result of the parenthesized expression is the result of the last such
-sub-expression.
-The primary use of
+result of the parenthesized expression (or line) is the result of the
+last such sub-expression.  The primary use of
 .RB ' ; '
 is likely for expressions which assign to variables.
 See the example in the SPECIAL VALUES AND VARIABLES section, below.
@@ -910,8 +909,9 @@ integer.  Then, values are rounded to N significant digits.  'N' in
 both cases is chosen to be midway between the user's precision (configured
 with the
 .B digits
-command) and the maximum precision available.  The internal
-representation of these values remains unchanged --
+command) and the maximum precision available.
+.BR rca 's
+internal representation remains unchanged --
 .I only
 the printed output (or the comparison) is affected.
 
