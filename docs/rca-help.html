@@ -31,6 +31,7 @@
 
  Numeric operators with one operand:
                     ~     Bitwise NOT of x (1's complement)
+                 bitc     Count of '1' bits in x
        chs, or negate     Change sign of x (2's complement)
           recip, sqrt     Reciprocal and square root of x
         sin, cos, tan
@@ -80,9 +81,8 @@
         clearsnapshot     Discard snapshot
 
  Other:
-                 (, )     Infix grouping
-                    ;     Infix separator (in RPN, discards y)
-                    :     Treat rest of line as RPN. (needed in infix mode)
+              (, ;, )     Infix expression grouping
+                    :     Treat rest of line as RPN. (for infix mode)
                   nop     Does nothing, but at end of line, suppresses output
 
  Display:
@@ -120,7 +120,7 @@
                     #     Comment. The rest of the line will be ignored.
 
 
-                                                  version v24     Mar 15, 2026
+                                                  version v25     Mar 21, 2026
 
  Tip:	Use &quot;rca help q | less&quot; to view this help
 </pre>

@@ -118,19 +118,17 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        previous.
 
        Variables, named with a leading '<span style="font-weight:bold;">_</span>' (underscore), like <span style="font-weight:bold;">_a</span>, <span style="font-weight:bold;">_tmp</span>,
-       or <span style="font-weight:bold;">_my_var</span>.  can be referenced for either reading or writing.  See
+       or <span style="font-weight:bold;">_my_var</span>, can be referenced for either reading or writing.  See
        the SPECIAL VALUES AND VARIABLES section, below.
 
-       Multiple expressions separated by '<span style="font-weight:bold;">;</span>' (semicolon) can be enclosed
-       in a single pair of parentheses.  The result of the parenthesized
-       expression is the result of the last such sub-expression.  Like
-       ',' in the C language, '<span style="font-weight:bold;">;</span>' is implemented as an operator whose
-       result is its right-hand operand -- the left-hand operand is
-       evaluated, and the result discarded.  The primary use of '<span style="font-weight:bold;">;</span>' is
-       likely for expressions which assign to variables.  See the example
-       in the SPECIAL VALUES AND VARIABLES section, below.  '<span style="font-weight:bold;">;</span>' is also
-       available in RPN:  when executed, it discards the second-to-top
-       stack element, leaving the top undisturbed.
+       Multiple sub-expressions separated by '<span style="font-weight:bold;">;</span>' (semicolon) can be
+       enclosed in a single pair of parentheses (or share a single line,
+       in full-time infix mode).  The result of the parenthesized
+       expression (or line) is the result of the last such sub-
+       expression.  The primary use of '<span style="font-weight:bold;">;</span>' is likely for expressions
+       which assign to variables.  See the example in the SPECIAL VALUES
+       AND VARIABLES section, below.  In RPN '<span style="font-weight:bold;">;</span>' discards the top stack
+       element, like <span style="font-weight:bold;">pop</span>.
 
        If an error occurs during evaluation of an infix expression,
        evaluation will cease, and the stack will be left as it was at the
@@ -141,32 +139,33 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        point (the default) using the <span style="font-weight:bold;">F </span>command, and integer, using one of
        <span style="font-weight:bold;">D </span>(signed decimal), <span style="font-weight:bold;">H </span>(hex), <span style="font-weight:bold;">O </span>(octal), or <span style="font-weight:bold;">B </span>(binary).
 
-       The difference between the various integer modes lies in how
-       values are displayed by default, but floating point differs in a
-       few additional ways.  Most math is done in long double, regardless
-       of mode, but in integer mode all stack values are masked to the
-       current word width, and sign extended, if necessary.  Math is
-       always performed using signed arithmetic in all modes.
+       Math is always performed using signed arithmetic in all modes, and
+       most math is done using &quot;long double&quot; operands.  (Bitwise
+       operators are handled differently, see below.) The various integer
+       modes differ only in how values are displayed by default.  They
+       all differ from floating point in that in integer mode, all stack
+       values are masked to the current word width, and sign extended, if
+       necessary (because the word width may be narrower than the native
+       width).
 
        The input base of a number is independent of the mode, and
        controlled entirely by how it is entered:  10, 0xa, 0o12, 0b1010
-       and 1e01 are all the same value.  The mode does not affect input:
-       for example, hex values must include the &quot;0x&quot; prefix even in <span style="font-weight:bold;">H</span>
-       mode.  Note that octal <span style="font-style:italic;">must</span> be entered using the &quot;0o&quot; prefix,
-       which is also how octal will be printed.  The more traditional &quot;0&quot;
-       prefix will be interpreted as decimal.
+       and 1e01 are all the same value.  The mode does not affect how
+       input is done:  for example, hex values must include the &quot;0x&quot;
+       prefix even in <span style="font-weight:bold;">H </span>mode.  Note that octal <span style="font-style:italic;">must</span> be entered using the
+       &quot;0o&quot; prefix, which is also how octal will be printed.  The more
+       traditional &quot;0&quot; prefix will be interpreted as decimal.
 
    <span style="font-weight:bold;">Floating point</span>
-       In floating point mode (i.e., <span style="font-weight:bold;">F </span>mode), all operations use the full
-       size of long double.
+       In floating point mode (i.e., <span style="font-weight:bold;">F </span>mode), all storage and operations
+       use the full capabilities of the &quot;long double&quot; type.
 
        Because floating point is inherently inexact, values are sometimes
        calculated which are <span style="font-style:italic;">almost</span> correct (like .99999999999... instead
-       of 1), but not quite.  <span style="font-weight:bold;">rca </span>tries to help by &quot;snapping&quot; values that
-       are very close to integers to those integers, and by rounding when
-       the precision limits of the floating point representation are
-       reached.  See also the DATA TYPES, OVERFLOW, ACCURACY section,
-       below.
+       of 1), but not quite.  <span style="font-weight:bold;">rca </span>tries to help (for display only) by
+       &quot;snapping&quot; values that are very close to integers to those
+       integers, and by rounding based on the user's display precision.
+       See also the DATA TYPES, OVERFLOW, ACCURACY section, below.
 
        Floating point printing can be controlled by the <span style="font-weight:bold;">automatic</span>,
        <span style="font-weight:bold;">engineering</span>, <span style="font-weight:bold;">fixed</span>, and <span style="font-weight:bold;">digits </span>commands.
@@ -205,12 +204,14 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
 
        The maximum allowed <span style="font-weight:bold;">digits </span>value is based on the number of
        significant digits the system can support.  (That's 18 digits for
-       most modern PC architectures.)  However, as noted above, if using
-       <span style="font-weight:bold;">fixed </span>format it's easy to start seeing &quot;unclean&quot; bits if the
-       magnitude of the number grows beyond the number of significant
-       digits.  The numbers are really big at that point:  over 1e19 on a
-       modern system.  At that point it's wise to choose <span style="font-weight:bold;">automatic </span>or
-       <span style="font-weight:bold;">engineering</span>, which will hide insignificant digits.
+       most modern PC architectures running Linux or BSD, but might be 33
+       on ARM64 Linux, or only 15 on another OS.)  However, as noted
+       above, if using <span style="font-weight:bold;">fixed </span>format it's easy to start seeing &quot;unclean&quot;
+       bits if the magnitude of the number grows beyond the number of
+       significant digits.  The numbers are really big at that point:
+       over 1e19 on a modern Linux system.  At that point it's wise to
+       choose <span style="font-weight:bold;">automatic </span>or <span style="font-weight:bold;">engineering</span>, which will hide insignificant
+       digits.
 
    <span style="font-weight:bold;">Integer</span>
        Integer mode is selected with any of the following commands, which
@@ -228,14 +229,17 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        <span style="font-weight:bold;">bits</span>) command.  Requesting a width of -1 will choose the maximum
        width.  The maximum supported width will be either the width of
        the <span style="font-style:italic;">long</span> <span style="font-style:italic;">long</span> data type, or of the <span style="font-style:italic;">long</span> <span style="font-style:italic;">double</span> mantissa, whichever
-       is smaller.  This results in 64 bits on most PC architectures in
-       2025.  Two counter-examples:  The Raspberry Pi 3 has just 52 bits
-       of long double mantissa, so <span style="font-weight:bold;">rca</span>'s maximum integer width there is
-       limited to 52, at least on a 32 bit OS.  The Raspberry Pi 4
-       supports 128-bit &quot;quad-precision&quot; floats with 113 bits of
-       mantissa, so has excellent floating point accuracy:  about 33
-       decimal digits.  But integers in <span style="font-weight:bold;">rca </span>are still limited to the
-       largest native integer size, 64 bits.)
+       is smaller.  This results in 64 bits on most PC architectures
+       running Linux/BSD in 2025.  Two counter-examples:  The Raspberry
+       Pi 3 has just 52 bits of long double mantissa, so <span style="font-weight:bold;">rca</span>'s maximum
+       integer width there is limited to 52, at least on a 32 bit OS.
+       The Raspberry Pi 4 running Linux supports 128-bit &quot;quad-precision&quot;
+       floats with 113 bits of mantissa, so has excellent floating point
+       accuracy:  about 33 decimal digits.  But integers in <span style="font-weight:bold;">rca </span>are still
+       limited to the largest native integer size, 64 bits.)  The author
+       has no personal experience with other OSes, but has been told that
+       Windows/MSVC and MacOS on Apple silicon have the 52 bit limit, due
+       to the ABI chosen on those systems.
 
        Values will be masked to the current word width for both use and
        display, whether they are input by the user or result from an
@@ -378,7 +382,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        All others group left to right.  (This list has no meaning for
        RPN.)
 
-         1      <span style="font-weight:bold;">( )</span>
+         1      <span style="font-weight:bold;">( ) ;</span>
          2  R   <span style="font-weight:bold;">~ ! + - chs negate recip sqrt sin cos tan asin acos</span>
                  <span style="font-weight:bold;">atan exp ln log2 log10 abs frac int i2mm mm2i ft2m</span>
                  <span style="font-weight:bold;">m2ft mi2km km2mi f2c c2f oz2g g2oz oz2ml ml2oz q2l</span>
@@ -396,7 +400,6 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
          13     <span style="font-weight:bold;">&amp;&amp;</span>
          14     <span style="font-weight:bold;">||</span>
          15     <span style="font-weight:bold;">=</span>
-         16     <span style="font-weight:bold;">;</span>
 
        Like C, Java, JavaScript, and Rust (but unlike Python and bc), the
        <span style="font-weight:bold;">! </span>operator (logical NOT) is a high-precedence unary operator and
@@ -412,13 +415,14 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        the only operators which use more than two stack elements.
        Variadic operators cannot be used in an infix expression.
 
-       <span style="font-weight:bold;">N mark </span>(i.e., the <span style="font-weight:bold;">mark </span>command with an argument of <span style="font-weight:bold;">N</span>) will cause a
-       later variadic operation to consider just the current top N
+       <span style="font-style:italic;">N</span> <span style="font-weight:bold;">mark </span>(i.e., the <span style="font-weight:bold;">mark </span>command with an argument of <span style="font-style:italic;">N</span>) will cause a
+       later variadic operation to consider just the current top <span style="font-style:italic;">N</span>
        values, plus any further values that are pushed prior to the
-       operation.  <span style="font-weight:bold;">N </span>cannot be greater than the depth of the stack.  <span style="font-weight:bold;">0</span>
+       operation.  <span style="font-style:italic;">N</span> cannot be greater than the depth of the stack.  <span style="font-weight:bold;">0</span>
        <span style="font-weight:bold;">mark </span>sets the mark at the current top of stack, causing only
        subsequent pushes to be included by a later variadic.  <span style="font-weight:bold;">-1 mark</span>
-       will clear the mark.
+       will clear the mark.  If set, the position of the mark will be
+       shown when the full stack is printed.
 
        <span style="font-weight:bold;">snapshot </span>is variadic, and will make a copy of the stack up to the
        mark or the end of stack.  The copied entries are undisturbed.
@@ -436,7 +440,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        attempt a snapshot before proceeding, but won't overwrite an
        existing snapshot.  Always doing a manual snapshot is safest, but
        it can be skipped if only working with one set of data.
-               1 <span style="font-weight:bold;">3 7 10 snapshot avg restore stddev</span>
+              <span style="font-weight:bold;">1 3 7 10 snapshot avg restore stddev</span>
        will leave the average and standard deviation of the given list on
        the stack.
 
@@ -494,9 +498,9 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
               least 4 fractional digits, to ensure seeing the DMS format
               correctly.
 
-              <span style="font-weight:bold;">nop </span>does nothing.  If used at the end of a line, has the
-              side effect of suppressing normal printed output, which can
-              be useful in scripts.
+              <span style="font-weight:bold;">nop </span>does nothing.  If used at the end of a line, <span style="font-weight:bold;">nop </span>has
+              the side effect of suppressing normal printed output, which
+              can be useful in scripts.
 
               The <span style="font-weight:bold;">: </span>(colon) command does nothing, but signifies to the
               parser that the rest of the line should be interpreted as
@@ -507,14 +511,14 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        The locale is consulted for just a few things:  the decimal point,
        the thousands separator (and grouping specification), and the
        currency symbol.  If using the minimal C/POSIX locale, defaults
-       will be provided:  the thousands separator will be be set to ','
-       (at every 3 digits), and the currency symbol to '$'.
+       will be provided:  the thousands separator will be set to ',' (at
+       every 3 digits), and the currency symbol to '$'.
 
        The locale always chooses the decimal point.  Usually this is '.',
        but is also commonly ','.
 
-       The thousands separator will be will be stripped from all input,
-       and optionally used for numeric grouping of output,
+       The thousands separator will be stripped from all input, and
+       optionally used for numeric grouping of output,
 
        The currency symbol will first be checked to see if its value
        occurs anywhere in the name of any <span style="font-weight:bold;">rca </span>command or operator.  If
@@ -526,14 +530,14 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        floating point, but can affect <span style="font-weight:bold;">rca</span>'s mixed model.  Changing <span style="font-weight:bold;">rca</span>'s
        operating mode from floating point to an integer mode requires
        conversion of all stack values to integer.  If the conversion from
-       <span style="font-style:italic;">long</span> <span style="font-style:italic;">double</span> to <span style="font-style:italic;">long</span> <span style="font-style:italic;">long</span> can't be done without loss, a error
+       <span style="font-style:italic;">long</span> <span style="font-style:italic;">double</span> to <span style="font-style:italic;">long</span> <span style="font-style:italic;">long</span> can't be done without loss, an error
        message is issued, but the conversion has already occurred, and
-       the loss cannot be undone.  (The error message shows the value
-       with enough digits to ensure it can be restored accurately via
-       copy and paste.)  If the conversion occurred while simply
-       displaying a float value as integer, without changing modes, then
-       the original value is unchanged.  Execution will proceed after the
-       warning unless <span style="font-weight:bold;">errorexit </span>has been enabled.
+       the loss cannot be undone.  The error message shows the value with
+       enough digits to ensure it can be restored accurately via copy and
+       paste.  If the conversion occurred while simply displaying a float
+       value as integer, without changing modes, then the original value
+       is unchanged.  Execution will proceed after the warning unless
+       <span style="font-weight:bold;">errorexit </span>has been enabled.
 
        Some floating point operations give results which are invalid
        (&quot;nan&quot;, i.e., &quot;not a number&quot;) or &quot;+inf&quot; or &quot;-inf&quot; (i.e.,
@@ -551,11 +555,13 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        Something that should be 0 may instead have a very tiny value, or
        two numbers which should be equal may differ by an insignificant
        amount.  <span style="font-weight:bold;">rca </span>helps by adjusting displayed values, and values being
-       compared to one another:  first, values very close to an integer
-       are forced to that integer.  Then, values are rounded to <span style="font-weight:bold;">rca</span>'s
-       maximum precision (again, usually 18 digits).  The internal
-       representation of these values remains unchanged -- <span style="font-style:italic;">only</span> the
-       printed output (or the comparison) is affected.
+       compared to one another.  First, values within 10e-N of an integer
+       are forced to that integer.  Then, values are rounded to N
+       significant digits.  'N' in both cases is chosen to be midway
+       between the user's precision (configured with the <span style="font-weight:bold;">digits </span>command)
+       and the maximum precision available.  <span style="font-weight:bold;">rca</span>'s internal
+       representation remains unchanged -- <span style="font-style:italic;">only</span> the printed output (or
+       the comparison) is affected.
 
 <span style="font-weight:bold;">EXIT STATUS</span>
        <span style="font-weight:bold;">rca </span>will normally exit with status 0 or 1.  To satisfy normal
@@ -566,8 +572,8 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        cause an exit status of 3.  Errors resulting from user input
        (parsing errors, empty stack, data conversion warnings) are non-
        fatal unless the <span style="font-weight:bold;">errorexit </span>toggle has been set.  In that case,
-       those warnings and errors will cause exit status of 4.  This can
-       be useful when <span style="font-weight:bold;">rca </span>is used non-interactively.
+       those warnings and errors will cause an exit status of 4.  This
+       can be useful when <span style="font-weight:bold;">rca </span>is used non-interactively.
 
 <span style="font-weight:bold;">SHELL SUPPORT</span>
        Incorporating <span style="font-weight:bold;">rca </span>into the shell is straightforward:
@@ -620,7 +626,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        Paul Fox created <span style="font-weight:bold;">rca </span>(formerly called &quot;ca&quot;) very slowly over a
        span of decades, starting in 1993.
 
-                       version v24     Mar 15, 2026                <span style="font-style:italic;">rca</span>(1)
+                       version v25     Mar 21, 2026                <span style="font-style:italic;">rca</span>(1)
 </pre>
 </body>
 </html>
