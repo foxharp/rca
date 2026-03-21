@@ -79,18 +79,20 @@ char licensetext[] = \
 # include <readline/history.h>
 #endif
 
+#if USE_VALGRIND_CHECKS
 #include <valgrind/memcheck.h>
 
 void
 valgrind(int n)
 {
 	(void)n;
-#if 1
 	fprintf(stderr, "invoking valgrind leak check %d\n", n);
 	VALGRIND_DO_LEAK_CHECK;
 	fprintf(stderr, "done with valgrind leak check %d\n", n);
-#endif
 }
+#else
+#define valgrind(n) do { } while(0)
+#endif
 
 /* who are we? */
 char *progname;
@@ -108,7 +110,7 @@ mpd_context_t context, *ctx = &context;
 
 
 /* debug logging support, runtime controllable */
-int tracing = 15;
+int tracing;
 #define TOK 1
 #define EXEC 2
 #define TWEAK 4
@@ -482,27 +484,6 @@ mpush_copy(mpd_t *a)
     mpush(n);
 }
 
-#if 0
-void
-push(ldouble n)
-{
-    (void) n; // fixme
-    fprintf(stderr, "empty push() called!\n");
-#if 0
-	if (floating_mode(mode) || !isfinite(n)) {
-		p->val = n;
-		trace(EXEC, " pushed %La (%Lg)\n", n, n);
-	} else {
-		p->val = integer_adjust( ld_to_ll(n));
-		if (tracing) {
-			long long ll = ld_to_ll(p->val);
-			trace(EXEC, " pushed masked/extended %lld/0x%llx\n", ll, ll);
-		}
-	}
-#endif
-
-}
-#endif
 
 #if 0
 void
@@ -533,16 +514,6 @@ peek(ldouble *f)
 	return TRUE;
 }
 
-#if 0
-boolean
-pop(ldouble *f)
-{
-	(void) f;
-	// struct num *p;
-    fprintf(stderr, "empty pop() called!\n");
-    return 0;
-}
-#endif
 
 boolean
 mpop(mpd_t **a)
@@ -3335,7 +3306,6 @@ sum_worker(boolean do_sum)
 	if (n) mpd_del(n);
 	if (tot) mpd_del(tot);
 	if (tot_sq) mpd_del(tot_sq);
-valgrind(28);
 
 	return GOODOP;
 }
@@ -3789,21 +3759,26 @@ tpush(token **tstackp, token *tok)
 {
 	struct token *t;
 
-char *s = stackname(tstackp);
+	// trace(EXEC, "tpushing on %s\n", stackname(tstackp));
+
 	/* we may be asked to push a static or local token.  so if we
 	 * originally malloc'ed the incoming token, just reuse it,
 	 * otherwise malloc and copy.  */
-	if (!tok->alloced) {
-		t = (struct token *)safe_calloc(sizeof(struct token));
-
-		*t = *tok;
-		t->alloced = 1;
-	} else {
+	if (tok->alloced) {
 		t = tok;
+	} else {
+		t = (struct token *)safe_calloc(sizeof(struct token));
+		*t = *tok;
+		if (tok->valstr)
+			t->valstr = strdup(tok->valstr);
+		if (tok->mpd) {
+			t->mpd = mpd_new(ctx);
+			mpd_copy(t->mpd, tok->mpd, ctx);
+		}
+		t->alloced = 1;
 	}
 
 	t->next = *tstackp;
-fprintf(stderr, "tpusing %p on %s\n", (void*)t, s);
 	*tstackp = t;
 }
 
@@ -3832,25 +3807,25 @@ void
 tfree(token *t)
 {
 	if (!t) return;
-fprintf(stderr, "tfree freeing '%p', t->type %c\n", (void*)t, t->type);
+// fprintf(stderr, "tfree freeing '%p', t->type %c\n", (void*)t, t->type);
 
 	if (t->valstr) {
-fprintf(stderr, "tfree freeing valstr %p\n", (void*)(t->valstr));
+// fprintf(stderr, "tfree freeing valstr %p\n", (void*)(t->valstr));
 		free(t->valstr);
 		t->valstr = 0;
 	}
 	if (t->mpd) {
-fprintf(stderr, "tfree freeing mpd %p\n", (void*)(t->mpd));
+// fprintf(stderr, "tfree freeing mpd %p\n", (void*)(t->mpd));
 		mpd_del(t->mpd);
 		t->mpd = 0;
 	}
 
 	if (!t->alloced) {
-fprintf(stderr, "tfree NOT freeing %p, not alloced\n", (void*)t);
+// fprintf(stderr, "tfree NOT freeing %p, not alloced\n", (void*)t);
 		return;
 	}
 
-fprintf(stderr, "tfree freeing wrapper\n");
+// fprintf(stderr, "tfree freeing wrapper\n");
 	free(t);
 }
 
@@ -3859,15 +3834,15 @@ tclear(token **tstackp)
 {
 	token *t, *nt;
 
-fprintf(stderr, "tclear clearing %s\n", stackname(tstackp));
+// fprintf(stderr, "tclear clearing %s\n", stackname(tstackp));
 	t = *tstackp;
 	*tstackp = NULL;
 
 	while (t) {
 		nt = t->next;
-fprintf(stderr, "freeing %p\n", (void*)t);
+// fprintf(stderr, "freeing %p\n", (void*)t);
 		tfree(t);
-valgrind(1000);
+		valgrind(1000);
 		t = nt;
 	}
 }
@@ -3883,6 +3858,7 @@ sprint_token(char *s, size_t slen, token *t)
 
 	switch (t->type) {
 	case NUMERIC:
+		// snprintf(s, slen, "'%s'", mpd_to_sci(t->mpd, 0));
 		snprintf(s, slen, "'%s'", t->valstr);
 		break;
 	case SYMBOLIC:
@@ -3945,10 +3921,8 @@ create_infix_support_tokens()
 	 * on, specifically for dealing with infix processing.  */
 
 	parse_token("(", &open_paren_token, NULL, INFIX);
-	// open_paren_token.tstatic = 1;
 
 	parse_token("chs", &chsign_token, NULL, INFIX);
-	// chsign_token.tstatic = 1;
 }
 
 void
@@ -3971,19 +3945,15 @@ expression_error(token *pt, token *t)
 	if (i == 2)
 		return;
 	error(" error: bad expression sequence, at %s and %s\n", pts, ts);
-    valgrind(40);
+	valgrind(40);
 }
 
 void
 stack_error_cleanup(void)
 {
-    fprintf(stderr, "starting error cleanup\n");
-    valgrind(41);
-    fprintf(stderr, "error cleanup outstack\n");
+	valgrind(41);
 	tclear(&out_stack);
-    fprintf(stderr, "error cleanup operstack\n");
 	tclear(&oper_stack);
-    fprintf(stderr, "done error cleanup\n");
 }
 
 
@@ -4057,8 +4027,8 @@ void shunt(token *t)
 opreturn
 shunting_yard(int command)
 {
-	token tok1, prevtok;
-	token *t = &tok1;	// permanent pointers to tok1 and prevtok
+	token sytok, prevtok;
+	token *t = &sytok;	// permanent pointers to sytok and prevtok
 	token *pt = &prevtok;
 	token *tp; // used for tpeek()
 	opreturn open_paren(void);
@@ -4083,10 +4053,11 @@ shunting_yard(int command)
 		trace_stack_dump(SHUNT,&oper_stack);
 		trace_stack_dump(SHUNT,&out_stack);
 
-		if (!read_token(&tok1, INFIX) || tok1.type == EOL) {
+		// remember, t always points at sytok
+		if (!read_token(&sytok, INFIX) || sytok.type == EOL) {
 			if (!infix_mode)
 				break;
-			tok1.type = EOL;
+			sytok.type = EOL;
 		}
 
 		/* we delayed classifying the previous variable token
@@ -4120,7 +4091,7 @@ shunting_yard(int command)
 				free(tpop(&out_stack));
 			} else if (!prev_tok_was_operand(pt)) {
 				expression_error(pt, t);
-				stack_error_cleanup(pt, t);
+				stack_error_cleanup();
 				input_ptr = NULL;
 				return BADOP;
 			}
@@ -4129,7 +4100,7 @@ shunting_yard(int command)
 		case VARIABLE:
 			if (prev_tok_was_operand(pt)) {
 				expression_error(pt, t);
-				stack_error_cleanup(pt, t);
+				stack_error_cleanup();
 				input_ptr = NULL;
 				return BADOP;
 			}
@@ -4142,7 +4113,7 @@ shunting_yard(int command)
 		case SYMBOLIC:
 			if (prev_tok_was_operand(pt)) {
 				expression_error(pt, t);
-				stack_error_cleanup(pt, t);
+				stack_error_cleanup();
 				input_ptr = NULL;
 				return BADOP;
 			}
@@ -4154,7 +4125,7 @@ shunting_yard(int command)
 
 				if (prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
-					stack_error_cleanup(pt, t);
+					stack_error_cleanup();
 					input_ptr = NULL;
 					return BADOP;
 				}
@@ -4168,7 +4139,7 @@ shunting_yard(int command)
 					free(tpop(&out_stack));
 				} else if (!prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
-					stack_error_cleanup(pt, t);
+					stack_error_cleanup();
 					input_ptr = NULL;
 					return BADOP;
 				}
@@ -4201,7 +4172,7 @@ shunting_yard(int command)
 					break;
 				} else if (!prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
-					stack_error_cleanup(pt, t);
+					stack_error_cleanup();
 					input_ptr = NULL;
 					return BADOP;
 				}
@@ -4222,7 +4193,7 @@ shunting_yard(int command)
 			unary:
 				if (prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
-					stack_error_cleanup(pt, t);
+					stack_error_cleanup();
 					input_ptr = NULL;
 					return BADOP;
 				}
@@ -4248,7 +4219,7 @@ shunting_yard(int command)
 					!prev_tok_was_operand(pt) &&
 					!strchr(" \t\v\r\n)+-", *input_ptr)) {
 					if (t_op->func == subtract) {
-						tok1 = chsign_token;
+						sytok = chsign_token;
 						trace(TOK, " subtract is now chs\n");
 					} else {  // add
 						trace(TOK, " ignoring unary plus\n");
@@ -4260,7 +4231,7 @@ shunting_yard(int command)
 				if (t_op->func == assignment) {
 					if (pt->type != VARIABLE) {
 						expression_error(pt, t);
-						stack_error_cleanup(pt, t);
+						stack_error_cleanup();
 						input_ptr = NULL;
 						return BADOP;
 					}
@@ -4270,7 +4241,7 @@ shunting_yard(int command)
 
 				if (!prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
-					stack_error_cleanup(pt, t);
+					stack_error_cleanup();
 					input_ptr = NULL;
 					return BADOP;
 				}
@@ -4301,9 +4272,11 @@ shunting_yard(int command)
 			break;
 		}
 
-		prevtok = tok1;
+		tfree(pt);  // safe, because "alloced" flag isn't set
+		*pt = *t;
 
 	}
+	tfree(pt);  // safe, because "alloced" flag isn't set
 
 	trace(SHUNT, "\n loop done:\n");
 	trace_stack_dump(SHUNT,&oper_stack);
@@ -4318,7 +4291,7 @@ shunting_yard(int command)
 		error(" error: %s parentheses\n",
 			nesting < 0 ? "extra" : "missing");
 		input_ptr = NULL;
-		stack_error_cleanup(pt, t);
+		stack_error_cleanup();
 		return BADOP;
 	}
 error("\ncode marker\n");
@@ -4619,7 +4592,6 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 
 	} else if (isdigit(*p) || match_dp(p)) {
 		// decimal
-		// long double dd = strtold(p, &np);
 
 		(void)strtold(p, &np);
 
@@ -4635,14 +4607,15 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 		t->type = NUMERIC;
 		t->imode = 'D';
 		t->valstr = strndup(p,(size_t)(np -p));
-    fprintf(stderr, "NUMERIC valstr is %s %p\n", t->valstr, t->valstr);
 		t->mpd = mpd_new(ctx);
 		mpd_set_string(t->mpd, t->valstr, ctx);
+
 	} else if (*p == '_' && isalnum(*(p+1))) {
 		// variable
 		n = stralnum(p, &np);
 		t->type = VARIABLE;
 		t->valstr = strndup(p,n);
+
 	} else {
 
 	    is_oper:
@@ -4945,7 +4918,6 @@ void
 putback_token(token *t)
 {
 	putback = *t;
-	// putback.tstatic = 1;
 	trace(EXEC,("pushing back: ")); trace_show_tok(EXEC, t);
 }
 
@@ -5716,7 +5688,7 @@ main(int argc, char *argv[])
 		/* use up tokens created by infix processing first */
 		token *tt;
 		if ((tt = tpop(&infix_rpn_queue))) {
-		    fprintf(stderr, " popped from rpn queue in main\n");
+		    // fprintf(stderr, " popped from rpn queue in main\n");
 			tokk = *tt;
 			free(tt);
 			freeze_lastx();
@@ -5750,17 +5722,24 @@ main(int argc, char *argv[])
 			// trace(EXEC,  " numeric %s\n", t->valstr);
 			trace_mpd(EXEC, "numeric", t->mpd);
 			mpush(t->mpd);
-			t->mpd = 0;
-			free(t->valstr);
-			t->valstr = 0;
-valgrind(5);
+			if (!tracing) {
+				/* we can't see var names and numbers
+				 * if we don't loosen the rules while
+				 * debugging */
+				free(t->valstr);
+				t->valstr = 0;
+			}
+			valgrind(5);
 			break;
 		case VARIABLE:
 			trace(EXEC, " variable %s\n", t->valstr);
 			dynamic_var(t);
-			// free(t->valstr);
-			t->valstr = 0;
-valgrind(6);
+			if (!tracing) {
+				/* see above */
+				free(t->valstr);
+				t->valstr = 0;
+			}
+			valgrind(6);
 			break;
 		case SYMBOLIC:
 		case OP:
@@ -5769,20 +5748,20 @@ valgrind(6);
 				pending_show();
 			else
 				pending_clear();
-valgrind(17);
+			valgrind(17);
 			(t->oper->func) ();
-valgrind(7);
+			valgrind(7);
 			break;
 		case EOL:
 			do_autoprint(pt);
 			pending_show();
-valgrind(8);
+			valgrind(8);
 			break;
 		default:
 		case UNKNOWN:
 			// I think this is unreachable
 			error(" error:  unrecognized input '%s'\n", t->str);
-valgrind(9);
+			valgrind(9);
 			break;
 		}
 		if (variable_write_enable)
