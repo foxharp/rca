@@ -1,3 +1,28 @@
+v25 changes (03/21/2026)
+
+    reworked floating point tweaking to be fully based on display
+    precision.  it feels a little weird, but i think it will help with
+    the artifact problem.  they'll still be there -- just harder to
+    see.  "48 47.8 - .2 - 0 ==" (aka "(((48 - 47.8) - .2) == 0)") didn't
+    used to work.  the precision chose for rounding is halfway between
+    your chosen precision, and the maximum available.
+
+    added "bitc", a bitwise op that counts the 1 bits.
+
+    reimplemented ';' as syntax, instead of as operator.  the elegance
+    was nice, and the code is definitely more complicated, but this
+    lets chained sub-expressions referencing lastx work:  (1 + 3; 7 +
+    lx) == 11.  previously this gave an answer of 7 (because lx was
+    defaulting to 0).  The RPN behavior of ';' is now less
+    interesting.  it used to discard y, which i actually found useful
+    once in a while.  now it just discards x, just like pop.
+
+    removed declaration immediately following case-labels, added
+    the -pedantic flag to catch this in the future
+
+    cleaned up man page
+
+
 
 v24 changes (03/15/2026)
 

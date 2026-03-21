@@ -1,4 +1,4 @@
-char *release = "v24";
+char *release = "v25";
 /*
  *
  *	This program is a mediocre but practical stack-based floating

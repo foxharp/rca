@@ -112,7 +112,7 @@ htmlmv:
 # to release a new version:
 #   update CHANGES file
 #   vi rca.c (bump release version)
-#   git commit     # "bumped to vNN"
+#   git commit -a     # "bumped to version vNN"
 #   make release
 #   make htmldiff   # check html files
 #   make htmlmv
