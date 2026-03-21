@@ -88,6 +88,7 @@ valgrind(int n)
 #if 1
 	fprintf(stderr, "invoking valgrind leak check %d\n", n);
 	VALGRIND_DO_LEAK_CHECK;
+	fprintf(stderr, "done with valgrind leak check %d\n", n);
 #endif
 }
 
@@ -198,16 +199,16 @@ typedef struct token {
 	char *str;     /* UNKNOWN: points to input buffer, for errors */
 	int imode;	    /* input mode: if NUMERIC, how was it entered?  */
 	struct token *next; /* for stacking tokens when infix processing */
-	int tstatic;   /* don't free this.  it wasn't alloc'ed */
+	int alloced;   /* don't free this.  it wasn't alloc'ed */
 } token;
 
 /* values for token type */
 #define UNKNOWN  0
-#define NUMERIC  1
-#define SYMBOLIC 2
-#define OP       3
-#define EOL      4
-#define VARIABLE 5
+#define NUMERIC  'N'
+#define SYMBOLIC 'S'
+#define OP       'O'
+#define EOL      'E'
+#define VARIABLE 'V'
 
 
 /* 6 major modes:  float, decimal, hex, octal, binary, and raw float.
@@ -298,7 +299,7 @@ int variable_write_enable;
 /* where program input is coming from currently */
 static char *input_ptr = NULL;
 
-token *read_token(int whichparse);
+int read_token(token *, int whichparse);
 int parse_token(char *p, token *t, char **nextp, int whichparse);
 void putback_token(token *t);
 #define RPN 1
@@ -3788,19 +3789,21 @@ tpush(token **tstackp, token *tok)
 {
 	struct token *t;
 
+char *s = stackname(tstackp);
 	/* we may be asked to push a static or local token.  so if we
 	 * originally malloc'ed the incoming token, just reuse it,
 	 * otherwise malloc and copy.  */
-	if (tok->tstatic) {
+	if (!tok->alloced) {
 		t = (struct token *)safe_calloc(sizeof(struct token));
 
 		*t = *tok;
-		t->tstatic = 0;
+		t->alloced = 1;
 	} else {
 		t = tok;
 	}
 
 	t->next = *tstackp;
+fprintf(stderr, "tpusing %p on %s\n", (void*)t, s);
 	*tstackp = t;
 }
 
@@ -3828,18 +3831,26 @@ tpop(token **tstackp)
 void
 tfree(token *t)
 {
-	if (!t || t->tstatic) return;
+	if (!t) return;
+fprintf(stderr, "tfree freeing '%p', t->type %c\n", (void*)t, t->type);
 
 	if (t->valstr) {
-		// fprintf(stderr, "tclear freeing '%s'\n", t->valstr);
+fprintf(stderr, "tfree freeing valstr %p\n", (void*)(t->valstr));
 		free(t->valstr);
 		t->valstr = 0;
 	}
 	if (t->mpd) {
+fprintf(stderr, "tfree freeing mpd %p\n", (void*)(t->mpd));
 		mpd_del(t->mpd);
 		t->mpd = 0;
 	}
 
+	if (!t->alloced) {
+fprintf(stderr, "tfree NOT freeing %p, not alloced\n", (void*)t);
+		return;
+	}
+
+fprintf(stderr, "tfree freeing wrapper\n");
 	free(t);
 }
 
@@ -3848,12 +3859,15 @@ tclear(token **tstackp)
 {
 	token *t, *nt;
 
+fprintf(stderr, "tclear clearing %s\n", stackname(tstackp));
 	t = *tstackp;
 	*tstackp = NULL;
 
 	while (t) {
 		nt = t->next;
+fprintf(stderr, "freeing %p\n", (void*)t);
 		tfree(t);
+valgrind(1000);
 		t = nt;
 	}
 }
@@ -3884,10 +3898,10 @@ sprint_token(char *s, size_t slen, token *t)
 		snprintf(s, slen, "'EOL'");
 		break;
 	case UNKNOWN:
-		snprintf(s, slen, "'unknown (%d)'", t->type);
+		snprintf(s, slen, "'UNKNOWN'");
 		break;
 	default:
-		error(" BUG: hit default in sprint_token()\n");
+		error(" BUG: hit default with %d in sprint_token()\n", t->type);
 	}
 }
 
@@ -3931,10 +3945,10 @@ create_infix_support_tokens()
 	 * on, specifically for dealing with infix processing.  */
 
 	parse_token("(", &open_paren_token, NULL, INFIX);
-	open_paren_token.tstatic = 1;
+	// open_paren_token.tstatic = 1;
 
 	parse_token("chs", &chsign_token, NULL, INFIX);
-	chsign_token.tstatic = 1;
+	// chsign_token.tstatic = 1;
 }
 
 void
@@ -3956,9 +3970,22 @@ expression_error(token *pt, token *t)
 	}
 	if (i == 2)
 		return;
-
 	error(" error: bad expression sequence, at %s and %s\n", pts, ts);
+    valgrind(40);
 }
+
+void
+stack_error_cleanup(void)
+{
+    fprintf(stderr, "starting error cleanup\n");
+    valgrind(41);
+    fprintf(stderr, "error cleanup outstack\n");
+	tclear(&out_stack);
+    fprintf(stderr, "error cleanup operstack\n");
+	tclear(&oper_stack);
+    fprintf(stderr, "done error cleanup\n");
+}
+
 
 opreturn
 close_paren(void)
@@ -4030,22 +4057,17 @@ void shunt(token *t)
 opreturn
 shunting_yard(int command)
 {
-	static token prevtok;
-	token *pt = &prevtok;  // pointers to statics
-	static token *t; // alloced token
+	token tok1, prevtok;
+	token *t = &tok1;	// permanent pointers to tok1 and prevtok
+	token *pt = &prevtok;
 	token *tp; // used for tpeek()
 	opreturn open_paren(void);
-	int t_was_EOL;
 
-	tfree(t);
-
-valgrind(20);
 	int nesting;
 
 	tclear(&out_stack);
 	tclear(&oper_stack);
 
-valgrind(21);
 	trace(TOK,("\n infix tokens: "));
 
 	if (command) {
@@ -4055,25 +4077,16 @@ valgrind(21);
 		pt->type = UNKNOWN;
 		nesting = 0;
 	}
-	pt->tstatic = 1;
 
 	while (1) {
-valgrind(25);
 		trace(SHUNT,("\n"));
 		trace_stack_dump(SHUNT,&oper_stack);
 		trace_stack_dump(SHUNT,&out_stack);
 
-		t_was_EOL = 0;
-
-		t = read_token(INFIX);
-		if (!t || t->type == EOL) {
-			tfree(t);
-			t = 0;
-			t_was_EOL = 1;
-			if (!infix_mode) {
+		if (!read_token(&tok1, INFIX) || tok1.type == EOL) {
+			if (!infix_mode)
 				break;
-			}
-			goto eol;
+			tok1.type = EOL;
 		}
 
 		/* we delayed classifying the previous variable token
@@ -4102,12 +4115,12 @@ valgrind(25);
 
 		switch (t->type) {
 		case EOL:
-		    eol:
 			if (prev_tok_was_semicolon(pt)) {
 				// ';' is a no-op at EOL
 				free(tpop(&out_stack));
 			} else if (!prev_tok_was_operand(pt)) {
 				expression_error(pt, t);
+				stack_error_cleanup(pt, t);
 				input_ptr = NULL;
 				return BADOP;
 			}
@@ -4116,6 +4129,7 @@ valgrind(25);
 		case VARIABLE:
 			if (prev_tok_was_operand(pt)) {
 				expression_error(pt, t);
+				stack_error_cleanup(pt, t);
 				input_ptr = NULL;
 				return BADOP;
 			}
@@ -4128,6 +4142,7 @@ valgrind(25);
 		case SYMBOLIC:
 			if (prev_tok_was_operand(pt)) {
 				expression_error(pt, t);
+				stack_error_cleanup(pt, t);
 				input_ptr = NULL;
 				return BADOP;
 			}
@@ -4139,6 +4154,7 @@ valgrind(25);
 
 				if (prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
+					stack_error_cleanup(pt, t);
 					input_ptr = NULL;
 					return BADOP;
 				}
@@ -4152,6 +4168,7 @@ valgrind(25);
 					free(tpop(&out_stack));
 				} else if (!prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
+					stack_error_cleanup(pt, t);
 					input_ptr = NULL;
 					return BADOP;
 				}
@@ -4167,7 +4184,7 @@ valgrind(25);
 				}
 
 				// Pop the opening parenthesis
-				tfree(tpop(&oper_stack));
+				free(tpop(&oper_stack));
 
 				/* if the parenthesized expression was
 				 * an operand for a unary operator
@@ -4184,6 +4201,7 @@ valgrind(25);
 					break;
 				} else if (!prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
+					stack_error_cleanup(pt, t);
 					input_ptr = NULL;
 					return BADOP;
 				}
@@ -4204,6 +4222,7 @@ valgrind(25);
 			unary:
 				if (prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
+					stack_error_cleanup(pt, t);
 					input_ptr = NULL;
 					return BADOP;
 				}
@@ -4229,7 +4248,7 @@ valgrind(25);
 					!prev_tok_was_operand(pt) &&
 					!strchr(" \t\v\r\n)+-", *input_ptr)) {
 					if (t_op->func == subtract) {
-						*t = chsign_token;
+						tok1 = chsign_token;
 						trace(TOK, " subtract is now chs\n");
 					} else {  // add
 						trace(TOK, " ignoring unary plus\n");
@@ -4241,6 +4260,7 @@ valgrind(25);
 				if (t_op->func == assignment) {
 					if (pt->type != VARIABLE) {
 						expression_error(pt, t);
+						stack_error_cleanup(pt, t);
 						input_ptr = NULL;
 						return BADOP;
 					}
@@ -4250,6 +4270,7 @@ valgrind(25);
 
 				if (!prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
+					stack_error_cleanup(pt, t);
 					input_ptr = NULL;
 					return BADOP;
 				}
@@ -4266,15 +4287,12 @@ valgrind(25);
 
 		default:
 		case UNKNOWN:
-	trace(SHUNT, "\n at UNKNOWN:\n");
-	trace_stack_dump(SHUNT,&oper_stack);
-	trace_stack_dump(SHUNT,&out_stack);
 			input_ptr = NULL;
 			return BADOP;
 		}
 
 		// in infix mode, we're done when the line ends
-		if (!command && t_was_EOL) {
+		if (!command && t->type == EOL) {
 			break;
 		}
 
@@ -4283,12 +4301,10 @@ valgrind(25);
 			break;
 		}
 
-		*pt = *t;
-		pt->tstatic = 1;
+		prevtok = tok1;
 
 	}
 
-valgrind(26);
 	trace(SHUNT, "\n loop done:\n");
 	trace_stack_dump(SHUNT,&oper_stack);
 	trace_stack_dump(SHUNT,&out_stack);
@@ -4302,18 +4318,17 @@ valgrind(26);
 		error(" error: %s parentheses\n",
 			nesting < 0 ? "extra" : "missing");
 		input_ptr = NULL;
+		stack_error_cleanup(pt, t);
 		return BADOP;
 	}
+error("\ncode marker\n");
 
 	 /* if we're in infix mode and we used our entire line of
 	  * input, then trick the rpn execution into reporting that
 	  * (i.e., the EOL) for us when it's finished running.  this
 	  * makes autoprint work.  */
-	if (infix_mode && t_was_EOL) {
-		pt->type = EOL;
-		tpush(&infix_rpn_queue, pt);
-	}
-valgrind(27);
+	if (infix_mode && t->type == EOL)
+		tpush(&infix_rpn_queue, t);
 
 	/* the shunting yard is done.  Dijkstra specified an
 	 * output queue, but we used a stack, so it's in the wrong
@@ -4333,6 +4348,7 @@ valgrind(27);
 #undef t_op
 #undef tp_op
 }
+
 
 opreturn
 open_paren(void)
@@ -4922,27 +4938,30 @@ fetch_line(void)
 	return 1;
 }
 
-token *putback;
+
+token putback;
 
 void
 putback_token(token *t)
 {
-	putback = t;
+	putback = *t;
+	// putback.tstatic = 1;
 	trace(EXEC,("pushing back: ")); trace_show_tok(EXEC, t);
 }
 
 /* read_token() makes sure we have input available to parse, and sets
  * things up for parse_token() to do the work.  */
-token *
-read_token(int parsing_rpn)
+int
+read_token(token *t, int parsing_rpn)
 {
 	char *next_input_ptr;
-	token *t;
 
-	if (putback) {
-		t = putback;
-		putback = 0;
-		return t;
+	bzero(t, sizeof(struct token));
+
+	if (putback.type != UNKNOWN) {
+		*t = putback;
+		putback.type = UNKNOWN;
+		return 1;
 	}
 
 	/* either it was never set, or we used up the data pointed
@@ -4955,26 +4974,24 @@ read_token(int parsing_rpn)
 	while (isspace(*input_ptr))
 		input_ptr++;
 
-	t = talloc();
-
 	if (*input_ptr == '\0') {  // out of input -- create an EOL token
 		t->type = EOL;
 		// trace_show_tok(TOK, t);  // trace disabled:  too chatty
 		input_ptr = NULL;
-		return t;
+		return 1;
 	}
 
 	fflush(stdin);
 
 	if (!parse_token(input_ptr, t, &next_input_ptr, parsing_rpn)) {
 		input_ptr = NULL;
-		tfree(t);
 		return 0;
 	}
 
 	input_ptr = next_input_ptr;
-	return t;
+	return 1;
 }
+
 
 /* the opers[] and config[] tables don't initialize everything explicitly */
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
@@ -5666,8 +5683,12 @@ do_autoprint(token *pt)
 int
 main(int argc, char *argv[])
 {
-	token *t;
-	token *pt = 0;
+	static token tokk, prevtokk;
+	token *t = &tokk;	// permanent pointers to tokk and prevtokk
+	token *pt = &prevtokk;
+
+	pt->type = UNKNOWN;
+
 
 	mpd_stuff();
 
@@ -5693,15 +5714,15 @@ main(int argc, char *argv[])
 	while (1) {
 
 		/* use up tokens created by infix processing first */
-		t = tpop(&infix_rpn_queue);
-		if (t) {
-valgrind(2);
+		token *tt;
+		if ((tt = tpop(&infix_rpn_queue))) {
+		    fprintf(stderr, " popped from rpn queue in main\n");
+			tokk = *tt;
+			free(tt);
 			freeze_lastx();
-valgrind(3);
 		} else { /* otherwise get tokens from input as usual */
-valgrind(4);
-			t = read_token(RPN);
-			if (!t) continue;
+			if (!read_token(&tokk, RPN))
+				continue;
 
 			thaw_lastx();
 			// in infix mode, check the first token on a line...
@@ -5726,13 +5747,19 @@ valgrind(4);
 
 		switch (t->type) {
 		case NUMERIC:
-			trace(EXEC,  " numeric %s\n", t->valstr);
-			mpush_copy(t->mpd);
+			// trace(EXEC,  " numeric %s\n", t->valstr);
+			trace_mpd(EXEC, "numeric", t->mpd);
+			mpush(t->mpd);
+			t->mpd = 0;
+			free(t->valstr);
+			t->valstr = 0;
 valgrind(5);
 			break;
 		case VARIABLE:
 			trace(EXEC, " variable %s\n", t->valstr);
 			dynamic_var(t);
+			// free(t->valstr);
+			t->valstr = 0;
 valgrind(6);
 			break;
 		case SYMBOLIC:
@@ -5747,7 +5774,7 @@ valgrind(17);
 valgrind(7);
 			break;
 		case EOL:
-			if (pt) do_autoprint(pt);
+			do_autoprint(pt);
 			pending_show();
 valgrind(8);
 			break;
@@ -5763,9 +5790,8 @@ valgrind(9);
 
 		trace(TOK, "end of main loop\n");
 		trace_show_tok(TOK, t);
-		if (pt) trace_show_tok(TOK, pt);
-		tfree(pt);
-		pt = t;
+		trace_show_tok(TOK, pt);
+		*pt = *t;
 
 	}
 	exit(3);  // not reached
