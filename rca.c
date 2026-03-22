@@ -79,19 +79,26 @@ char licensetext[] = \
 # include <readline/history.h>
 #endif
 
-#if USE_VALGRIND_CHECKS
+#define DO_VALGRIND_CHECKS 1
+#if DO_VALGRIND_CHECKS
+
 #include <valgrind/memcheck.h>
 
 void
-valgrind(int n)
+valgrind(char *s)
 {
-	(void)n;
-	fprintf(stderr, "invoking valgrind leak check %d\n", n);
+	if (!RUNNING_ON_VALGRIND)
+		return;
+
+	fprintf(stderr, ",,, valgrind %s\n", s);
 	VALGRIND_DO_LEAK_CHECK;
-	fprintf(stderr, "done with valgrind leak check %d\n", n);
+	fprintf(stderr, ",,, valgrind %s done\n", s);
 }
+
 #else
-#define valgrind(n) do { } while(0)
+
+#define valgrind(s)  do { } while(0)
+
 #endif
 
 /* who are we? */
@@ -2036,8 +2043,7 @@ p_printf(const char *fmt, ...)  // short for pending_printf()
 		memfile_open(&pp);
 
 	va_start(ap, fmt);
-	// vfprintf(pp.fp, fmt, ap);
-	vfprintf(stderr, fmt, ap);
+	vfprintf(pp.fp, fmt, ap);
 	va_end(ap);
 	// ensure it's always null-terminated
 	fputc('\0', pp.fp);
@@ -3807,25 +3813,20 @@ void
 tfree(token *t)
 {
 	if (!t) return;
-// fprintf(stderr, "tfree freeing '%p', t->type %c\n", (void*)t, t->type);
 
 	if (t->valstr) {
-// fprintf(stderr, "tfree freeing valstr %p\n", (void*)(t->valstr));
 		free(t->valstr);
 		t->valstr = 0;
 	}
 	if (t->mpd) {
-// fprintf(stderr, "tfree freeing mpd %p\n", (void*)(t->mpd));
 		mpd_del(t->mpd);
 		t->mpd = 0;
 	}
 
 	if (!t->alloced) {
-// fprintf(stderr, "tfree NOT freeing %p, not alloced\n", (void*)t);
 		return;
 	}
 
-// fprintf(stderr, "tfree freeing wrapper\n");
 	free(t);
 }
 
@@ -3834,15 +3835,13 @@ tclear(token **tstackp)
 {
 	token *t, *nt;
 
-// fprintf(stderr, "tclear clearing %s\n", stackname(tstackp));
 	t = *tstackp;
 	*tstackp = NULL;
 
 	while (t) {
 		nt = t->next;
-// fprintf(stderr, "freeing %p\n", (void*)t);
 		tfree(t);
-		valgrind(1000);
+		valgrind("tclear");
 		t = nt;
 	}
 }
@@ -3945,13 +3944,13 @@ expression_error(token *pt, token *t)
 	if (i == 2)
 		return;
 	error(" error: bad expression sequence, at %s and %s\n", pts, ts);
-	valgrind(40);
+	valgrind("expr. error");
 }
 
 void
 stack_error_cleanup(void)
 {
-	valgrind(41);
+	valgrind("pre stack error clean");
 	tclear(&out_stack);
 	tclear(&oper_stack);
 }
@@ -5655,13 +5654,11 @@ do_autoprint(token *pt)
 int
 main(int argc, char *argv[])
 {
-	static token tokk, prevtokk;
-	token *t = &tokk;	// permanent pointers to tokk and prevtokk
-	token *pt = &prevtokk;
+	static token tok, prevtok;
+	token *t = &tok;	// permanent pointers to tok and prevtok
+	token *pt = &prevtok;
 
 	pt->type = UNKNOWN;
-
-
 	mpd_stuff();
 
 	char *pn = strrchr(argv[0], '/');
@@ -5676,6 +5673,7 @@ main(int argc, char *argv[])
 	setup_width(0);
 
 	create_infix_support_tokens();
+
 	config_read_defaults();
 
 	/* we simply loop forever, either pushing operands or
@@ -5688,14 +5686,12 @@ main(int argc, char *argv[])
 		/* use up tokens created by infix processing first */
 		token *tt;
 		if ((tt = tpop(&infix_rpn_queue))) {
-		    // fprintf(stderr, " popped from rpn queue in main\n");
-			tokk = *tt;
+			tok = *tt;
 			free(tt);
 			freeze_lastx();
 		} else { /* otherwise get tokens from input as usual */
-			if (!read_token(&tokk, RPN))
+			if (!read_token(&tok, RPN))
 				continue;
-
 			thaw_lastx();
 			// in infix mode, check the first token on a line...
 			if (infix_mode && pt && pt->type == EOL) {
@@ -5729,7 +5725,7 @@ main(int argc, char *argv[])
 				free(t->valstr);
 				t->valstr = 0;
 			}
-			valgrind(5);
+			valgrind("main numeric");
 			break;
 		case VARIABLE:
 			trace(EXEC, " variable %s\n", t->valstr);
@@ -5739,7 +5735,7 @@ main(int argc, char *argv[])
 				free(t->valstr);
 				t->valstr = 0;
 			}
-			valgrind(6);
+			valgrind("main variable");
 			break;
 		case SYMBOLIC:
 		case OP:
@@ -5748,28 +5744,25 @@ main(int argc, char *argv[])
 				pending_show();
 			else
 				pending_clear();
-			valgrind(17);
+			valgrind("pre main op/symbolic");
 			(t->oper->func) ();
-			valgrind(7);
+			valgrind("post main op/symbolic");
 			break;
 		case EOL:
 			do_autoprint(pt);
 			pending_show();
-			valgrind(8);
+			valgrind("main eol");
 			break;
 		default:
 		case UNKNOWN:
 			// I think this is unreachable
 			error(" error:  unrecognized input '%s'\n", t->str);
-			valgrind(9);
+			valgrind("unknown");
 			break;
 		}
 		if (variable_write_enable)
 			variable_write_enable--;
 
-		trace(TOK, "end of main loop\n");
-		trace_show_tok(TOK, t);
-		trace_show_tok(TOK, pt);
 		*pt = *t;
 
 	}
