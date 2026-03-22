@@ -143,7 +143,7 @@ char **g_argv;
 char *pi_val = "3.1415926535897932384626433832795028841971693993751"
 	       "058209749445923078164062862089986280348253421170679";
 
-mpd_t *pi, *e, *one, *zero;
+mpd_t *pi, *e, *zero, *one, *two;
 
 /* internal representation of operands on the stack.  numbers are always
  * stored as long doubles, even when we're in integer mode.  this could
@@ -276,6 +276,7 @@ boolean rightalignment = 1;
 #define TEMP_BUFSIZE 512
 
 /* these all help limit the word size to anything we want.  */
+mpd_t *int_modulo;
 int max_int_width;
 int int_width;
 long long int_sign_bit;
@@ -320,11 +321,14 @@ mpd_stuff(void)
 	mpd_init(&context, DIGITS);
 	context.traps = 0;
 
+	zero = mpd_new(ctx);
+	mpd_set_i64(zero, 0, ctx);
+
 	one = mpd_new(ctx);
 	mpd_set_i64(one, 1, ctx);
 
-	zero = mpd_new(ctx);
-	mpd_set_i64(zero, 0, ctx);
+	two = mpd_new(ctx);
+	mpd_set_i64(two, 2, ctx);
 
 	lastx = mpd_new(ctx);
 	mpd_copy(lastx, zero, ctx);
@@ -2287,26 +2291,25 @@ putsigned(long long ln)
 }
 
 boolean
-check_int_truncation(ldouble *np, boolean conv)
+mpd_to_integer(mpd_t *r, mpd_t *a)
 {
-	ldouble n = *np;
-	boolean changed = 0;
+	mpd_t *t, *q;
+	t = mpd_new(ctx);
+	q = mpd_new(ctx);
 
-	if (isnan(n) || !isfinite(n)) {
-		return 0;
-	} else if (n != integer_adjust( ld_to_ll(n))) {
-		n = integer_adjust( ld_to_ll(n));
-		changed = 1;
-	}
+	set_lastx(a);
+	mpd_trunc(t, a, ctx);
+	mpd_divmod(q, r, t, int_modulo, ctx);
 
-	if (conv)
-		*np = n;
+	mpd_del(q);
+	mpd_del(t);
 
-	return changed;
+	return (mpd_cmp(r, a, ctx) != 0);
 }
 
+
 void
-show_int_truncation(boolean changed, ldouble old_n, char *mark)
+show_int_truncation(boolean changed, mpd_t *old, char *mark)
 {
 	if (!changed) {
 		p_printf("%s\n", mark);
@@ -2319,8 +2322,10 @@ show_int_truncation(boolean changed, ldouble old_n, char *mark)
 	if (floating_mode(mode))
 		error("     # warning: display format loses accuracy\n");
 	else
-		error("     # warning: accuracy lost, was %.*Lg\n",
-				LDBL_DECIMAL_DIG, old_n);
+		error("     # warning: accuracy lost, was %s\n",
+					mpd_to_sci(old, 0));
+	    // FIXME.  should print more accurately, for copy/paste restore.
+	    // or, save a snapshot.  :-?
 
 }
 
@@ -2537,9 +2542,7 @@ calc_align(int binary)
 void
 print_n(mpd_t *m, int format, boolean conv, char *mark)
 {
-	ldouble old_n, n = 0;
-	long long ln;
-	// unsigned long long uln;
+	int64_t ln;
 	uint64_t u;
 	long long mask = int_mask;
 	int align;
@@ -2550,7 +2553,7 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 
 	// old_n = n = *np;
 
-	if (floating_mode(format) || !isfinite(n)) {
+	if (floating_mode(format) || !mpd_isfinite(m)) {
 		char *pf;
 
 		pf = print_floating(m);
@@ -2581,39 +2584,38 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 	/* check for integer masking, and optionally modify the original.
 	 * we'll do that if we're changing modes, but not if we're just
 	 * printing in another mode's format.  */
-	changed = check_int_truncation(&n, conv);
 
 	/* mode can be float but we can still print in hex, binary
 	 * format, etc */
+	mpd_t *n = mpd_new(ctx);
 	switch (format) {
 	case 'H':
-#if 0
-		ln = ld_to_ll(n) & mask;
-		align = calc_align(0);
-		p_printf("%*s", align, puthex(ln));
-#else
-		u = mpd_get_u64(m, ctx);
+		changed = mpd_to_integer(n, m);
+		u = mpd_get_u64(n, ctx);
 		align = calc_align(0);
 		p_printf("%*s", align, puthex((ll_t)u));
-#endif
 		break;
 	case 'O':
-		u = mpd_get_u64(m, ctx);
+		changed = mpd_to_integer(n, m);
+		u = mpd_get_u64(n, ctx);
 		align = calc_align(0);
 		p_printf("%*s", align, putoct((ll_t)u));
 		break;
 	case 'B':
-		u = mpd_get_u64(m, ctx);
+		changed = mpd_to_integer(n, m);
+		u = mpd_get_u64(n, ctx);
 		align = calc_align(0);
 		p_printf("%*s", align, putbinary((ll_t)u));
 		break;
 	case 'U':
-		u = mpd_get_u64(m, ctx);
+		changed = mpd_to_integer(n, m);
+		u = mpd_get_u64(n, ctx);
 		align = calc_align(0);
 		p_printf("%*s", align, putunsigned(u));
 		break;
 	case 'D':
-		ln = ld_to_ll(n);
+		changed = mpd_to_integer(n, m);
+		ln = mpd_get_i64(n, ctx);
 		if (!floating_mode(mode) && int_width != LONGLONG_BITS) {
 			/* shenanigans to make pos/neg numbers appear
 			 * properly.  our masked/shortened numbers
@@ -2637,12 +2639,11 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 		return;
 	}
 
-	p_printf("%s\n", mark);
-#if NOPE
-	// show_int_truncation(changed, old_n, mark);
-	if (changed)
-		*np = n;
-#endif
+	// p_printf("%s\n", mark);
+	show_int_truncation(changed, m, mark);
+	if (changed && conv)
+		mpd_copy(m, n, ctx);
+	mpd_del(n);
 
 }
 
@@ -3032,6 +3033,7 @@ digits(void)
 void
 setup_width(int bits)
 {
+#if 0
 	/* we use long double to store our data.  in integer mode,
 	 * this means the FP mantissa, if it's shorter than long long,
 	 * may limit our maximum word width.  */
@@ -3053,6 +3055,27 @@ setup_width(int bits)
 	} else {
 		int_mask = (1LL << int_width) - 1;
 	}
+#else
+	if (!bits || !max_int_width) {	/* first call */
+		max_int_width = LONGLONG_BITS;
+		bits = max_int_width;
+		int_modulo = mpd_new(ctx);
+
+	}
+
+	// int_modulo used as tmp var here
+	mpd_set_i64(int_modulo, bits+1, ctx);
+	mpd_pow(int_modulo, two, int_modulo, ctx);   // 2 ^ (bits+1)
+
+	int_width = bits;
+	int_sign_bit = (1LL << (int_width - 1));
+
+	if (int_width == LONGLONG_BITS) {
+		int_mask = ~0;
+	} else {
+		int_mask = (1LL << int_width) - 1;
+	}
+#endif
 }
 
 #if 0
@@ -3065,17 +3088,19 @@ mask_stack(void)
 			s->val = integer_adjust( ld_to_ll(s->val));
 	}
 }
+#endif
 
 opreturn
 width(void)
 {
-	ldouble n;
+	mpd_t *mbits;
 	int bits;
 
-	if (!pop(&n))
+	if (!mpop(&mbits))
 		return BADOP;
 
-	bits = (int)n;
+	bits = (int)mpd_get_u32(mbits, ctx);
+
 	if (bits == -1) {
 		bits = max_int_width;
 	} else if (bits > max_int_width) {
@@ -3087,18 +3112,18 @@ width(void)
 	}
 
 	setup_width(bits);
+	mpd_del(mbits);
 
 	p_printf(" Integers are now %d bits wide.\n", int_width);
 	if (floating_mode(mode)) {
 		p_printf(" In floating mode, integer width"
 				" is recorded but ignored.\n");
 	} else {
-		mask_stack();
+		; // mask_stack();
 	}
 
 	return GOODOP;
 }
-#endif
 
 
 opreturn
@@ -5566,14 +5591,12 @@ struct oper opers[] = {
 	{""},
     {"Modes:"},
 	{"F", modefloat,	0 },
-#if 0
 	{"D", modedec,		0 },
 	{"H", modehex,		0 },
 	{"O", modeoct,		0 },
 	{"B", modebin,		"Switch to floating, decimal, hex, octal, binary mode" },
 	{"width", width,	0, Auto },
 	{"bits", width,		"Set effective word size for integer modes", Auto },
-#endif
 	{"zerofill", zerof,	0, Auto },
 	{"zf", zerof,		"Toggle left-fill with zeros in H, O, and B modes", Auto },
 	{"rightalign", rightalign, 0, Auto },
