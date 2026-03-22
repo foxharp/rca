@@ -315,6 +315,11 @@ void putback_token(token *t);
 #define RPN 1
 #define INFIX 0
 
+typedef void (*mpd_2_op_func_t)(mpd_t *, const mpd_t *, const mpd_t *,
+			mpd_context_t *);
+typedef void (*mpd_1_op_func_t)(mpd_t *, const mpd_t *, mpd_context_t *);
+
+
 void
 mpd_stuff(void)
 {
@@ -618,6 +623,7 @@ assignment(void)
 	return GOODOP;
 }
 
+#if 0
 boolean
 are_finite(ldouble a, ldouble b)
 {
@@ -626,7 +632,67 @@ are_finite(ldouble a, ldouble b)
 
 	return 0;
 }
+#endif
 
+boolean
+mpd_to_integer(mpd_t *r, mpd_t *a)
+{
+	mpd_t *t, *q;
+	t = mpd_new(ctx);
+	q = mpd_new(ctx);
+
+	set_lastx(a);
+	mpd_trunc(t, a, ctx);
+	mpd_divmod(q, r, t, int_modulo, ctx);
+
+	mpd_del(q);
+	mpd_del(t);
+
+	return (mpd_cmp(r, a, ctx) != 0);
+}
+
+opreturn
+mpd_2_op_worker(mpd_2_op_func_t f)
+{
+	mpd_t *a, *b;
+
+	if (!mpop(&b)) {
+		return BADOP;
+	}
+	if (!mpop(&a)) {
+		mpush(b);
+		return BADOP;
+	}
+
+	f(a, a, b, ctx);
+	if (!floating_mode(mode))
+		mpd_to_integer(a, a);
+
+	mpush(a);
+
+	mpd_free_before_move(&lastx, b, ctx);
+
+	return GOODOP;
+}
+
+opreturn
+mpd_1_op_worker(mpd_1_op_func_t f)
+{
+	mpd_t *a;
+	if (!mpop(&a))
+		return BADOP;
+
+	set_lastx(a);
+	f(a, a, ctx);
+	if (!floating_mode(mode))
+		mpd_to_integer(a, a);
+
+	mpd_free_before_copy(&lastx, a, ctx);
+
+	mpush(a);
+
+	return GOODOP;
+}
 
 opreturn
 add(void)
@@ -649,21 +715,7 @@ add(void)
 	}
 	return BADOP;
 #else
-	mpd_t *a, *b;
-
-	if (!mpop(&b)) {
-		return BADOP;
-	}
-	if (!mpop(&a)) {
-		mpush(b);
-		return BADOP;
-	}
-
-	mpd_add(a, a, b, ctx);
-	mpush(a);
-	mpd_free_before_move(&lastx, b, ctx);
-
-	return GOODOP;
+	return mpd_2_op_worker(mpd_add);
 #endif
 }
 
@@ -688,21 +740,7 @@ subtract(void)
 	}
 	return BADOP;
 #else
-	mpd_t *a, *b;
-
-	if (!mpop(&b)) {
-		return BADOP;
-	}
-	if (!mpop(&a)) {
-		mpush(b);
-		return BADOP;
-	}
-
-	mpd_sub(a, a, b, ctx);
-	mpush(a);
-	mpd_free_before_move(&lastx, b, ctx);
-
-	return GOODOP;
+	return mpd_2_op_worker(mpd_sub);
 #endif
 }
 
@@ -728,21 +766,7 @@ multiply(void)
 	}
 	return BADOP;
 #else
-	mpd_t *a, *b;
-
-	if (!mpop(&b)) {
-		return BADOP;
-	}
-	if (!mpop(&a)) {
-		mpush(b);
-		return BADOP;
-	}
-
-	mpd_mul(a, a, b, ctx);
-	mpush(a);
-	mpd_free_before_move(&lastx, b, ctx);
-
-	return GOODOP;
+	return mpd_2_op_worker(mpd_mul);
 #endif
 }
 
@@ -770,29 +794,31 @@ divide(void)
 	}
 	return BADOP;
 #else
-	mpd_t *a, *b;
-
-	if (!mpop(&b)) {
-		return BADOP;
-	}
-	if (!mpop(&a)) {
-		mpush(b);
-		return BADOP;
-	}
-
-	mpd_div(a, a, b, ctx);
-	mpush(a);
-	mpd_free_before_copy(&lastx, b, ctx);
-	mpd_del(b);
-
-	return GOODOP;
+	return mpd_2_op_worker(mpd_div);
 #endif
 }
 
-#if 0
+void mpd_mod(mpd_t *m, const mpd_t *a, const mpd_t *b, mpd_context_t *ctx)
+{
+	trace_mpd(EXEC, "a is ", a);
+	trace_mpd(EXEC, "b is ", b);
+
+	mpd_t *q = mpd_new(ctx);
+	mpd_t *t = mpd_new(ctx);
+
+	mpd_div(q, a, b, ctx);  // divide
+	mpd_trunc(t, q, ctx);   // truncate
+	mpd_mul(t, t, b, ctx);  // multiply the truncated value by divisor
+	mpd_sub(m, a, t, ctx);  // subtract from original dividend
+
+	mpd_del(t);
+	mpd_del(q);
+}
+
 opreturn
 modulo(void)
 {
+#if 0
 	ldouble a, b;
 
 	if (pop(&b)) {
@@ -812,8 +838,12 @@ modulo(void)
 		push(b);
 	}
 	return BADOP;
+#else
+	return mpd_2_op_worker(mpd_mod);
+#endif
 }
 
+#if 0
 long long
 int_pow(long long base, long long exp)
 {
@@ -847,22 +877,7 @@ y_to_the_x(void)
 	}
 	return BADOP;
 #else
-	mpd_t *a, *b;
-
-	if (!mpop(&b)) {
-		return BADOP;
-	}
-	if (!mpop(&a)) {
-		mpush(b);
-		return BADOP;
-	}
-
-	mpd_pow(a, a, b, ctx);
-	mpush(a);
-	mpd_free_before_move(&lastx, b, ctx);
-
-	return GOODOP;
-
+	return mpd_2_op_worker(mpd_pow);
 #endif
 }
 
@@ -879,16 +894,7 @@ e_to_the_x(void)
 	}
 	return BADOP;
 #else
-	mpd_t *a;
-	if (!mpop(&a))
-		return BADOP;
-
-	set_lastx(a);
-	mpd_exp(a, a, ctx);
-
-	mpush(a);
-
-	return GOODOP;
+	return mpd_1_op_worker(mpd_exp);
 #endif
 }
 
@@ -1311,15 +1317,7 @@ chsign(void)
 	}
 	return BADOP;
 #else
-	mpd_t *a;
-	if (!mpop(&a))
-		return BADOP;
-
-	set_lastx(a);
-	mpd_copy_negate(a, a, ctx);
-	mpush(a);
-
-	return GOODOP;
+	return mpd_1_op_worker(mpd_copy_negate);
 #endif
 }
 
@@ -1349,16 +1347,7 @@ absolute(void)
 	}
 	return BADOP;
 #else
-	mpd_t *a;
-	if (!mpop(&a))
-		return BADOP;
-
-	set_lastx(a);
-	mpd_copy_abs(a, a, ctx);
-	mpush(a);
-
-	return GOODOP;
-
+	return mpd_1_op_worker(mpd_copy_abs);
 #endif
 }
 
@@ -1388,17 +1377,7 @@ squarert(void)
 	}
 	return BADOP;
 #else
-	mpd_t *a;
-	if (!mpop(&a))
-		return BADOP;
-
-	set_lastx(a);
-	mpd_sqrt(a, a, ctx);
-
-	mpush(a);
-
-	return GOODOP;
-
+	return mpd_1_op_worker(mpd_sqrt);
 #endif
 }
 
@@ -1627,29 +1606,13 @@ log_base2(void)
 opreturn
 log_natural(void)
 {
-	mpd_t *a;
-	if (!mpop(&a))
-		return BADOP;
-
-	set_lastx(a);
-	mpd_ln(a, a, ctx);
-	mpush(a);
-
-	return GOODOP;
+	return mpd_1_op_worker(mpd_ln);
 }
 
 opreturn
 log_base10(void)
 {
-	mpd_t *a;
-	if (!mpop(&a))
-		return BADOP;
-
-	set_lastx(a);
-	mpd_log10(a, a, ctx);
-	mpush(a);
-
-	return GOODOP;
+	return mpd_1_op_worker(mpd_log10);
 }
 
 opreturn
@@ -1708,15 +1671,7 @@ integer(void)
 	}
 	return BADOP;
 #else
-	mpd_t *a;
-	if (!mpop(&a))
-		return BADOP;
-
-	set_lastx(a);
-	mpd_trunc(a, a, ctx);
-	mpush(a);
-
-	return GOODOP;
+	return mpd_1_op_worker(mpd_trunc);
 #endif
 }
 
@@ -2288,23 +2243,6 @@ putsigned(long long ln)
 	m_file_finish();
 
 	return mp.bufp;
-}
-
-boolean
-mpd_to_integer(mpd_t *r, mpd_t *a)
-{
-	mpd_t *t, *q;
-	t = mpd_new(ctx);
-	q = mpd_new(ctx);
-
-	set_lastx(a);
-	mpd_trunc(t, a, ctx);
-	mpd_divmod(q, r, t, int_modulo, ctx);
-
-	mpd_del(q);
-	mpd_del(t);
-
-	return (mpd_cmp(r, a, ctx) != 0);
 }
 
 
@@ -5438,9 +5376,7 @@ struct oper opers[] = {
 	{"*", multiply,		0, 2, 26 },
 	{"x", multiply,		"Multiply x and y", 2, 26 },
 	{"/", divide,		"Divide y by x", 2, 26 },
-#if 0
 	{"%", modulo,		"Modulo of y by x", 2, 26 },
-#endif
 	{"^", y_to_the_x,	0, 2, 28, 'R'},
 	{"**", y_to_the_x,	"Raise y to the x'th power", 2, 28, 'R'},
 #if 0
