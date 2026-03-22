@@ -2742,7 +2742,6 @@ printfloat(void)
 void
 rawprintstack(int n, struct num *s, int is_stack)
 {
-#if 0
 	if (!s) {
 		p_printf("%16s\n", "<empty>");
 		return;
@@ -2768,13 +2767,12 @@ rawprintstack(int n, struct num *s, int is_stack)
 	p_printf("\n");
 	if (!is_stack && s->next)
 		rawprintstack(n-1, s->next, is_stack);
-#endif
 }
+#endif
 
 opreturn
 printstate(void)
 {
-	struct num *s;
 
 	p_printf("\n");
 	p_printf(" Current mode is %c (%s)\n", mode,
@@ -2792,7 +2790,7 @@ printstate(void)
 
 
 #if 0
-	s = stack;
+	struct num *s = stack;
 	p_printf("\n Stack:\n");
 	if (debug_enabled)
 		p_printf("  stack count %d, depth of the stack mark is %d\n",
@@ -2815,24 +2813,8 @@ printstate(void)
 
 	p_printf(" rca descriptor: f%ui%u\n", LDBL_MANT_DIG, max_int_width);
 
-#if 0
-	if (!debug_enabled)
-		return GOODOP;
-
-	p_printf("\n Build-time constants:\n");
-	p_printf("   sizeof(long long):\t%lu (%d bits)\n", sizeof(long long),
-					sizeof(long long) * CHAR_BIT);
-	p_printf("   sizeof(long double):\t%lu (%d bits)\n", sizeof(long double),
-					(unsigned long)(8 * sizeof(long double)));
-	p_printf("   LDBL_MANT_DIG: %u\n", LDBL_MANT_DIG);
-	p_printf("   LDBL_EPSILON is %Lg (%La)\n", LDBL_EPSILON, LDBL_EPSILON);
-	p_printf("   LDBL_DIG (max_digits): %u\n", LDBL_DIG);
-	p_printf("\n");
-
-#endif
 	return GOODOP;
 }
-#endif
 
 static char *
 mode2name(void)
@@ -5617,9 +5599,7 @@ struct oper opers[] = {
 	{"?", help,		0 },
 	{"help", help,		"Show this list (using $PAGER, if set)" },
 	{"config", config,	"Show current configuration settings" },
-#if 0
 	{"state", printstate,	"Show calculator state"},
-#endif
 	{"precedence", precedence, "List infix operator precedence" },
 	{"quit", quit,		0 },
 	{"q", quit,		0 },
