@@ -641,9 +641,8 @@ mpd_to_integer(mpd_t *r, mpd_t *a)
 	t = mpd_new(ctx);
 	q = mpd_new(ctx);
 
-	set_lastx(a);
-	mpd_trunc(t, a, ctx);
-	mpd_divmod(q, r, t, int_modulo, ctx);
+	mpd_trunc(t, a, ctx); // remove fractional part
+	mpd_divmod(q, r, t, int_modulo, ctx); // modulo word-length
 
 	mpd_del(q);
 	mpd_del(t);
@@ -651,26 +650,99 @@ mpd_to_integer(mpd_t *r, mpd_t *a)
 	return (mpd_cmp(r, a, ctx) != 0);
 }
 
+typedef void (*bitwise_2_op_func_t)(uint64_t *, uint64_t, uint64_t);
+
+/* This is poorly named.  The goal it to report whether the two
+ * arguments are both finite (i.e., useful), and if not, to propagate
+ * the nan, or inf, in that order, as the final result of the operation.  */
+int
+mpd_bothfinite(mpd_t *x, mpd_t *y)
+{
+	if (mpd_isfinite(y) && mpd_isfinite(x))
+		return 1;
+
+	if (mpd_isnan(y)) {
+		mpush(y);
+		return 0;
+	} else if (mpd_isnan(x)) {
+		mpush(x);
+		return 0;
+	}
+
+	if (!mpd_isfinite(y)) {
+		mpush(y);
+		return 0;
+	} else if (!mpd_isfinite(x)) {
+		mpush(x);
+		return 0;
+	}
+	return 1;
+}
+
+opreturn
+bitwise_2_op_worker(char *which, bitwise_2_op_func_t f, int checkdistance)
+{
+	mpd_t *mx, *my;
+	uint64_t x, y, r;
+
+	if (!mpop(&mx))
+		return BADOP;
+
+	if (!mpop(&my)) {
+		mpush(mx);
+		return BADOP;
+	}
+
+	// if not, completes operation silently and appropriately
+	if (!mpd_bothfinite(my, mx))
+		return GOODOP;
+
+	// adjusts stack and emits message on failure
+	if (checkdistance && mpd_isnegative(mx)) {
+		mpush(my);
+		mpush(mx);
+		error(" error: %s by negative not allowed\n", which);
+		return BADOP;
+	}
+
+	set_lastx(mx);
+	mpd_to_integer(my, my);
+	mpd_to_integer(mx, mx);
+
+	y = mpd_get_u64(my, ctx);
+	x = mpd_get_u64(mx, ctx);
+
+	f(&r, y, x);
+
+	mpd_set_u64(my, r, ctx);
+	mpd_to_integer(my, my);
+
+	mpush(my);
+	mpd_del(mx);
+
+	return GOODOP;
+}
+
 opreturn
 mpd_2_op_worker(mpd_2_op_func_t f)
 {
-	mpd_t *a, *b;
+	mpd_t *x, *y;
 
-	if (!mpop(&b)) {
+	if (!mpop(&x))
+		return BADOP;
+
+	if (!mpop(&y)) {
+		mpush(x);
 		return BADOP;
 	}
-	if (!mpop(&a)) {
-		mpush(b);
-		return BADOP;
-	}
 
-	f(a, a, b, ctx);
+	set_lastx(x);
+	f(y, y, x, ctx);
 	if (!floating_mode(mode))
-		mpd_to_integer(a, a);
+		mpd_to_integer(y, y);
 
-	mpush(a);
-
-	mpd_free_before_move(&lastx, b, ctx);
+	mpd_del(x);
+	mpush(y);
 
 	return GOODOP;
 }
@@ -678,18 +750,16 @@ mpd_2_op_worker(mpd_2_op_func_t f)
 opreturn
 mpd_1_op_worker(mpd_1_op_func_t f)
 {
-	mpd_t *a;
-	if (!mpop(&a))
+	mpd_t *x;
+	if (!mpop(&x))
 		return BADOP;
 
-	set_lastx(a);
-	f(a, a, ctx);
+	set_lastx(x);
+	f(x, x, ctx);
 	if (!floating_mode(mode))
-		mpd_to_integer(a, a);
+		mpd_to_integer(x, x);
 
-	mpd_free_before_copy(&lastx, a, ctx);
-
-	mpush(a);
+	mpush(x);
 
 	return GOODOP;
 }
@@ -964,7 +1034,10 @@ bitwise_operand_too_big(ldouble a)
 	}
 	return 0;
 }
+#endif
 
+
+#if 0
 opreturn
 rshift(void)
 {
@@ -1005,7 +1078,43 @@ rshift(void)
 	}
 	return BADOP;
 }
+#else
 
+void
+rshift_worker(uint64_t *r, uint64_t y, uint64_t x)
+{
+	if (x >= sizeof(y) * CHAR_BIT) {
+		mpush(zero);
+	} else {
+		int64_t i = (int64_t)x;
+		int64_t j = (int64_t)y;
+
+		if (i > int_width)
+			i = int_width;
+		*r = (uint64_t)(j >> i);
+#if 0
+		/* obviously I tried shifting directly,
+		 * but for some reason had trouble on
+		 * some platforms getting the casting
+		 * right to force an unsigned shift.
+		 * so a loop won out. */
+		while (x--) {
+			y = (y >> 1) & ~int_sign_bit;
+		}
+		*r = (uint64_t)y;
+#endif
+	}
+
+}
+
+opreturn
+rshift(void)
+{
+	return bitwise_2_op_worker("shift", rshift_worker, 1);
+}
+#endif
+
+#if 0
 opreturn
 lshift(void)
 {
@@ -1035,6 +1144,24 @@ lshift(void)
 	}
 	return BADOP;
 }
+#else
+void
+lshift_worker(uint64_t *r, uint64_t y, uint64_t x)
+{
+	if (x >= sizeof(y) * CHAR_BIT) {
+		mpush(zero);
+	} else {
+		*r = y << x;
+	}
+}
+opreturn
+lshift(void)
+{
+	return bitwise_2_op_worker("shift", lshift_worker, 1);
+}
+#endif
+
+#if 0
 
 opreturn
 rotateright(void)
@@ -1069,7 +1196,29 @@ rotateright(void)
 	}
 	return BADOP;
 }
+#else
+void
+ror_worker(uint64_t *r, uint64_t y, uint64_t x)
+{
+	int64_t i = (int64_t)x;
+	int64_t j = (int64_t)y;
 
+	i %= int_width;
+	while (i--) {
+		long long rbit = (j & 1);
+		j = (((j >> 1) & ~int_sign_bit) | (rbit << (int_width - 1)));
+	}
+	*r = (uint64_t)j;
+}
+
+opreturn
+rotateright(void)
+{
+	return bitwise_2_op_worker("rotate", ror_worker, 1);
+}
+#endif
+
+#if 0
 opreturn
 rotateleft(void)
 {
@@ -1088,7 +1237,6 @@ rotateleft(void)
 
 			long long i = ld_to_ll(a), j = ld_to_ll(b);
 
-			j %= int_width;
 			while (j--) {
 				long long rbit = (i & int_sign_bit);
 				i = (((i << 1) & ~1) | (rbit != 0));
@@ -1102,6 +1250,28 @@ rotateleft(void)
 	}
 	return BADOP;
 }
+#else
+void
+rol_worker(uint64_t *r, uint64_t y, uint64_t x)
+{
+	int64_t i = (int64_t)x;
+	int64_t j = (int64_t)y;
+
+	while (i--) {
+		long long rbit = (j & int_sign_bit);
+		j = (((j << 1) & ~1) | (rbit != 0));
+	}
+	*r = (uint64_t)j;
+}
+
+opreturn
+rotateleft(void)
+{
+	return bitwise_2_op_worker("rotate", rol_worker, 1);
+}
+#endif
+
+#if 0
 
 opreturn
 bitwise_and(void)
@@ -1127,6 +1297,21 @@ bitwise_and(void)
 	return BADOP;
 }
 
+#else
+void
+bitwise_and_worker(uint64_t *r, uint64_t y, uint64_t x)
+{
+	*r = x & y;
+}
+
+opreturn
+bitwise_and(void)
+{
+	return bitwise_2_op_worker("and", bitwise_and_worker, 0);
+}
+#endif
+
+#if 0
 opreturn
 bitwise_or(void)
 {
@@ -1150,6 +1335,21 @@ bitwise_or(void)
 	}
 	return BADOP;
 }
+#else
+void
+bitwise_or_worker(uint64_t *r, uint64_t y, uint64_t x)
+{
+	*r = x | y;
+}
+
+opreturn
+bitwise_or(void)
+{
+	return bitwise_2_op_worker("or", bitwise_or_worker, 0);
+}
+#endif
+
+#if 0
 
 opreturn
 bitwise_xor(void)
@@ -1175,6 +1375,21 @@ bitwise_xor(void)
 	}
 	return BADOP;
 }
+#else
+void
+bitwise_xor_worker(uint64_t *r, uint64_t y, uint64_t x)
+{
+	*r = x ^ y;
+}
+
+opreturn
+bitwise_xor(void)
+{
+	return bitwise_2_op_worker("xor", bitwise_xor_worker, 0);
+}
+#endif
+
+#if 0
 
 opreturn
 setbit(void)
@@ -1205,6 +1420,26 @@ setbit(void)
 	}
 	return BADOP;
 }
+#else
+void
+setbit_worker(uint64_t *r, uint64_t y, uint64_t x)
+{
+	uint64_t i = x, j = y;
+
+	if (i < sizeof(j) * CHAR_BIT)
+		j |= (1LL << i);
+
+	*r = j;
+}
+
+opreturn
+setbit(void)
+{
+	return bitwise_2_op_worker("set bit", setbit_worker, 1);
+}
+#endif
+
+#if 0
 
 opreturn
 clearbit(void)
@@ -1235,7 +1470,26 @@ clearbit(void)
 	}
 	return BADOP;
 }
+#else
+void
+clearbit_worker(uint64_t *r, uint64_t y, uint64_t x)
+{
+	uint64_t i = x, j = y;
 
+	if (i < sizeof(j) * CHAR_BIT)
+		j &= ~(1ULL << i);
+
+	*r = j;
+}
+
+opreturn
+clearbit(void)
+{
+	return bitwise_2_op_worker("clear bit", clearbit_worker, 1);
+}
+#endif
+
+#if 0
 opreturn
 bitwise_not(void)
 {
@@ -1354,14 +1608,14 @@ absolute(void)
 opreturn
 recip(void)
 {
-	mpd_t *a;
+	mpd_t *x;
 
-	if (!mpop(&a))
+	if (!mpop(&x))
 		return BADOP;
 
-	set_lastx(a);
-	mpd_div(a, one, a, ctx);
-	mpush(a);
+	set_lastx(x);
+	mpd_div(x, one, x, ctx);
+	mpush(x);
 	return GOODOP;
 }
 
@@ -1583,22 +1837,22 @@ log_worker(int which)
 opreturn
 log_base2(void)
 {
-	mpd_t *a;
+	mpd_t *x;
 	static mpd_t *ln2;
 
-	if (!ln2) {
+	if (!ln2) { // initialization
 		ln2 = mpd_new(ctx);
 		mpd_add(ln2, one, one, ctx);
 		mpd_ln(ln2, ln2, ctx);
 	}
 
-	if (!mpop(&a))
+	if (!mpop(&x))
 		return BADOP;
 
-	set_lastx(a);
-	mpd_ln(a, a, ctx);
-	mpd_div(a, a, ln2, ctx);
-	mpush(a);
+	set_lastx(x);
+	mpd_ln(x, x, ctx);
+	mpd_div(x, x, ln2, ctx);
+	mpush(x);
 
 	return GOODOP;
 }
@@ -1635,16 +1889,16 @@ fraction(void)
 	}
 	return BADOP;
 #else
-	mpd_t *a, *t;
-	if (!mpop(&a))
+	mpd_t *x, *t;
+	if (!mpop(&x))
 		return BADOP;
 
 	t = mpd_new(ctx);
 
-	set_lastx(a);
-	mpd_trunc(t, a, ctx);
-	mpd_sub(a, a, t, ctx);
-	mpush(a);
+	set_lastx(x);
+	mpd_trunc(t, x, ctx);
+	mpd_sub(x, x, t, ctx);
+	mpush(x);
 	mpd_del(t);
 
 	return GOODOP;
@@ -1675,42 +1929,67 @@ integer(void)
 #endif
 }
 
-#if 0
+opreturn
+logical_compare_worker(int *xz, int *yz)
+{
+	mpd_t *x, *y;
+
+	if (!mpop(&x)) {
+		return BADOP;
+	}
+	if (!mpop(&y)) {
+		mpush(x);
+		return BADOP;
+	}
+
+	set_lastx(x);
+
+	*xz = mpd_iszero(x);
+	*yz = mpd_iszero(y);
+
+	mpd_del(x);
+	mpd_del(y);
+
+	return GOODOP;
+}
+
 opreturn
 logical_and(void)
 {
-	ldouble a, b;
+	int xz, yz;
 
-	if (pop(&b)) {
-		if (pop(&a)) {
-			push(cmp_tweak(a) && cmp_tweak(b));
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
+	if (logical_compare_worker(&xz, &yz) != GOODOP)
+		return BADOP;
+
+	mpush_copy((!xz && !yz) ? one : zero);
+
+	return GOODOP;
 }
 
 opreturn
 logical_or(void)
 {
-	ldouble a, b;
+	int xz, yz;
 
-	if (pop(&b)) {
-		if (pop(&a)) {
-			push(cmp_tweak(a) || cmp_tweak(b));
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
+	if (logical_compare_worker(&xz, &yz) != GOODOP)
+		return BADOP;
+
+	mpush_copy((!xz || !yz) ? one : zero);
+
+	return GOODOP;
 }
 
+#define EQ  1
+#define NEQ 2
+#define LT  3
+#define LE  4
+#define GT  5
+#define GE  6
+
 opreturn
-is_eq(void)
+compare_worker(int c)
 {
+#if 0
 	ldouble a, b;
 
 	if (pop(&b)) {
@@ -1722,11 +2001,61 @@ is_eq(void)
 		push(b);
 	}
 	return BADOP;
+#else
+	mpd_t *x, *y;
+
+	if (!mpop(&x)) {
+		return BADOP;
+	}
+	if (!mpop(&y)) {
+		mpush(x);
+		return BADOP;
+	}
+
+	set_lastx(x);
+
+	int r = mpd_cmp(y, x, ctx);
+	switch(c) {
+	case EQ:  mpush_copy((r == 0) ? one : zero); break;
+	case NEQ: mpush_copy((r != 0) ? one : zero); break;
+	case LT:  mpush_copy((r < 0) ? one : zero); break;
+	case LE:  mpush_copy((r <= 0) ? one : zero); break;
+	case GT:  mpush_copy((r > 0) ? one : zero); break;
+	case GE:  mpush_copy((r >= 0) ? one : zero); break;
+	}
+
+	mpd_del(x);
+	mpd_del(y);
+
+	return GOODOP;
+
+#endif
+}
+
+opreturn
+is_eq(void)
+{
+#if 0
+	ldouble a, b;
+
+	if (pop(&b)) {
+		if (pop(&a)) {
+			push(cmp_tweak(a) == cmp_tweak(b));
+			lastx = b;
+			return GOODOP;
+		}
+		push(b);
+	}
+	return BADOP;
+#else
+	return compare_worker(EQ);
+#endif
 }
 
 opreturn
 is_neq(void)
 {
+#if 0
 	ldouble a, b;
 
 	if (pop(&b)) {
@@ -1738,11 +2067,15 @@ is_neq(void)
 		push(b);
 	}
 	return BADOP;
+#else
+	return compare_worker(NEQ);
+#endif
 }
 
 opreturn
 is_lt(void)
 {
+#if 0
 	ldouble a, b;
 
 	if (pop(&b)) {
@@ -1754,11 +2087,15 @@ is_lt(void)
 		push(b);
 	}
 	return BADOP;
+#else
+	return compare_worker(LT);
+#endif
 }
 
 opreturn
 is_le(void)
 {
+#if 0
 	ldouble a, b;
 
 	if (pop(&b)) {
@@ -1770,11 +2107,15 @@ is_le(void)
 		push(b);
 	}
 	return BADOP;
+#else
+	return compare_worker(LE);
+#endif
 }
 
 opreturn
 is_gt(void)
 {
+#if 0
 	ldouble a, b;
 
 	if (pop(&b)) {
@@ -1786,11 +2127,15 @@ is_gt(void)
 		push(b);
 	}
 	return BADOP;
+#else
+	return compare_worker(GT);
+#endif
 }
 
 opreturn
 is_ge(void)
 {
+#if 0
 	ldouble a, b;
 
 	if (pop(&b)) {
@@ -1802,11 +2147,15 @@ is_ge(void)
 		push(b);
 	}
 	return BADOP;
+#else
+	return compare_worker(GE);
+#endif
 }
 
 opreturn
 logical_not(void)
 {
+#if 0
 	ldouble a;
 
 	if (pop(&a)) {
@@ -1815,8 +2164,21 @@ logical_not(void)
 		return GOODOP;
 	}
 	return BADOP;
-}
+#else
+	mpd_t *x;
+
+	if (!mpop(&x))
+		return BADOP;
+
+	set_lastx(x);
+
+	mpush_copy( mpd_iszero(x) ? one : zero);
+
+	mpd_del(x);
+
+	return GOODOP;
 #endif
+}
 
 opreturn
 clear(void)
@@ -5379,7 +5741,6 @@ struct oper opers[] = {
 	{"%", modulo,		"Modulo of y by x", 2, 26 },
 	{"^", y_to_the_x,	0, 2, 28, 'R'},
 	{"**", y_to_the_x,	"Raise y to the x'th power", 2, 28, 'R'},
-#if 0
 	{">>", rshift,		0, 2, 22 },
 	{"<<", lshift,		"Shift y right/left by x bits (logical shift)", 2, 22 },
 	{"ror", rotateright,	0, 2, 22 },
@@ -5391,9 +5752,11 @@ struct oper opers[] = {
 	{"clearb", clearbit,	"Set and clear bit x in y", 2, 20 },
 	{""},		// all-null entries cause blank line in output
     {"Numeric operators with one operand:"},
+#if 0
 	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 30, 'R' },
-	// {"bitc", bitcount,	"Count of '1' bits in x", 1, 30, 'R' },
+	{"bitc", bitcount,	"Count of '1' bits in x", 1, 30, 'R' },
 #endif
+
 	{"chs", chsign,		0, 1, 30, 'R' },
 	{"negate", chsign,	"Change sign of x (2's complement)", 1, 30, 'R' },
 	{"recip", recip,	0, 1, 30, 'R' },
@@ -5416,7 +5779,6 @@ struct oper opers[] = {
 	{"frac", fraction,	0, 1, 30, 'R' },
 	{"int", integer,	"Absolute value, fractional and integer parts of x", 1, 30, 'R' },
 	{""},
-#if 0
     {"Logical operators (mostly two operands):"},
 	{"&&", logical_and,	0, 2, 10 },
 	{"||", logical_or,	"Logical AND and OR", 2, 8 },
@@ -5428,7 +5790,6 @@ struct oper opers[] = {
 	{">=", is_ge,		"Arithmetic comparisons", 2, 14 },
 	{"!", logical_not,	"Logical NOT of x", 1, 30, 'R'},
 	{""},
-#endif
     {"Unit conversions (one operand):"},
 	{"i2mm", units_in_mm,	0, 1, 30, 'R' },
 	{"mm2i", units_mm_in,	"inches / millimeters", 1, 30, 'R' },
