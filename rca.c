@@ -477,7 +477,7 @@ integer_adjust(long long n)
 }
 
 void
-mpush(mpd_t *a )
+mpush(mpd_t *a)
 {
 	struct num *p;
 
@@ -650,8 +650,6 @@ mpd_to_integer(mpd_t *r, mpd_t *a)
 	return (mpd_cmp(r, a, ctx) != 0);
 }
 
-typedef void (*bitwise_2_op_func_t)(uint64_t *, uint64_t, uint64_t);
-
 /* This is poorly named.  The goal it to report whether the two
  * arguments are both finite (i.e., useful), and if not, to propagate
  * the nan, or inf, in that order, as the final result of the operation.  */
@@ -679,8 +677,10 @@ mpd_bothfinite(mpd_t *x, mpd_t *y)
 	return 1;
 }
 
+typedef void (*bitwise_2_op_func_t)(uint64_t *, uint64_t, uint64_t);
+
 opreturn
-bitwise_2_op_worker(char *which, bitwise_2_op_func_t f, int checkdistance)
+bitwise_2_op_shell(char *which, bitwise_2_op_func_t f, int checkdistance)
 {
 	mpd_t *mx, *my;
 	uint64_t x, y, r;
@@ -723,8 +723,39 @@ bitwise_2_op_worker(char *which, bitwise_2_op_func_t f, int checkdistance)
 	return GOODOP;
 }
 
+typedef void (*bitwise_1_op_func_t)(uint64_t *, uint64_t);
+
 opreturn
-mpd_2_op_worker(mpd_2_op_func_t f)
+bitwise_1_op_shell(bitwise_1_op_func_t f)
+{
+	mpd_t *mx;
+	uint64_t x, r;
+
+	if (!mpop(&mx))
+		return BADOP;
+
+	if (!mpd_isfinite(mx)) {
+		mpush(mx);
+		return GOODOP;
+	}
+
+	set_lastx(mx);
+	mpd_to_integer(mx, mx);
+
+	x = mpd_get_u64(mx, ctx);
+
+	f(&r, x);
+
+	mpd_set_u64(mx, r, ctx);
+	mpd_to_integer(mx, mx);
+
+	mpush(mx);
+
+	return GOODOP;
+}
+
+opreturn
+mpd_2_op_shell(mpd_2_op_func_t f)
 {
 	mpd_t *x, *y;
 
@@ -748,7 +779,7 @@ mpd_2_op_worker(mpd_2_op_func_t f)
 }
 
 opreturn
-mpd_1_op_worker(mpd_1_op_func_t f)
+mpd_1_op_shell(mpd_1_op_func_t f)
 {
 	mpd_t *x;
 	if (!mpop(&x))
@@ -785,7 +816,7 @@ add(void)
 	}
 	return BADOP;
 #else
-	return mpd_2_op_worker(mpd_add);
+	return mpd_2_op_shell(mpd_add);
 #endif
 }
 
@@ -810,7 +841,7 @@ subtract(void)
 	}
 	return BADOP;
 #else
-	return mpd_2_op_worker(mpd_sub);
+	return mpd_2_op_shell(mpd_sub);
 #endif
 }
 
@@ -836,7 +867,7 @@ multiply(void)
 	}
 	return BADOP;
 #else
-	return mpd_2_op_worker(mpd_mul);
+	return mpd_2_op_shell(mpd_mul);
 #endif
 }
 
@@ -864,7 +895,7 @@ divide(void)
 	}
 	return BADOP;
 #else
-	return mpd_2_op_worker(mpd_div);
+	return mpd_2_op_shell(mpd_div);
 #endif
 }
 
@@ -909,7 +940,7 @@ modulo(void)
 	}
 	return BADOP;
 #else
-	return mpd_2_op_worker(mpd_mod);
+	return mpd_2_op_shell(mpd_mod);
 #endif
 }
 
@@ -947,7 +978,7 @@ y_to_the_x(void)
 	}
 	return BADOP;
 #else
-	return mpd_2_op_worker(mpd_pow);
+	return mpd_2_op_shell(mpd_pow);
 #endif
 }
 
@@ -964,7 +995,7 @@ e_to_the_x(void)
 	}
 	return BADOP;
 #else
-	return mpd_1_op_worker(mpd_exp);
+	return mpd_1_op_shell(mpd_exp);
 #endif
 }
 
@@ -1110,7 +1141,7 @@ rshift_worker(uint64_t *r, uint64_t y, uint64_t x)
 opreturn
 rshift(void)
 {
-	return bitwise_2_op_worker("shift", rshift_worker, 1);
+	return bitwise_2_op_shell("shift", rshift_worker, 1);
 }
 #endif
 
@@ -1157,7 +1188,7 @@ lshift_worker(uint64_t *r, uint64_t y, uint64_t x)
 opreturn
 lshift(void)
 {
-	return bitwise_2_op_worker("shift", lshift_worker, 1);
+	return bitwise_2_op_shell("shift", lshift_worker, 1);
 }
 #endif
 
@@ -1214,7 +1245,7 @@ ror_worker(uint64_t *r, uint64_t y, uint64_t x)
 opreturn
 rotateright(void)
 {
-	return bitwise_2_op_worker("rotate", ror_worker, 1);
+	return bitwise_2_op_shell("rotate", ror_worker, 1);
 }
 #endif
 
@@ -1267,7 +1298,7 @@ rol_worker(uint64_t *r, uint64_t y, uint64_t x)
 opreturn
 rotateleft(void)
 {
-	return bitwise_2_op_worker("rotate", rol_worker, 1);
+	return bitwise_2_op_shell("rotate", rol_worker, 1);
 }
 #endif
 
@@ -1307,7 +1338,7 @@ bitwise_and_worker(uint64_t *r, uint64_t y, uint64_t x)
 opreturn
 bitwise_and(void)
 {
-	return bitwise_2_op_worker("and", bitwise_and_worker, 0);
+	return bitwise_2_op_shell("and", bitwise_and_worker, 0);
 }
 #endif
 
@@ -1345,7 +1376,7 @@ bitwise_or_worker(uint64_t *r, uint64_t y, uint64_t x)
 opreturn
 bitwise_or(void)
 {
-	return bitwise_2_op_worker("or", bitwise_or_worker, 0);
+	return bitwise_2_op_shell("or", bitwise_or_worker, 0);
 }
 #endif
 
@@ -1385,7 +1416,7 @@ bitwise_xor_worker(uint64_t *r, uint64_t y, uint64_t x)
 opreturn
 bitwise_xor(void)
 {
-	return bitwise_2_op_worker("xor", bitwise_xor_worker, 0);
+	return bitwise_2_op_shell("xor", bitwise_xor_worker, 0);
 }
 #endif
 
@@ -1435,7 +1466,7 @@ setbit_worker(uint64_t *r, uint64_t y, uint64_t x)
 opreturn
 setbit(void)
 {
-	return bitwise_2_op_worker("set bit", setbit_worker, 1);
+	return bitwise_2_op_shell("set bit", setbit_worker, 1);
 }
 #endif
 
@@ -1485,7 +1516,7 @@ clearbit_worker(uint64_t *r, uint64_t y, uint64_t x)
 opreturn
 clearbit(void)
 {
-	return bitwise_2_op_worker("clear bit", clearbit_worker, 1);
+	return bitwise_2_op_shell("clear bit", clearbit_worker, 1);
 }
 #endif
 
@@ -1512,28 +1543,23 @@ bitwise_not(void)
 	}
 	return BADOP;
 }
+#else
+void
+bitwise_not_worker(uint64_t *r, uint64_t x)
+{
+	uint64_t i = x;
+
+	*r = ~i;
+}
+
+opreturn
+bitwise_not(void)
+{
+	return bitwise_1_op_shell(bitwise_not_worker);
+}
 #endif
 
 #if 0
-/*
- * I wasn't going to include a bitcount operator, until I came across
- * this, suggested by "the bible" (C Programming Language 2nd Ed.),
- * and often credited to Brian Kernighan.  The book makes no such
- * claim, and he later pointed out that it was first published by
- * Peter Wegner, in CACM 3 (1960), 322.
- */
-int
-countbits(unsigned long long n)
-{
-	int i = 0;
-
-	while (n > 0) {
-		n &= n - 1;  // always clears the least significant 1
-		i++;
-	}
-	return i;
-}
-
 opreturn
 bitcount(void)
 {
@@ -1556,6 +1582,32 @@ bitcount(void)
 	}
 	return BADOP;
 }
+#else
+void
+bitcount_worker(uint64_t *r, uint64_t x)
+{
+	uint64_t i = 0;
+
+	/*
+	 * I wasn't going to include a bitcount operator, until I came
+	 * across this, suggested by "the bible" (C Programming Language 2nd
+	 * Ed.), and often credited to Brian Kernighan.  The book makes no
+	 * such claim, and he later pointed out that it was first published
+	 * by Peter Wegner, in CACM 3 (1960), 322.  It's not the fastest bit
+	 * counting technique, but very clever and very simple.
+	 */
+	while (x > 0) {
+		x &= x - 1;  // always clears the least significant 1
+		i++;
+	}
+	*r = i;
+}
+
+opreturn
+bitcount(void)
+{
+	return bitwise_1_op_shell(bitcount_worker);
+}
 #endif
 
 opreturn
@@ -1571,7 +1623,7 @@ chsign(void)
 	}
 	return BADOP;
 #else
-	return mpd_1_op_worker(mpd_copy_negate);
+	return mpd_1_op_shell(mpd_copy_negate);
 #endif
 }
 
@@ -1601,7 +1653,7 @@ absolute(void)
 	}
 	return BADOP;
 #else
-	return mpd_1_op_worker(mpd_copy_abs);
+	return mpd_1_op_shell(mpd_copy_abs);
 #endif
 }
 
@@ -1631,7 +1683,7 @@ squarert(void)
 	}
 	return BADOP;
 #else
-	return mpd_1_op_worker(mpd_sqrt);
+	return mpd_1_op_shell(mpd_sqrt);
 #endif
 }
 
@@ -1860,13 +1912,13 @@ log_base2(void)
 opreturn
 log_natural(void)
 {
-	return mpd_1_op_worker(mpd_ln);
+	return mpd_1_op_shell(mpd_ln);
 }
 
 opreturn
 log_base10(void)
 {
-	return mpd_1_op_worker(mpd_log10);
+	return mpd_1_op_shell(mpd_log10);
 }
 
 opreturn
@@ -1925,7 +1977,7 @@ integer(void)
 	}
 	return BADOP;
 #else
-	return mpd_1_op_worker(mpd_trunc);
+	return mpd_1_op_shell(mpd_trunc);
 #endif
 }
 
@@ -5752,11 +5804,8 @@ struct oper opers[] = {
 	{"clearb", clearbit,	"Set and clear bit x in y", 2, 20 },
 	{""},		// all-null entries cause blank line in output
     {"Numeric operators with one operand:"},
-#if 0
 	{"~", bitwise_not,	"Bitwise NOT of x (1's complement)", 1, 30, 'R' },
 	{"bitc", bitcount,	"Count of '1' bits in x", 1, 30, 'R' },
-#endif
-
 	{"chs", chsign,		0, 1, 30, 'R' },
 	{"negate", chsign,	"Change sign of x (2's complement)", 1, 30, 'R' },
 	{"recip", recip,	0, 1, 30, 'R' },
