@@ -899,18 +899,18 @@ divide(void)
 #endif
 }
 
-void mpd_mod(mpd_t *m, const mpd_t *a, const mpd_t *b, mpd_context_t *ctx)
+void mpd_mod(mpd_t *m, const mpd_t *y, const mpd_t *x, mpd_context_t *ctx)
 {
-	trace_mpd(EXEC, "a is ", a);
-	trace_mpd(EXEC, "b is ", b);
+	trace_mpd(EXEC, "y is ", y);
+	trace_mpd(EXEC, "x is ", x);
 
 	mpd_t *q = mpd_new(ctx);
 	mpd_t *t = mpd_new(ctx);
 
-	mpd_div(q, a, b, ctx);  // divide
+	mpd_div(q, y, x, ctx);  // divide
 	mpd_trunc(t, q, ctx);   // truncate
-	mpd_mul(t, t, b, ctx);  // multiply the truncated value by divisor
-	mpd_sub(m, a, t, ctx);  // subtract from original dividend
+	mpd_mul(t, t, x, ctx);  // multiply the truncated value by divisor
+	mpd_sub(m, y, t, ctx);  // subtract from original dividend
 
 	mpd_del(t);
 	mpd_del(q);
@@ -3632,11 +3632,11 @@ sum_worker(boolean do_sum)
 	while (stack_count > stack_mark) {
 		if (!mpop(&a)) {
 			fprintf(stderr, "bailing in sum_worker\n");
-			goto error_out;
+			goto cleanup;
 		}
-		// tot += a;
+		// tot += a
 		mpd_add(tot, tot, a, ctx);
-		// tot_sq += a * a;
+		// tot_sq += (a * a)
 		mpd_mul(a, a, a, ctx);
 		mpd_add(tot_sq, tot_sq, a, ctx);
 		mpd_del(a);
@@ -3646,31 +3646,39 @@ sum_worker(boolean do_sum)
 
 	switch (do_sum) {
 	case 1: // sum
-		mpush(tot);
-		tot = 0;
+		mpush_copy(tot);
 		p_printf(" Summed %d stack entries\n", i);
 		break ;;
-	case 2: // avg
+	case 2: // average
 		mpd_div(n, tot, n, ctx);
-		mpush(n);
-		n = 0;
+		mpush_copy(n);
 		p_printf(" Averaged %d stack entries\n", i);
 		break ;;
-#if 0
 	case 3: // standard deviation
-		push(sqrtl( (n * tot_sq - (tot * tot)) / (n * (n-1))));
+		// "oh look!  let's borrow the user's calculator!"
+		// sqrt( ( (n * tot_sq) - (tot * tot)) / (n * (n-1)) )
+		// in rpn:  n tot_sq * tot tot * - n n 1 - * / sqrt
+#define p_(n) mpush_copy(n)
+		p_(n); p_(tot_sq); multiply();
+		p_(tot); p_(tot); multiply();
+		subtract();
+		p_(n);
+		p_(n); p_(one); subtract();
+		multiply();
+		divide();
+		squarert();
 		p_printf(" Sample standard deviation calculated "
 					"for %d stack entries.\n", i);
-		p_printf(" (multiply by sqrt(%d/%d) for "
-					"population standard deviation)\n",
-			i - 1, i);
+		if (i > 1) {
+			p_printf(" (multiply by sqrt(%d/%d) for "
+				"population standard deviation)\n", i - 1, i);
+		}
 		break ;;
-#endif
 	}
-    error_out:
-	if (n) mpd_del(n);
-	if (tot) mpd_del(tot);
-	if (tot_sq) mpd_del(tot_sq);
+    cleanup:
+	mpd_del(n);
+	mpd_del(tot);
+	mpd_del(tot_sq);
 
 	return GOODOP;
 }
@@ -3687,13 +3695,11 @@ avg(void)
 	return sum_worker(2);
 }
 
-#if 0
 opreturn
 stddev(void)
 {
 	return sum_worker(3);
 }
-#endif
 
 opreturn
 unit_worker( int muldiv, char *factor, char *offset)
@@ -5878,9 +5884,7 @@ struct oper opers[] = {
     {"Variadics (operate on entire stack, limited by the mark if set):"},
 	{"sum", sum,		0, Auto },
 	{"avg", avg,		0, Auto },
-#if 0
 	{"stddev", stddev,	"Total, mean, and standard deviation of entries", Auto },
-#endif
 	{"snapshot", snapshot,	"Saves copy of selected entries", Auto },
 	{"mark", mark,		"Mark the stack, to limit variadics' range" },
 	{""},
