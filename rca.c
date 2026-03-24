@@ -2058,9 +2058,19 @@ print_floating(mpd_t *m)
 	fputc(' ', mp.fp);
 
 	if (!mpd_isfinite(m)) {
-		char *s = mpd_to_sci(m, 0);
+		/* I just prefer the libc "nan" and "inf" to the mixed
+		 * case "NaN" and "Infinity" strings mpdecimal provides */
+		char *s; // = mpd_to_sci(m, 0);
+		if (m->flags & (MPD_INF)) {
+			if (m->flags & MPD_POS)	s = "+inf" ;
+			else if (m->flags & MPD_NEG) s = "-inf";
+			else s = "inf";
+		} else if (m->flags & (MPD_NAN|MPD_SNAN)) {
+			if (m->flags & MPD_POS)	s = "+nan" ;
+			else if (m->flags & MPD_NEG) s = "-nan";
+			else s = "nan";
+		}
 		fprintf(mp.fp, "%s", s);
-		free(s);
 	} else if (float_specifier[0] == 'a') { // 'a'uto
 		// first construct the format string
 		snprintf(fmt, sizeof fmt, ".%dg",
