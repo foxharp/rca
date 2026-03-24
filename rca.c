@@ -306,6 +306,9 @@ boolean raw_hex_input_ok;
 mpd_t *lastx;
 mpd_t *frozen_lastx;
 
+/* for store/recall */
+mpd_t *offstack;
+
 /* counting state variable, which allows variables to be read/write */
 int variable_write_enable;
 
@@ -341,18 +344,20 @@ mpd_stuff(void)
 	two = mpd_new(ctx);
 	mpd_set_i64(two, 2, ctx);
 
-	lastx = mpd_new(ctx);
-	mpd_copy(lastx, zero, ctx);
-
-	frozen_lastx = mpd_new(ctx);
-	mpd_copy(frozen_lastx, zero, ctx);
-
 	e = mpd_new(ctx);
 	mpd_exp(e, one, ctx);
 
 	pi = mpd_new(ctx);
 	mpd_set_string(pi, pi_val, ctx);
 
+	lastx = mpd_new(ctx);
+	mpd_copy(lastx, zero, ctx);
+
+	frozen_lastx = mpd_new(ctx);
+	mpd_copy(frozen_lastx, zero, ctx);
+
+	offstack = mpd_new(ctx);
+	mpd_copy(offstack, zero, ctx);
 }
 
 void trace_mpd(int level, char *msg, const mpd_t *t);
@@ -1440,18 +1445,16 @@ logical_not(void)
 opreturn
 clear(void)
 {
-	mpd_t *scrap;
+	mpd_t *x;
 
-#if FIXME
-	if (mpeek(&lastx))
-#else
-	if (mpeek(&scrap))
-#endif
-	{
-		while(stack) {
-			mpop(&scrap);
-			mpd_del(scrap);
-		}
+	if (!mpeek(&x))
+		return GOODOP;
+
+	set_lastx(x);
+
+	while(stack) {
+		mpop(&x);
+		mpd_del(x);
 	}
 
 	return GOODOP;
@@ -1470,12 +1473,12 @@ rolldown(void)			// aka "pop"
 opreturn
 enter(void)
 {
-	mpd_t *a;
+	mpd_t *x;
 
-	if (mpop(&a)) {
-		mpush(a);
+	if (mpop(&x)) {
+		mpush(x);
 		mpd_t *n = mpd_new(ctx);
-		mpd_copy(n, a, ctx);
+		mpd_copy(n, x, ctx);
 		mpush(n);
 		return GOODOP;
 	}
@@ -1535,15 +1538,15 @@ repush(void)			// aka "lastx"
 opreturn
 exchange(void)
 {
-	mpd_t *a, *b;
+	mpd_t *x, *y;
 
-	if (mpop(&b)) {
-		if (mpop(&a)) {
-			mpush(b);
-			mpush(a);
+	if (mpop(&y)) {
+		if (mpop(&x)) {
+			mpush(y);
+			mpush(x);
 			return GOODOP;
 		}
-		mpush(b);
+		mpush(y);
 	}
 	return BADOP;
 }
@@ -2682,16 +2685,13 @@ rightalign(void)
 		"on", "off");
 }
 
-/* for store/recall */
-mpd_t *offstack;
-
 opreturn
 store(void)
 {
-	mpd_t *a;
+	mpd_t *x;
 
-	if (mpeek(&a)) {
-		mpd_free_before_copy(&offstack, a, ctx);
+	if (mpeek(&x)) {
+		mpd_free_before_copy(&offstack, x, ctx);
 		return GOODOP;
 	}
 	return BADOP;
@@ -3355,11 +3355,11 @@ semicolon(void)
 	 * In RPN (perhaps less useful):
 	 *      y x ;  discards x, just as pop would
 	 */
-	mpd_t *a;
-	mpop(&a);
-	mpd_free_before_copy(&lastx, a, ctx);
-	mpd_free_before_copy(&frozen_lastx, a, ctx);
-	mpd_del(a);
+	mpd_t *x;
+	mpop(&x);
+	mpd_free_before_copy(&lastx, x, ctx);
+	mpd_free_before_copy(&frozen_lastx, x, ctx);
+	mpd_del(x);
 	return GOODOP;
 }
 
@@ -3853,15 +3853,15 @@ dynamic_var(token *t)
 
 	/* if we were preceded by '=', set our value */
 	if (variable_write_enable) {
-		mpd_t *a;
-		if (!mpeek(&a)) {
+		mpd_t *x;
+		if (!mpeek(&x)) {
 			trace(EXEC, " nothing to assign\n");
 			return 0;
 		}
 		// trace(EXEC, " assigning %Lg to %s\n", a, v->name);
 		if (!v->mpd)
 			v->mpd  = mpd_new(ctx);
-		mpd_copy(v->mpd, a, ctx);
+		mpd_copy(v->mpd, x, ctx);
 	} else {
 		mpush_copy(v->mpd);
 	}
