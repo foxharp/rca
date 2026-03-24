@@ -92,9 +92,9 @@ valgrind(char *s)
 	if (!RUNNING_ON_VALGRIND)
 		return;
 
-	fprintf(stderr, ",,, valgrind %s\n", s);
+	// fprintf(stderr, ",,, valgrind %s\n", s);
 	VALGRIND_DO_LEAK_CHECK;
-	fprintf(stderr, ",,, valgrind %s done\n", s);
+	// fprintf(stderr, ",,, valgrind %s done\n", s);
 }
 
 #else
@@ -254,8 +254,8 @@ long double epsilon = LDBL_EPSILON;
 /* float_digits may represent either the total displayed precision, or
  * the number of digits after the decimal, depending on float_specifier.
  * it will be capped at max_digits.  */
-#define DIGITS 30
-int max_digits = DIGITS;
+#define DIGITS 20
+int max_digits = DIGITS-2;
 int float_digits = 6;
 char *float_specifier = "automatic"; // or "engineering" or "fixed decimal"
 /* NB:  If we save/restore externally, values should be written using
