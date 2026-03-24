@@ -116,6 +116,7 @@ usage(void)
 }
 
 mpd_context_t context, *ctx = &context;
+mpd_context_t compare_context, *cmp_ctx = &compare_context;
 
 
 /* debug logging support, runtime controllable */
@@ -327,6 +328,9 @@ mpd_stuff(void)
 {
 	mpd_init(&context, DIGITS);
 	context.traps = 0;
+	mpd_init(&compare_context, DIGITS-2);
+	context.traps = 0;
+	compare_context.traps = 0;
 
 	zero = mpd_new(ctx);
 	mpd_set_i64(zero, 0, ctx);
@@ -2072,7 +2076,9 @@ compare_worker(int c)
 
 	set_lastx(x);
 
-	int r = mpd_cmp(y, x, ctx);
+	mpd_finalize(y, cmp_ctx);
+	mpd_finalize(x, cmp_ctx);
+	int r = mpd_cmp(y, x, cmp_ctx);
 	switch(c) {
 	case EQ:  mpush_copy((r == 0) ? one : zero); break;
 	case NEQ: mpush_copy((r != 0) ? one : zero); break;
