@@ -386,27 +386,6 @@ set_lastx(mpd_t *a)
 	mpd_free_before_copy(&lastx, a, ctx);
 }
 
-#if 0
-long long
-ld_to_ll(long double n)
-{
-	/* the ARM machines I have (RPi4 and RPi3) will cheerfully set
-	 * an unsigned to 0 if you assign it directly from a negative
-	 * long double.  So we go to some length to avoid that */
-	long long ll;
-	unsigned long long ull;
-	if (n < 0) {
-		ll = (ll_t)n;
-		return ll;
-	} else {
-		ull = (ull_t)n;
-		ll = (ll_t)ull;
-		return ll;
-	}
-}
-#endif
-
-
 unsigned long long
 ull_from_ll(long long s)
 {
@@ -526,15 +505,6 @@ mpush_copy(mpd_t *a)
     mpush(n);
 }
 
-
-#if 0
-void
-lpush(long long l)
-{
-       push(integer_adjust(l));
-}
-#endif
-
 boolean
 mpeek(mpd_t **f)
 {
@@ -648,17 +618,6 @@ assignment(void)
 	trace(EXEC,( " enabling assignment\n"));
 	return GOODOP;
 }
-
-#if 0
-boolean
-are_finite(ldouble a, ldouble b)
-{
-	if (isfinite(a) && isfinite(b))
-		return 1;
-
-	return 0;
-}
-#endif
 
 /* This is poorly named.  The goal it to report whether the two
  * arguments are both finite (i.e., useful), and if not, to propagate
@@ -808,105 +767,26 @@ mpd_1_op_shell(mpd_1_op_func_t f)
 opreturn
 add(void)
 {
-#if 0
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			if (floating_mode(mode) || !are_finite(a,b)) {
-				push(a + b);
-			} else {
-				long long i = ld_to_ll(a), j = ld_to_ll(b);
-				lpush(i + j);
-			}
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-#else
 	return mpd_2_op_shell(mpd_add);
-#endif
 }
 
 opreturn
 subtract(void)
 {
-#if 0
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			if (floating_mode(mode) || !are_finite(a,b)) {
-				push(a - b);
-			} else {
-				long long i = ld_to_ll(a), j = ld_to_ll(b);
-				lpush(i - j);
-			}
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-#else
 	return mpd_2_op_shell(mpd_sub);
-#endif
 }
 
 
 opreturn
 multiply(void)
 {
-#if 0
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			if (floating_mode(mode) || !are_finite(a,b)) {
-				push(a * b);
-			} else {
-				long long i = ld_to_ll(a), j = ld_to_ll(b);
-				lpush(i * j);
-			}
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-#else
 	return mpd_2_op_shell(mpd_mul);
-#endif
 }
 
 opreturn
 divide(void)
 {
-#if 0
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			if (floating_mode(mode) || !are_finite(a,b)) {
-				push(a / b);
-			} else {
-				long long i = ld_to_ll(a), j = ld_to_ll(b);
-				if (j == 0)
-					push( (i < 0) ? -INFINITY : INFINITY);
-				else
-					lpush(i / j);
-			}
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-#else
 	return mpd_2_op_shell(mpd_div);
-#endif
 }
 
 void mpd_mod(mpd_t *m, const mpd_t *y, const mpd_t *x, mpd_context_t *ctx)
@@ -929,197 +809,22 @@ void mpd_mod(mpd_t *m, const mpd_t *y, const mpd_t *x, mpd_context_t *ctx)
 opreturn
 modulo(void)
 {
-#if 0
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			if (floating_mode(mode) || !are_finite(a,b)) {
-				push(fmodl(a,b));
-			} else {
-				long long i = ld_to_ll(a), j = ld_to_ll(b);
-				if (j == 0)
-					push(-NAN);
-				else
-					lpush(i % j);
-			}
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-#else
 	return mpd_2_op_shell(mpd_mod);
-#endif
 }
-
-#if 0
-long long
-int_pow(long long base, long long exp)
-{
-	long long result = 1;
-
-	for (long long i = 0; i < exp; i++) {
-		result *= base;
-	}
-	return result;
-}
-#endif
 
 opreturn
 y_to_the_x(void)
 {
-#if 0
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			if (floating_mode(mode) || !are_finite(a,b)) {
-				push(powl(a, b));
-			} else {
-				long long i = ld_to_ll(a), j = ld_to_ll(b);
-				lpush(int_pow(i, j));
-			}
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-#else
 	return mpd_2_op_shell(mpd_pow);
-#endif
 }
 
 opreturn
 e_to_the_x(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		push(expl(a));
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return mpd_1_op_shell(mpd_exp);
-#endif
 }
 
-#if 0
-/* This is poorly named.  The goal it to report whether the two
- * arguments are both finite (i.e., useful), and if not, to propagate
- * the nan, or inf, in that order, as the final result of the operation.  */
-boolean
-bitwise_bothfinite(ldouble a, ldouble b)
-{
-	if (isfinite(a) && isfinite(b))
-		return 1;
 
-	if (isnan(a)) {
-		push(a);
-		return 0;
-	} else if (isnan(b)) {
-		push(b);
-		return 0;
-	}
-
-	if (!isfinite(a)) {
-		push(a);
-		return 0;
-	} else if (!isfinite(b)) {
-		push(b);
-		return 0;
-	}
-	return 1;
-}
-
-/* check operands _and_ put them back on the stack if we can't proceed */
-boolean
-bitwise_operands_too_big(ldouble a, ldouble b)
-{
-	if (a < LLONG_MIN || a > LLONG_MAX ||
-	    b < LLONG_MIN || b > LLONG_MAX) {
-		push(a);
-		push(b);
-		error(" error: bitwise operand(s) bigger/smaller than LLONG_MAX/MIN\n");
-		return 1;
-	}
-	return 0;
-}
-
-/* check operands _and_ put them back on the stack if we can't proceed */
-boolean
-bitwise_distance_negative(char *which, ldouble a, ldouble b)
-{
-	if (b < 0) {
-		push(a);
-		push(b);
-		error(" error: %s by negative not allowed\n", which);
-		return 1;
-	}
-	return 0;
-}
-
-/* check operand _and_ put it back on the stack if we can't proceed */
-boolean
-bitwise_operand_too_big(ldouble a)
-{
-	if (a < LLONG_MIN || a > LLONG_MAX) {
-		push(a);
-		error(" error: bitwise operand bigger/smaller than LLONG_MAX/MIN\n");
-		return 1;
-	}
-	return 0;
-}
-#endif
-
-
-#if 0
-opreturn
-rshift(void)
-{
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			if (!bitwise_bothfinite(a, b))
-				return GOODOP;
-
-			if (bitwise_operands_too_big(a, b))
-				return BADOP;
-
-			if (bitwise_distance_negative("shift", a, b))
-				return BADOP;
-
-			if (b >= sizeof(a) * CHAR_BIT) {
-				push(0);
-			} else {
-				long long i = ld_to_ll(a), j = ld_to_ll(b);
-
-				/* obviously I tried shifting directly,
-				 * but for some reason had trouble on
-				 * some platforms getting the casting
-				 * right to force an unsigned shift.
-				 * so a loop won out. */
-				if (j > int_width)
-					j = int_width;
-				while (j--) {
-					i = (i >> 1) & ~int_sign_bit;
-				}
-				lpush(i);
-			}
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-}
-#else
 
 void
 rshift_worker(uint64_t *r, uint64_t y, uint64_t x)
@@ -1133,17 +838,6 @@ rshift_worker(uint64_t *r, uint64_t y, uint64_t x)
 		if (i > int_width)
 			i = int_width;
 		*r = (uint64_t)(j >> i);
-#if 0
-		/* obviously I tried shifting directly,
-		 * but for some reason had trouble on
-		 * some platforms getting the casting
-		 * right to force an unsigned shift.
-		 * so a loop won out. */
-		while (x--) {
-			y = (y >> 1) & ~int_sign_bit;
-		}
-		*r = (uint64_t)y;
-#endif
 	}
 
 }
@@ -1153,39 +847,7 @@ rshift(void)
 {
 	return bitwise_2_op_shell("shift", rshift_worker, 1);
 }
-#endif
 
-#if 0
-opreturn
-lshift(void)
-{
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			if (!bitwise_bothfinite(a, b))
-				return GOODOP;
-
-			if (bitwise_operands_too_big(a, b))
-				return BADOP;
-
-			if (bitwise_distance_negative("shift", a, b))
-				return BADOP;
-
-			if (b >= sizeof(a) * CHAR_BIT) {
-				push(0);
-			} else {
-				long long i = ld_to_ll(a), j = ld_to_ll(b);
-				lpush(i << j);
-			}
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-}
-#else
 void
 lshift_worker(uint64_t *r, uint64_t y, uint64_t x)
 {
@@ -1200,44 +862,7 @@ lshift(void)
 {
 	return bitwise_2_op_shell("shift", lshift_worker, 1);
 }
-#endif
 
-#if 0
-
-opreturn
-rotateright(void)
-{
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			if (!bitwise_bothfinite(a, b))
-				return GOODOP;
-
-			if (bitwise_operands_too_big(a, b))
-				return BADOP;
-
-			if (bitwise_distance_negative("rotate", a, b))
-				return BADOP;
-
-			long long i = ld_to_ll(a), j = ld_to_ll(b);
-
-			j %= int_width;
-			while (j--) {
-				long long rbit = (i & 1);
-				i = (((i >> 1) & ~int_sign_bit) |
-					(rbit << (int_width - 1)));
-			}
-			lpush(i);
-
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-}
-#else
 void
 ror_worker(uint64_t *r, uint64_t y, uint64_t x)
 {
@@ -1257,41 +882,7 @@ rotateright(void)
 {
 	return bitwise_2_op_shell("rotate", ror_worker, 1);
 }
-#endif
 
-#if 0
-opreturn
-rotateleft(void)
-{
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			if (!bitwise_bothfinite(a, b))
-				return GOODOP;
-
-			if (bitwise_operands_too_big(a, b))
-				return BADOP;
-
-			if (bitwise_distance_negative("rotate", a, b))
-				return BADOP;
-
-			long long i = ld_to_ll(a), j = ld_to_ll(b);
-
-			while (j--) {
-				long long rbit = (i & int_sign_bit);
-				i = (((i << 1) & ~1) | (rbit != 0));
-			}
-			lpush(i);
-
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-}
-#else
 void
 rol_worker(uint64_t *r, uint64_t y, uint64_t x)
 {
@@ -1310,35 +901,7 @@ rotateleft(void)
 {
 	return bitwise_2_op_shell("rotate", rol_worker, 1);
 }
-#endif
 
-#if 0
-
-opreturn
-bitwise_and(void)
-{
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			if (!bitwise_bothfinite(a, b))
-				return GOODOP;
-
-			if (bitwise_operands_too_big(a, b))
-				return BADOP;
-
-			long long i = ld_to_ll(a), j = ld_to_ll(b);
-
-			lpush((i & j));
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-}
-
-#else
 void
 bitwise_and_worker(uint64_t *r, uint64_t y, uint64_t x)
 {
@@ -1350,33 +913,7 @@ bitwise_and(void)
 {
 	return bitwise_2_op_shell("and", bitwise_and_worker, 0);
 }
-#endif
 
-#if 0
-opreturn
-bitwise_or(void)
-{
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			if (!bitwise_bothfinite(a, b))
-				return GOODOP;
-
-			if (bitwise_operands_too_big(a, b))
-				return BADOP;
-
-			long long i = ld_to_ll(a), j = ld_to_ll(b);
-
-			lpush(i | j);
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-}
-#else
 void
 bitwise_or_worker(uint64_t *r, uint64_t y, uint64_t x)
 {
@@ -1388,35 +925,7 @@ bitwise_or(void)
 {
 	return bitwise_2_op_shell("or", bitwise_or_worker, 0);
 }
-#endif
 
-#if 0
-
-opreturn
-bitwise_xor(void)
-{
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-
-			if (!bitwise_bothfinite(a, b))
-				return GOODOP;
-
-			if (bitwise_operands_too_big(a, b))
-				return BADOP;
-
-			long long i = ld_to_ll(a), j = ld_to_ll(b);
-
-			lpush(i ^ j);
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-}
-#else
 void
 bitwise_xor_worker(uint64_t *r, uint64_t y, uint64_t x)
 {
@@ -1428,40 +937,7 @@ bitwise_xor(void)
 {
 	return bitwise_2_op_shell("xor", bitwise_xor_worker, 0);
 }
-#endif
 
-#if 0
-
-opreturn
-setbit(void)
-{
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			if (!bitwise_bothfinite(a, b))
-				return GOODOP;
-
-			if (bitwise_operands_too_big(a, b))
-				return BADOP;
-
-			if (bitwise_distance_negative("set bit", a, b))
-				return BADOP;
-
-			long long i = ld_to_ll(a), j = ld_to_ll(b);
-
-			if (b < sizeof(i) * CHAR_BIT)
-				i |= (1LL << j);
-
-			lpush(i);
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-}
-#else
 void
 setbit_worker(uint64_t *r, uint64_t y, uint64_t x)
 {
@@ -1478,40 +954,7 @@ setbit(void)
 {
 	return bitwise_2_op_shell("set bit", setbit_worker, 1);
 }
-#endif
 
-#if 0
-
-opreturn
-clearbit(void)
-{
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			if (!bitwise_bothfinite(a, b))
-				return GOODOP;
-
-			if (bitwise_operands_too_big(a, b))
-				return BADOP;
-
-			if (bitwise_distance_negative("clear bit", a, b))
-				return BADOP;
-
-			long long i = ld_to_ll(a), j = ld_to_ll(b);
-
-			if (b < sizeof(i) * CHAR_BIT)
-				i &= ~(1LL << j);
-
-			lpush(i);
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-}
-#else
 void
 clearbit_worker(uint64_t *r, uint64_t y, uint64_t x)
 {
@@ -1528,32 +971,7 @@ clearbit(void)
 {
 	return bitwise_2_op_shell("clear bit", clearbit_worker, 1);
 }
-#endif
 
-#if 0
-opreturn
-bitwise_not(void)
-{
-	ldouble a;
-
-	if (pop(&a)) {
-		if (!isfinite(a)) {
-			push(a);
-			return GOODOP;
-		}
-
-		if (bitwise_operand_too_big(a))
-			return BADOP;
-
-		long long i = ld_to_ll(a);
-
-		lpush(~i);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-}
-#else
 void
 bitwise_not_worker(uint64_t *r, uint64_t x)
 {
@@ -1567,32 +985,7 @@ bitwise_not(void)
 {
 	return bitwise_1_op_shell(bitwise_not_worker);
 }
-#endif
 
-#if 0
-opreturn
-bitcount(void)
-{
-	ldouble a;
-
-	if (pop(&a)) {
-		if (!isfinite(a)) {
-			push(a);
-			return GOODOP;
-		}
-
-		if (bitwise_operand_too_big(a))
-			return BADOP;
-
-		unsigned long long i = (unsigned long long)ld_to_ll(a);
-		i &= (unsigned long long)int_mask;
-		lpush(countbits(i));
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-}
-#else
 void
 bitcount_worker(uint64_t *r, uint64_t x)
 {
@@ -1618,23 +1011,11 @@ bitcount(void)
 {
 	return bitwise_1_op_shell(bitcount_worker);
 }
-#endif
 
 opreturn
 chsign(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		push(-a);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return mpd_1_op_shell(mpd_copy_negate);
-#endif
 }
 
 
@@ -1653,18 +1034,7 @@ rpnswitch(void)
 opreturn
 absolute(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		push((a < 0) ? -a : a);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return mpd_1_op_shell(mpd_copy_abs);
-#endif
 }
 
 opreturn
@@ -1684,20 +1054,10 @@ recip(void)
 opreturn
 squarert(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		push(sqrtl(a));
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return mpd_1_op_shell(mpd_sqrt);
-#endif
 }
 
-#if 0
+#if TRIG
 opreturn
 trig_no_sense(void)
 {
@@ -1705,7 +1065,6 @@ trig_no_sense(void)
 	return BADOP;
 }
 
-#endif
 boolean trig_degrees = 1;  // work in degrees by default
 
 opreturn
@@ -1714,8 +1073,6 @@ use_degrees(void)
 	return toggler(&trig_degrees, "trig functions will now use",
 		"degrees", "radians");
 }
-
-#if 0
 
 ldouble
 to_degrees(ldouble angle)
@@ -1876,24 +1233,6 @@ atangent2(void)
 	return BADOP;
 }
 
-opreturn
-log_worker(int which)
-{
-	ldouble n, l;
-
-	if (pop(&n)) {
-		switch(which) {
-		default:  // warning suppression
-		case 0: l = logl(n); break;
-		case 2: l = log2l(n); break;
-		case 10:l = log10l(n); break;
-		}
-		push(l);
-		lastx = n;
-		return GOODOP;
-	}
-	return BADOP;
-}
 #endif
 
 opreturn
@@ -1934,23 +1273,6 @@ log_base10(void)
 opreturn
 fraction(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		if (!floating_mode(mode)) {
-			push(0);
-			return GOODOP;
-		}
-		if (a > 0)
-			push(a - floorl(a));
-		else
-			push(a - ceill(a));
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	mpd_t *x, *t;
 	if (!mpop(&x))
 		return BADOP;
@@ -1964,31 +1286,12 @@ fraction(void)
 	mpd_del(t);
 
 	return GOODOP;
-#endif
 }
 
 opreturn
 integer(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		if (!floating_mode(mode)) {
-			push(a);
-			return GOODOP;
-		}
-		if (a > 0)
-			push(floorl(a));
-		else
-			push(ceill(a));
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return mpd_1_op_shell(mpd_trunc);
-#endif
 }
 
 opreturn
@@ -2051,19 +1354,6 @@ logical_or(void)
 opreturn
 compare_worker(int c)
 {
-#if 0
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			push(cmp_tweak(a) == cmp_tweak(b));
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-#else
 	mpd_t *x, *y;
 
 	if (!mpop(&x)) {
@@ -2092,143 +1382,47 @@ compare_worker(int c)
 	mpd_del(y);
 
 	return GOODOP;
-
-#endif
 }
 
 opreturn
 is_eq(void)
 {
-#if 0
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			push(cmp_tweak(a) == cmp_tweak(b));
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-#else
 	return compare_worker(EQ);
-#endif
 }
 
 opreturn
 is_neq(void)
 {
-#if 0
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			push(cmp_tweak(a) != cmp_tweak(b));
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-#else
 	return compare_worker(NEQ);
-#endif
 }
 
 opreturn
 is_lt(void)
 {
-#if 0
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			push(cmp_tweak(a) < cmp_tweak(b));
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-#else
 	return compare_worker(LT);
-#endif
 }
 
 opreturn
 is_le(void)
 {
-#if 0
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			push(cmp_tweak(a) <= cmp_tweak(b));
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-#else
 	return compare_worker(LE);
-#endif
 }
 
 opreturn
 is_gt(void)
 {
-#if 0
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			push(cmp_tweak(a) > cmp_tweak(b));
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-#else
 	return compare_worker(GT);
-#endif
 }
 
 opreturn
 is_ge(void)
 {
-#if 0
-	ldouble a, b;
-
-	if (pop(&b)) {
-		if (pop(&a)) {
-			push(cmp_tweak(a) >= cmp_tweak(b));
-			lastx = b;
-			return GOODOP;
-		}
-		push(b);
-	}
-	return BADOP;
-#else
 	return compare_worker(GE);
-#endif
 }
 
 opreturn
 logical_not(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		push((cmp_tweak(a) == 0) ? 1 : 0);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	mpd_t *x;
 
 	if (!mpop(&x))
@@ -2241,7 +1435,6 @@ logical_not(void)
 	mpd_del(x);
 
 	return GOODOP;
-#endif
 }
 
 opreturn
@@ -3409,29 +2602,6 @@ digits(void)
 void
 setup_width(int bits)
 {
-#if 0
-	/* we use long double to store our data.  in integer mode,
-	 * this means the FP mantissa, if it's shorter than long long,
-	 * may limit our maximum word width.  */
-	if (!bits || !max_int_width) {	/* first call */
-		max_int_width = LONGLONG_BITS;
-		if (max_int_width > LDBL_MANT_DIG)
-			max_int_width = LDBL_MANT_DIG;
-		bits = max_int_width;
-	}
-
-	if (bits > max_int_width)
-		bits = max_int_width;
-
-	int_width = bits;
-	int_sign_bit = (1LL << (int_width - 1));
-
-	if (int_width == LONGLONG_BITS) {
-		int_mask = ~0;
-	} else {
-		int_mask = (1LL << int_width) - 1;
-	}
-#else
 	if (!bits || !max_int_width) {	/* first call */
 		max_int_width = LONGLONG_BITS;
 		bits = max_int_width;
@@ -3451,24 +2621,15 @@ setup_width(int bits)
 	} else {
 		int_mask = (1LL << int_width) - 1;
 	}
-#endif
 }
 
 void
 mask_stack(void)
 {
-#if 0
-	struct num *s;
-	for (s = stack; s; s = s->next) {
-		if (isfinite(s->val))
-			s->val = integer_adjust( ld_to_ll(s->val));
-	}
-#else
 	struct num *s;
 	for (s = stack; s; s = s->next) {
 		mpd_to_integer(s->mpd, s->mpd);
 	}
-#endif
 }
 
 opreturn
@@ -3794,258 +2955,88 @@ unit_worker( int muldiv, char *factor, char *offset)
 opreturn
 units_in_mm(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		a *= 25.4;
-		push(a);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return unit_worker(MUL, "25.4", 0);
-#endif
 }
 
 opreturn
 units_mm_in(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		a /= 25.4;
-		push(a);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return unit_worker(DIV, "25.4", 0);
-#endif
 }
 
 opreturn
 units_ft_m(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		a /= 3.28084;
-		push(a);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return unit_worker(DIV, "3.28084", 0);
-#endif
 }
 
 opreturn
 units_m_ft(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		a *= 3.28084;
-		push(a);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return unit_worker(MUL, "3.28084", 0);
-#endif
 }
 
 opreturn
 units_F_C(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		a -= 32.0;
-		a /= 1.8;
-		push(a);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return unit_worker(DIV, "1.8", "32.0");
-#endif
 }
 
 opreturn
 units_C_F(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		a *= 1.8;
-		a += 32.0;
-		push(a);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return unit_worker(MUL, "1.8", "32.0");
-#endif
 }
 
 opreturn
 units_l_qt(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		a *= 1.05669;
-		push(a);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return unit_worker(MUL, "1.05669", 0);
-#endif
 }
 
 opreturn
 units_qt_l(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		a /= 1.05669;
-		push(a);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return unit_worker(DIV, "1.05669", 0);
-#endif
 }
 
 opreturn
 units_oz_g(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		a *= 28.3495;
-		push(a);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return unit_worker(MUL, "28.3495", 0);
-#endif
 }
 
 opreturn
 units_g_oz(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		a /= 28.3495;
-		push(a);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return unit_worker(DIV, "28.3495", 0);
-#endif
 }
 
 opreturn
 units_oz_ml(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		a *= 29.5735;
-		push(a);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return unit_worker(MUL, "29.5735", 0);
-#endif
 }
 
 opreturn
 units_ml_oz(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		a /= 29.5735;
-		push(a);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return unit_worker(DIV, "29.5735", 0);
-#endif
 }
 
 opreturn
 units_mi_km(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		a *= 1.609344;
-		push(a);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return unit_worker(MUL, "1.609344", 0);
-#endif
 }
 
 opreturn
 units_km_mi(void)
 {
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		a /= 1.609344;
-		push(a);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	return unit_worker(DIV, "1.609344", 0);
-#endif
 }
 
-#if 0
+#if TRIG
 opreturn
 units_deg_rad(void)
 {
@@ -4081,17 +3072,6 @@ units_mpg_l100km(void)
 {
 	/* the same formula converts back and
 	 * forth between mpg and liters/100km */
-#if 0
-	ldouble a;
-
-	if (pop(&a)) {
-		a = 235.214583 / a;
-		push(a);
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-#else
 	mpd_t *t;
 	int r;
 	r = unit_worker(DIV, "235.214583", 0);
@@ -4102,7 +3082,6 @@ units_mpg_l100km(void)
 	mpd_div(t, one, t, ctx);
 	mpush(t);
 	return GOODOP;
-#endif
 }
 
 #if 0
@@ -4932,18 +3911,7 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 
 	if (*p == '0' && (*(p + 1) == 'x' || *(p + 1) == 'X')) {
 		// hex, leading "0x"
-#if 0
-		long double dd;
-		if (raw_hex_input_ok) {
-			// will accept floating hex like 0xc.90fdaa22168c23cp-2
-			dd = strtold(p, &np);
-		} else {
-#endif
-			// accept simple hex integers only
-			unsigned long long u = strtoull(p, &np, 16);
-#if 0
-		}
-#endif
+		unsigned long long u = strtoull(p, &np, 16);
 
 		/* be strict about what comes next */
 		if (isalnum(*np))
@@ -5384,7 +4352,7 @@ struct config {
 	{ "rightalign",		c_int, &rightalignment },
 	{ "zerofill",		c_int, &zerofill },
 	{ "autoprint",		c_int, &autoprint },
-#if 0
+#if TRIG
 	{ "degrees",		c_int, &trig_degrees },
 #endif
 	{ "infix",		c_int, &infix_mode },
@@ -5849,7 +4817,7 @@ struct oper opers[] = {
 	{"negate", chsign,	"Change sign of x (2's complement)", 1, 30, 'R' },
 	{"recip", recip,	0, 1, 30, 'R' },
 	{"sqrt", squarert,	"Reciprocal and square root of x", 1, 30, 'R' },
-#if 0
+#if TRIG
 	{"sin", sine,		0, 1, 30, 'R' },
 	{"cos", cosine,		0, 1, 30, 'R' },
 	{"tan", tangent,	"", 1, 30, 'R' },
@@ -5893,9 +4861,11 @@ struct oper opers[] = {
 	{"ml2oz", units_ml_oz,	"US fluid ounces / milliliters", 1, 30, 'R' },
 	{"q2l", units_qt_l,	0, 1, 30, 'R' },
 	{"l2q", units_l_qt,	"US quarts / liters", 1, 30, 'R' },
-#if 0
+#if TRIG
 	{"d2r", units_deg_rad,	0, 1, 30, 'R' },
 	{"r2d", units_rad_deg,	"degrees / radians", 1, 30, 'R' },
+#endif
+#if 0
 	{"dd2dms", units_dd_dms, 0, 1, 30, 'R' },
 	{"dms2dd", units_dms_dd,"decimal degrees / deg.mm.sss", 1, 30, 'R' },
 #endif
@@ -5966,7 +4936,7 @@ struct oper opers[] = {
 	{"zf", zerof,		"Toggle left-fill with zeros in H, O, and B modes", Auto },
 	{"rightalign", rightalign, 0, Auto },
 	{"ra", rightalign,	"Toggle right alignment of numbers", Auto },
-#if 0
+#if TRIG
 	{"degrees", use_degrees, "Toggle trig functions: degrees (1) or radians (0)" },
 #endif
 	{"autoprint", autop,	0 },
