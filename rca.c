@@ -116,7 +116,6 @@ usage(void)
 }
 
 mpd_context_t context, *ctx = &context;
-mpd_context_t compare_context, *cmp_ctx = &compare_context;
 
 
 /* debug logging support, runtime controllable */
@@ -254,8 +253,8 @@ long double epsilon = LDBL_EPSILON;
 /* float_digits may represent either the total displayed precision, or
  * the number of digits after the decimal, depending on float_specifier.
  * it will be capped at max_digits.  */
-#define DIGITS 20
-int max_digits = DIGITS-2;
+#define DIGITS 30
+int max_digits = DIGITS;
 int float_digits = 6;
 char *float_specifier = "automatic"; // or "engineering" or "fixed decimal"
 /* NB:  If we save/restore externally, values should be written using
@@ -329,11 +328,8 @@ typedef void (*mpd_1_op_func_t)(mpd_t *, const mpd_t *, mpd_context_t *);
 void
 mpd_stuff(void)
 {
-	mpd_init(&context, DIGITS);
+	mpd_init(&context, DIGITS+2);
 	context.traps = 0;
-	mpd_init(&compare_context, DIGITS-2);
-	context.traps = 0;
-	compare_context.traps = 0;
 
 	zero = mpd_new(ctx);
 	mpd_set_i64(zero, 0, ctx);
@@ -518,9 +514,12 @@ mpush(mpd_t *a)
 {
 	struct num *p;
 
-	p = (struct num *)safe_calloc(sizeof(struct num));
-	if (!floating_mode(mode))
+	if (floating_mode(mode))
+		mpd_rescale(a, a, -DIGITS, ctx);
+	else
 		mpd_to_integer(a, a);
+
+	p = (struct num *)safe_calloc(sizeof(struct num));
 	p->mpd = a;
 	if (a == lastx) abort();
 	p->next = stack;
@@ -1403,9 +1402,7 @@ compare_worker(int c)
 
 	set_lastx(x);
 
-	mpd_finalize(y, cmp_ctx);
-	mpd_finalize(x, cmp_ctx);
-	int r = mpd_cmp(y, x, cmp_ctx);
+	int r = mpd_cmp(y, x, ctx);
 	switch(c) {
 	case EQ:  mpush_copy((r == 0) ? one : zero); break;
 	case NEQ: mpush_copy((r != 0) ? one : zero); break;
@@ -2428,7 +2425,7 @@ printstate(void)
 		currency[0] ? currency : "<none>");
 	p_printf("\n");
 
-	p_printf(" rca descriptor: f%ui%u\n", LDBL_MANT_DIG, max_int_width);
+	p_printf(" rca descriptor: fmpi%u\n", LDBL_MANT_DIG, max_int_width);
 
 	return GOODOP;
 }
