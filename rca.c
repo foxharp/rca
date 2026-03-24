@@ -1833,12 +1833,16 @@ add_digit_grouping(char *iobuf)
 }
 
 char *
-putunsigned(unsigned long long uln)
+putunsigned(unsigned long long u)
 {
 	char buf[TEMP_BUFSIZE];
 	m_file_start();
 
-	snprintf(buf, sizeof(buf), " %llu", uln);
+	u &= (ull_t)int_mask;
+
+	trace(EXEC, "putunsigned: hex is 0x%Lx\n", u);
+
+	snprintf(buf, sizeof(buf), " %llu", u);
 	add_digit_grouping(buf);
 	fputs(buf, mp.fp);
 
@@ -2125,6 +2129,22 @@ mpd_get_64_bits(mpd_t *n)
 	return 0;
 }
 
+int
+floating_alignment(char *s)
+{
+	int align = 0;
+	if (rightalignment) {
+		char *eos, *dp;
+		align = calc_align(0);
+		dp = strstr(s, decimal_pt);
+		if (dp) {
+			eos = s + strlen(s);
+			align += (int)(eos - dp);
+		}
+	}
+	return align;
+}
+
 void
 print_n(mpd_t *m, int format, boolean conv, char *mark)
 {
@@ -2132,33 +2152,27 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 	uint64_t u;
 	int align;
 	boolean changed;
-	trace_mpd(EXEC, "in print_n", m);
 
 	if (!mark) mark = "";
 
-	// old_n = n = *np;
-
-	if (floating_mode(format) || !mpd_isfinite(m)) {
+	if (!mpd_isfinite(m) ||
+			(floating_mode(mode) && floating_mode(format))) {
 		char *pf;
-
 		pf = print_floating(m);
-		align = 0;
-		if (rightalignment) {
-			char *eos, *dp;
-			align = calc_align(0);
-			dp = strstr(pf, decimal_pt);
-			if (dp) {
-				eos = pf + strlen(pf);
-				align += (int)(eos - dp);
-			}
-		}
+		align = floating_alignment(pf);
 		p_printf("%*s%s\n", align, pf, mark);
 		return;
 	}
 
-	/* this is a little messy.  this is the general "print a
-	 * number" routine, but because it's called at the deep end of
-	 * a recursive loop when printing a stack, it also gets
+	/* otherwise, if we're in an integer mode, or printing in an
+	 * integer format, then we honor the current no. of bits (i.e.,
+	 * integer width, even for floating point display format. */
+
+	/* this is a little messy.  being in integer mode means the
+	 * values need to be converted to integer.  (duh.) we do that
+	 * here, even though this is the general "print a number"
+	 * routine.  this is because it's called at the deep end of a
+	 * recursive loop when printing a stack, so it also gets
 	 * saddled for doing float to int conversion of values on the
 	 * stack.  the conversion needs to happen when switching from
 	 * float mode to an integer mode:  values need to be masked
@@ -2166,12 +2180,6 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 	 * we need to do it here so we can print a message about the
 	 * conversion alongside the converted value.  */
 
-	/* check for integer masking, and optionally modify the original.
-	 * we'll do that if we're changing modes, but not if we're just
-	 * printing in another mode's format.  */
-
-	/* mode can be float but we can still print in hex, binary
-	 * format, etc */
 	mpd_t *n = mpd_new(ctx);
 	switch (format) {
 	case 'H':
@@ -2199,29 +2207,35 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 		p_printf("%*s", align, putunsigned(u));
 		break;
 	case 'D':
+	case 'F':
 		changed = mpd_to_integer(n, m);
 		u = mpd_get_64_bits(n);
 		align = calc_align(0);
-		if (int_width != LONGLONG_BITS) {
-			/* shenanigans to make pos/neg numbers appear
-			 * properly.  our masked/shortened numbers
-			 * don't appear as negative to printf, so we
-			 * find the reduced-width sign bit, and fake
-			 * it.
-			 */
+		/* shenanigans to make pos/neg numbers appear
+		 * properly.  our masked/shortened numbers
+		 * don't appear as negative to printf, so we
+		 * find the reduced-width sign bit, and fake
+		 * it.
+		 */
 
-			// long long mask;
-			ln = (ll_t)u;
-			// mask gives us everything but the sign bit
-			// mask = (long long)int_mask & ~int_sign_bit;
-			if (ln & int_sign_bit) {	// it's negative
-				ln |= ~int_mask;
-			} else {
-				ln &= int_mask;
-			}
-			p_printf("%*s", align, putsigned(ln));
+		// long long mask;
+		ln = (ll_t)u;
+		// mask gives us everything but the sign bit
+		// mask = (long long)int_mask & ~int_sign_bit;
+		if (ln & int_sign_bit) {	// it's negative
+			ln |= ~int_mask;
 		} else {
-			p_printf("%*s", align, putsigned(ll_from_ull(u)));
+			ln &= int_mask;
+		}
+		if (format == 'D')
+			p_printf("%*s", align, putsigned(ln));
+		else {
+			char *pf;
+			mpd_set_i64(n, ln, ctx);
+
+			pf = print_floating(m);
+			align = floating_alignment(pf);
+			p_printf("%*s%s\n", align, pf, mark);
 		}
 		break;
 	default:
