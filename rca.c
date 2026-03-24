@@ -483,6 +483,35 @@ mpd_to_integer(mpd_t *r, mpd_t *a)
 	return (mpd_cmp(r, a, ctx) != 0);
 }
 
+unsigned long long
+mpd_get_64_bits(mpd_t *n)
+{
+	uint32_t status;
+	ull_t u;
+	ll_t ln;
+
+	/* we only use this routine if we already known the value
+	 * should fit in 64 bits.  if it's negative, mpdecimal won't
+	 * let us have it as unsigned.  but if it's bigger than the
+	 * MAX integer, it won't let us have it as integer.  so we try
+	 * both ways.  */
+	status = 0;
+	ln = mpd_qget_i64(n, &status);
+	if (status == 0) {
+		u = ull_from_ll(ln);
+		return u;
+	}
+
+	status = 0;
+	u = mpd_qget_u64(n, &status);
+	if (status == 0)
+		return u;
+
+	error("damn\n");
+	fprintf(stderr, "status is 0x%x\n", status);
+	return 0;
+}
+
 
 void
 mpush(mpd_t *a)
@@ -683,8 +712,8 @@ bitwise_2_op_shell(char *which, bitwise_2_op_func_t f, int checkdistance)
 	mpd_to_integer(my, my);
 	mpd_to_integer(mx, mx);
 
-	y = mpd_get_u64(my, ctx);
-	x = mpd_get_u64(mx, ctx);
+	y = mpd_get_64_bits(my);
+	x = mpd_get_64_bits(mx);
 
 	f(&r, y, x);
 
@@ -716,7 +745,7 @@ bitwise_1_op_shell(bitwise_1_op_func_t f)
 	set_lastx(mx);
 	mpd_to_integer(mx, mx);
 
-	x = mpd_get_u64(mx, ctx);
+	x = mpd_get_64_bits(mx);
 
 	f(&r, x);
 
@@ -837,12 +866,15 @@ rshift_worker(uint64_t *r, uint64_t y, uint64_t x)
 	if (x >= sizeof(y) * CHAR_BIT) {
 		mpush(zero);
 	} else {
-		int64_t i = (int64_t)x;
-		int64_t j = (int64_t)y;
+		uint64_t i = x;
+		uint64_t j = y;
 
-		if (i > int_width)
-			i = int_width;
-		*r = (uint64_t)(j >> i);
+		if (i > (uint64_t)int_width)
+			i = (uint64_t)int_width;
+		while (i--) {
+			j = (j >> 1UL); // & ~(uint64_t)int_sign_bit;
+		}
+		*r = j;
 	}
 
 }
@@ -2098,35 +2130,6 @@ calc_align(int binary)
 		return ALIGN_COL_BINARY;
 	else
 		return ALIGN_COL;
-}
-
-unsigned long long
-mpd_get_64_bits(mpd_t *n)
-{
-	uint32_t status;
-	ull_t u;
-	ll_t ln;
-
-	/* we only use this routine if we already known the value
-	 * should fit in 64 bits.  if it's negative, mpdecimal won't
-	 * let us have it as unsigned.  but if it's bigger than the
-	 * MAX integer, it won't let us have it as integer.  so we try
-	 * both ways.  */
-	status = 0;
-	ln = mpd_qget_i64(n, &status);
-	if (status == 0) {
-		u = ull_from_ll(ln);
-		return u;
-	}
-
-	status = 0;
-	u = mpd_qget_u64(n, &status);
-	if (status == 0)
-		return u;
-
-	error("damn\n");
-	fprintf(stderr, "status is 0x%x\n", status);
-	return 0;
 }
 
 int
