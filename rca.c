@@ -4354,15 +4354,6 @@ expression_error(token *pt, token *t)
 	valgrind("expr. error");
 }
 
-void
-stack_error_cleanup(void)
-{
-	valgrind("pre stack error clean");
-	tclear(&out_stack);
-	tclear(&oper_stack);
-}
-
-
 opreturn
 close_paren(void)
 {
@@ -4433,7 +4424,7 @@ void shunt(token *t)
 opreturn
 shunting_yard(int command)
 {
-	token sytok, prevtok;
+	static token sytok, prevtok;
 	token *t = &sytok;	// permanent pointers to sytok and prevtok
 	token *pt = &prevtok;
 	token *tp; // used for tpeek()
@@ -4441,8 +4432,13 @@ shunting_yard(int command)
 
 	int nesting;
 
+	/* by cleaning these up on the way in, we don't have to
+	 * clean them up on the way out.  there are a lot more exit
+	 * points than entry points. */
 	tclear(&out_stack);
 	tclear(&oper_stack);
+	tfree(t);
+	tfree(pt);
 
 	trace(TOK,("\n infix tokens: "));
 
@@ -4497,7 +4493,6 @@ shunting_yard(int command)
 				free(tpop(&out_stack));
 			} else if (!prev_tok_was_operand(pt)) {
 				expression_error(pt, t);
-				stack_error_cleanup();
 				input_ptr = NULL;
 				return BADOP;
 			}
@@ -4506,7 +4501,6 @@ shunting_yard(int command)
 		case VARIABLE:
 			if (prev_tok_was_operand(pt)) {
 				expression_error(pt, t);
-				stack_error_cleanup();
 				input_ptr = NULL;
 				return BADOP;
 			}
@@ -4519,7 +4513,6 @@ shunting_yard(int command)
 		case SYMBOLIC:
 			if (prev_tok_was_operand(pt)) {
 				expression_error(pt, t);
-				stack_error_cleanup();
 				input_ptr = NULL;
 				return BADOP;
 			}
@@ -4531,7 +4524,6 @@ shunting_yard(int command)
 
 				if (prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
-					stack_error_cleanup();
 					input_ptr = NULL;
 					return BADOP;
 				}
@@ -4545,7 +4537,6 @@ shunting_yard(int command)
 					free(tpop(&out_stack));
 				} else if (!prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
-					stack_error_cleanup();
 					input_ptr = NULL;
 					return BADOP;
 				}
@@ -4578,7 +4569,6 @@ shunting_yard(int command)
 					break;
 				} else if (!prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
-					stack_error_cleanup();
 					input_ptr = NULL;
 					return BADOP;
 				}
@@ -4599,7 +4589,6 @@ shunting_yard(int command)
 			unary:
 				if (prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
-					stack_error_cleanup();
 					input_ptr = NULL;
 					return BADOP;
 				}
@@ -4637,7 +4626,6 @@ shunting_yard(int command)
 				if (t_op->func == assignment) {
 					if (pt->type != VARIABLE) {
 						expression_error(pt, t);
-						stack_error_cleanup();
 						input_ptr = NULL;
 						return BADOP;
 					}
@@ -4647,7 +4635,6 @@ shunting_yard(int command)
 
 				if (!prev_tok_was_operand(pt)) {
 					expression_error(pt, t);
-					stack_error_cleanup();
 					input_ptr = NULL;
 					return BADOP;
 				}
@@ -4682,7 +4669,6 @@ shunting_yard(int command)
 		*pt = *t;
 
 	}
-	tfree(pt);  // safe, because "alloced" flag isn't set
 
 	trace(SHUNT, "\n loop done:\n");
 	trace_stack_dump(SHUNT,&oper_stack);
@@ -4697,7 +4683,6 @@ shunting_yard(int command)
 		error(" error: %s parentheses\n",
 			nesting < 0 ? "extra" : "missing");
 		input_ptr = NULL;
-		stack_error_cleanup();
 		return BADOP;
 	}
 
