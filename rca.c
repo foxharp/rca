@@ -5379,7 +5379,9 @@ struct config {
 	{ "rightalign",		c_int, &rightalignment },
 	{ "zerofill",		c_int, &zerofill },
 	{ "autoprint",		c_int, &autoprint },
+#if 0
 	{ "degrees",		c_int, &trig_degrees },
+#endif
 	{ "infix",		c_int, &infix_mode },
 	{ "errorexit",		c_int, &exit_on_error },
 	{ "", c_none },
@@ -5959,7 +5961,9 @@ struct oper opers[] = {
 	{"zf", zerof,		"Toggle left-fill with zeros in H, O, and B modes", Auto },
 	{"rightalign", rightalign, 0, Auto },
 	{"ra", rightalign,	"Toggle right alignment of numbers", Auto },
+#if 0
 	{"degrees", use_degrees, "Toggle trig functions: degrees (1) or radians (0)" },
+#endif
 	{"autoprint", autop,	0 },
 	{"ap", autop,		"Toggle autoprinting on/off with 0/1" },
 	{"separators", separators, 0, Auto },
