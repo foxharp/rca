@@ -87,6 +87,8 @@ char licensetext[] = \
 void
 valgrind(char *s)
 {
+	(void)s;
+
 	if (!RUNNING_ON_VALGRIND)
 		return;
 
@@ -251,7 +253,7 @@ long double epsilon = LDBL_EPSILON;
 /* float_digits may represent either the total displayed precision, or
  * the number of digits after the decimal, depending on float_specifier.
  * it will be capped at max_digits.  */
-#define DIGITS 20
+#define DIGITS 30
 int max_digits = DIGITS;
 int float_digits = 6;
 char *float_specifier = "automatic"; // or "engineering" or "fixed decimal"
@@ -380,6 +382,7 @@ set_lastx(mpd_t *a)
 	mpd_free_before_copy(&lastx, a, ctx);
 }
 
+#if 0
 long long
 ld_to_ll(long double n)
 {
@@ -396,6 +399,24 @@ ld_to_ll(long double n)
 		ll = (ll_t)ull;
 		return ll;
 	}
+}
+#endif
+
+
+unsigned long long
+ull_from_ll(long long s)
+{
+    unsigned long long u;
+    memcpy(&u, &s, sizeof(u));
+    return u;
+}
+
+long long
+ll_from_ull(unsigned long long u)
+{
+    long long s;
+    memcpy(&s, &u, sizeof(s));
+    return s;
 }
 
 
@@ -457,24 +478,23 @@ error(const char *fmt, ...)
 		exit(4);
 }
 
-/* in integer mode, a) long longs might be a different size than
- * the float format we're using for storage, and b) we support varying
- * word widths.  this routine takes care of both needs.  it runs for
- * every long long operator result, and is also used to fully scrub
- * the stack when switching from float mode to integer mode. */
-ldouble
-integer_adjust(long long n)
+/* in integer mode we maintain the illusion of integer storage. */
+boolean
+mpd_to_integer(mpd_t *r, mpd_t *a)
 {
-	n &= int_mask;
+	mpd_t *t, *q;
+	t = mpd_new(ctx);
+	q = mpd_new(ctx);
 
-	if (int_width == LONGLONG_BITS)
-		return (ldouble)n;
+	mpd_trunc(t, a, ctx); // remove fractional part
+	mpd_divmod(q, r, t, int_modulo, ctx); // modulo word-length
 
-	if (n & int_sign_bit)
-		n |= ~int_mask;
+	mpd_del(q);
+	mpd_del(t);
 
-	return (ldouble)n;
+	return (mpd_cmp(r, a, ctx) != 0);
 }
+
 
 void
 mpush(mpd_t *a)
@@ -482,6 +502,8 @@ mpush(mpd_t *a)
 	struct num *p;
 
 	p = (struct num *)safe_calloc(sizeof(struct num));
+	if (!floating_mode(mode))
+		mpd_to_integer(a, a);
 	p->mpd = a;
 	if (a == lastx) abort();
 	p->next = stack;
@@ -633,22 +655,6 @@ are_finite(ldouble a, ldouble b)
 	return 0;
 }
 #endif
-
-boolean
-mpd_to_integer(mpd_t *r, mpd_t *a)
-{
-	mpd_t *t, *q;
-	t = mpd_new(ctx);
-	q = mpd_new(ctx);
-
-	mpd_trunc(t, a, ctx); // remove fractional part
-	mpd_divmod(q, r, t, int_modulo, ctx); // modulo word-length
-
-	mpd_del(q);
-	mpd_del(t);
-
-	return (mpd_cmp(r, a, ctx) != 0);
-}
 
 /* This is poorly named.  The goal it to report whether the two
  * arguments are both finite (i.e., useful), and if not, to propagate
@@ -2442,18 +2448,18 @@ m_file_finish(void)
 }
 
 char *
-putbinary(long long l)
+putbinary(unsigned long long u)
 {
 	int i;
 	int zf = zerofill; // leading_zeros;
 
-	l &= int_mask;
+	u &= (ull_t)int_mask;
 
 	m_file_start();
 
 	fprintf(mp.fp, " 0b");
 	for (i = int_width-1; i >= 0; i--) {
-		if (l & (1L << i)) {
+		if (u & (1L << i)) {
 			fputc('1', mp.fp);
 			zf = 1;
 		} else if (zf || i == 0) {
@@ -2471,15 +2477,13 @@ putbinary(long long l)
 }
 
 char *
-puthex(long long l)
+puthex(unsigned long long u)
 {
 	int i;
 	int nibbles = ((int_width + 3) / 4);
 	int zf = zerofill; // leading_zeros;
-	unsigned long long u;
 
-	l &= int_mask;
-	u = (ull_t)l;
+	u &= (ull_t)int_mask;
 
 	m_file_start();
 
@@ -2502,15 +2506,13 @@ puthex(long long l)
 }
 
 char *
-putoct(long long l)
+putoct(unsigned long long u)
 {
 	int i;
 	int triplets = ((int_width + 2) / 3);
 	int zf = zerofill; // leading_zeros;
-	unsigned long long u;
 
-	l &= int_mask;
-	u = (ull_t)l;
+	u &= (ull_t)int_mask;
 
 	m_file_start();
 
@@ -2671,11 +2673,13 @@ show_int_truncation(boolean changed, mpd_t *old, char *mark)
 	// don't bother showing mark if we're warning about truncation
 
 	pending_show();
-	if (floating_mode(mode))
+	if (floating_mode(mode)) {
 		error("     # warning: display format loses accuracy\n");
-	else
-		error("     # warning: accuracy lost, was %s\n",
-					mpd_to_sci(old, 0));
+	} else {
+		char *s = mpd_to_sci(old, 0);
+		error("     # warning: value changed, was %s\n", s);
+		free(s);
+	}
 	    // FIXME.  should print more accurately, for copy/paste restore.
 	    // or, save a snapshot.  :-?
 
@@ -2891,12 +2895,40 @@ calc_align(int binary)
 		return ALIGN_COL;
 }
 
+unsigned long long
+mpd_get_64_bits(mpd_t *n)
+{
+	uint32_t status;
+	ull_t u;
+	ll_t ln;
+
+	/* we only use this routine if we already known the value
+	 * should fit in 64 bits.  if it's negative, mpdecimal won't
+	 * let us have it as unsigned.  but if it's bigger than the
+	 * MAX integer, it won't let us have it as integer.  so we try
+	 * both ways.  */
+	status = 0;
+	ln = mpd_qget_i64(n, &status);
+	if (status == 0) {
+		u = ull_from_ll(ln);
+		return u;
+	}
+
+	status = 0;
+	u = mpd_qget_u64(n, &status);
+	if (status == 0)
+		return u;
+
+	error("damn\n");
+	fprintf(stderr, "status is 0x%x\n", status);
+	return 0;
+}
+
 void
 print_n(mpd_t *m, int format, boolean conv, char *mark)
 {
 	int64_t ln;
 	uint64_t u;
-	long long mask = int_mask;
 	int align;
 	boolean changed;
 	trace_mpd(EXEC, "in print_n", m);
@@ -2943,32 +2975,33 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 	switch (format) {
 	case 'H':
 		changed = mpd_to_integer(n, m);
-		u = mpd_get_u64(n, ctx);
+		u = mpd_get_64_bits(n);
 		align = calc_align(0);
-		p_printf("%*s", align, puthex((ll_t)u));
+		p_printf("%*s", align, puthex(u));
 		break;
 	case 'O':
 		changed = mpd_to_integer(n, m);
-		u = mpd_get_u64(n, ctx);
+		u = mpd_get_64_bits(n);
 		align = calc_align(0);
-		p_printf("%*s", align, putoct((ll_t)u));
+		p_printf("%*s", align, putoct(u));
 		break;
 	case 'B':
 		changed = mpd_to_integer(n, m);
-		u = mpd_get_u64(n, ctx);
+		u = mpd_get_64_bits(n);
 		align = calc_align(0);
-		p_printf("%*s", align, putbinary((ll_t)u));
+		p_printf("%*s", align, putbinary(u));
 		break;
 	case 'U':
 		changed = mpd_to_integer(n, m);
-		u = mpd_get_u64(n, ctx);
+		u = mpd_get_64_bits(n);
 		align = calc_align(0);
 		p_printf("%*s", align, putunsigned(u));
 		break;
 	case 'D':
 		changed = mpd_to_integer(n, m);
-		ln = mpd_get_i64(n, ctx);
-		if (!floating_mode(mode) && int_width != LONGLONG_BITS) {
+		u = mpd_get_64_bits(n);
+		align = calc_align(0);
+		if (int_width != LONGLONG_BITS) {
 			/* shenanigans to make pos/neg numbers appear
 			 * properly.  our masked/shortened numbers
 			 * don't appear as negative to printf, so we
@@ -2976,15 +3009,19 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 			 * it.
 			 */
 
-			mask = (long long)int_mask & ~int_sign_bit;
-			if (ln & int_sign_bit) {	// negative
-				ln = -1 * (int_sign_bit - (ln & mask));
+			// long long mask;
+			ln = (ll_t)u;
+			// mask gives us everything but the sign bit
+			// mask = (long long)int_mask & ~int_sign_bit;
+			if (ln & int_sign_bit) {	// it's negative
+				ln |= ~int_mask;
 			} else {
-				ln = ln & mask;
+				ln &= int_mask;
 			}
+			p_printf("%*s", align, putsigned(ln));
+		} else {
+			p_printf("%*s", align, putsigned(ll_from_ull(u)));
 		}
-		align = calc_align(0);
-		p_printf("%*s", align, putsigned(ln));
 		break;
 	default:
 		error(" bug: default case in print_n()\n");
@@ -3135,8 +3172,8 @@ printstate(void)
 
 	p_printf("  - when in integer modes,");
 	p_printf(" word width is %d bits\n", int_width);
-	p_printf("    mask: %s", puthex(int_mask));
-	p_printf("  sign bit: %s\n", puthex(int_sign_bit) );
+	p_printf("    mask: %s", puthex((ull_t)int_mask));
+	p_printf("  sign bit: %s\n", puthex((ull_t)int_sign_bit) );
 	if (debug_enabled)
 		p_printf("    max integer width is %d bits\n", max_int_width);
 
@@ -3398,7 +3435,7 @@ setup_width(int bits)
 	}
 
 	// int_modulo used as tmp var here
-	mpd_set_i64(int_modulo, bits+1, ctx);
+	mpd_set_i64(int_modulo, bits, ctx);
 	mpd_pow(int_modulo, two, int_modulo, ctx);   // 2 ^ (bits+1)
 
 	int_width = bits;
@@ -3412,17 +3449,22 @@ setup_width(int bits)
 #endif
 }
 
-#if 0
 void
 mask_stack(void)
 {
+#if 0
 	struct num *s;
 	for (s = stack; s; s = s->next) {
 		if (isfinite(s->val))
 			s->val = integer_adjust( ld_to_ll(s->val));
 	}
-}
+#else
+	struct num *s;
+	for (s = stack; s; s = s->next) {
+		mpd_to_integer(s->mpd, s->mpd);
+	}
 #endif
+}
 
 opreturn
 width(void)
@@ -3453,7 +3495,7 @@ width(void)
 		p_printf(" In floating mode, integer width"
 				" is recorded but ignored.\n");
 	} else {
-		; // mask_stack();
+		mask_stack();
 	}
 
 	return GOODOP;
@@ -4658,12 +4700,11 @@ shunting_yard(int command)
 		stack_error_cleanup();
 		return BADOP;
 	}
-error("\ncode marker\n");
 
-	 /* if we're in infix mode and we used our entire line of
-	  * input, then trick the rpn execution into reporting that
-	  * (i.e., the EOL) for us when it's finished running.  this
-	  * makes autoprint work.  */
+	/* if we're in infix mode and we used our entire line of
+	 * input, then trick the rpn execution into reporting that
+	 * (i.e., the EOL) for us when it's finished running.  this
+	 * makes autoprint work.  */
 	if (infix_mode && t->type == EOL)
 		tpush(&infix_rpn_queue, t);
 
