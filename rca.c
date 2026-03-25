@@ -2407,39 +2407,6 @@ printfloat(void)
 	return GOODOP;
 }
 
-#if 0
-// worker for printstate()
-void
-rawprintstack(int n, struct num *s, int is_stack)
-{
-	if (!s) {
-		p_printf("%16s\n", "<empty>");
-		return;
-	}
-
-	if (is_stack) {
-		if (s->next)
-			rawprintstack(n-1, s->next, is_stack);
-		else
-			p_printf("  %-20s%-24s\n", "as integer", "as float");
-	}
-
-	p_printf( "  %#-20llx", ld_to_ll(s->val));
-	p_printf(  "%-24.*Lg", max_digits, s->val);
-	if (debug_enabled)
-		p_printf(" %La", s->val);
-	if (is_stack) {
-		if (n == stack_mark)
-			p_printf(" <-  mark");
-		if (n == stack_count)
-			p_printf(" <-  top");
-	}
-	p_printf("\n");
-	if (!is_stack && s->next)
-		rawprintstack(n-1, s->next, is_stack);
-}
-#endif
-
 opreturn
 printstate(void)
 {
@@ -2455,22 +2422,7 @@ printstate(void)
 	p_printf(" word width is %d bits\n", int_width);
 	p_printf("    mask: %s", puthex((ull_t)int_mask));
 	p_printf("  sign bit: %s\n", puthex((ull_t)int_sign_bit) );
-	if (debug_enabled)
-		p_printf("    max integer width is %d bits\n", max_int_width);
-
-
-#if 0
-	struct num *s = stack;
-	p_printf("\n Stack:\n");
-	if (debug_enabled)
-		p_printf("  stack count %d, depth of the stack mark is %d\n",
-			stack_count, stack_count - stack_mark);
-	rawprintstack(stack_count, s, 1);
-
-	s = snapstack;
-	p_printf("\n Snapshot:\n");
-	rawprintstack(stack_count, s, 0);
-#endif
+	p_printf("    max integer width is %d bits\n", max_int_width);
 
 	p_printf("\n");
 	p_printf(" Locale elements, from locale '%s'%s:\n",
