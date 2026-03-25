@@ -145,7 +145,7 @@ char **g_argv;
 char *pi_val = "3.1415926535897932384626433832795028841971693993751"
 	       "058209749445923078164062862089986280348253421170679";
 
-mpd_t *pi, *e, *zero, *one, *two;
+mpd_t *pi, *e, *zero, *one, *two, *oneeighty;
 
 /* internal representation of operands on the stack.  numbers are always
  * stored as long doubles, even when we're in integer mode.  this could
@@ -339,6 +339,9 @@ mpd_stuff(void)
 
 	two = mpd_new(ctx);
 	mpd_set_i64(two, 2, ctx);
+
+	oneeighty = mpd_new(ctx);
+	mpd_set_i64(oneeighty, 180, ctx);
 
 	e = mpd_new(ctx);
 	mpd_exp(e, one, ctx);
@@ -1093,7 +1096,6 @@ squarert(void)
 	return mpd_1_op_shell(mpd_sqrt);
 }
 
-#if TRIG
 opreturn
 trig_no_sense(void)
 {
@@ -1110,166 +1112,190 @@ use_degrees(void)
 		"degrees", "radians");
 }
 
-ldouble
-to_degrees(ldouble angle)
+void
+mpd_radians_to_degrees(mpd_t *r, mpd_t *a)
 {
-	return (angle * 180.0L) / pi;
+	// return (angle * 180.0L) / pi;
+	mpd_mul(a, a, oneeighty, ctx);
+	mpd_div(r, a, pi, ctx);
 }
 
-ldouble
-to_radians(ldouble angle)
+void
+mpd_degrees_to_radians(mpd_t *r, mpd_t *a)
 {
-	return (angle * pi) / 180.0L;
+	// return (angle * pi) / 180.0L;
+	mpd_mul(a, a, pi, ctx);
+	mpd_div(r, a, oneeighty, ctx);
 }
 
-ldouble
-radians_to_user_angle(ldouble rads)
+void
+mpd_radians_to_user_angle(mpd_t *user, mpd_t *rads)
 {
 	if (trig_degrees)
-		return to_degrees(rads);
+		mpd_radians_to_degrees(user, rads);
 	else
-		return rads;
+		mpd_copy(user, rads, ctx);
 }
 
-ldouble
-user_angle_to_radians(ldouble u_angle)
+void
+mpd_user_angle_to_radians(mpd_t *rads, mpd_t *user)
 {
 	if (trig_degrees)
-		return to_radians(u_angle);
+		mpd_degrees_to_radians(rads, user);
 	else
-		return u_angle;
+		mpd_copy(rads, user, ctx);
 }
 
-ldouble
-user_angle_to_degrees(ldouble u_angle)
+void
+mpd_user_angle_to_degrees(mpd_t *degrees, mpd_t *user)
 {
 	if (trig_degrees)
-		return u_angle;
+		mpd_copy(degrees, user, ctx);
 	else
-		return to_degrees(u_angle);
+		mpd_radians_to_degrees(degrees, user);
+}
+
+int
+mpd_to_double(ldouble *dp, mpd_t *m)
+{
+	char fmt[32];
+	char *s, *es;
+
+	snprintf(fmt, sizeof fmt, ".%dg", DIGITS);
+	s = mpd_format(m, fmt, ctx);
+
+	errno = 0;
+	*dp = strtold(s, &es);
+
+	int ok = ((*es == '\0') && (errno == 0));
+
+	free(s);
+
+	return ok;
+}
+
+void
+mpd_from_double(mpd_t *m, ldouble d, mpd_context_t *ctx)
+{
+	char buf[128];
+	snprintf(buf, sizeof(buf), "%.*Lg", LDBL_DECIMAL_DIG, d);
+	mpd_set_string(m, buf, ctx);
+}
+
+#define SIN 1
+#define COS 2
+#define TAN 3
+#define aSIN 4
+#define aCOS 5
+#define aTAN 6
+
+opreturn
+trig(int which)
+{
+	mpd_t *mx;
+	ldouble dx;
+
+	if (!floating_mode(mode))
+		return trig_no_sense();
+
+	if (!mpop(&mx))
+		return BADOP;
+
+	set_lastx(mx);
+	if (which <= TAN)
+		mpd_user_angle_to_radians(mx, mx);
+
+	if (!mpd_to_double(&dx, mx)) {
+		error("error: trig input angle likely out of range\n");
+		mpd_del(mx);
+		return BADOP;
+	}
+
+	switch (which) {
+	case SIN:  dx = sinl(dx); break;
+	case COS:  dx = cosl(dx); break;
+	case TAN:  dx = tanl(dx); break;
+	case aSIN:  dx = asinl(dx); break;
+	case aCOS:  dx = acosl(dx); break;
+	case aTAN:  dx = atanl(dx); break;
+	}
+
+	mpd_from_double(mx, dx, ctx);
+
+	if (which >= aSIN)
+		mpd_radians_to_user_angle(mx, mx);
+
+	mpush(mx);
+
+	return GOODOP;
 }
 
 opreturn
 sine(void)
 {
-	ldouble a;
-
-	if (!floating_mode(mode))
-		return trig_no_sense();
-
-	if (pop(&a)) {
-		push(sinl(user_angle_to_radians(a)));
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-}
-
-opreturn
-asine(void)
-{
-	ldouble a;
-
-	if (!floating_mode(mode))
-		return trig_no_sense();
-
-	if (pop(&a)) {
-		push(radians_to_user_angle(asinl(a)));
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
+	return trig(SIN);
 }
 
 opreturn
 cosine(void)
 {
-	ldouble a;
-
-	if (!floating_mode(mode))
-		return trig_no_sense();
-
-	if (pop(&a)) {
-		push(cosl(user_angle_to_radians(a)));
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
-}
-
-opreturn
-acosine(void)
-{
-	ldouble a;
-
-	if (!floating_mode(mode))
-		return trig_no_sense();
-
-	if (pop(&a)) {
-		push(radians_to_user_angle(acosl(a)));
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
+	return trig(COS);
 }
 
 opreturn
 tangent(void)
 {
-	ldouble a;
+	return trig(TAN);
+}
 
-	if (!floating_mode(mode))
-		return trig_no_sense();
+opreturn
+asine(void)
+{
+	return trig(aSIN);
+}
 
-	if (pop(&a)) {
-		// tan() goes undefined at +/-90,
-		if (fmodl((user_angle_to_degrees(a)) - 90, 180) == 0)
-			push(NAN);
-		else
-			push(tanl(user_angle_to_radians(a)));
-		lastx = a;
-		return GOODOP;
-	}
-
-	return BADOP;
+opreturn
+acosine(void)
+{
+	return trig(aCOS);
 }
 
 opreturn
 atangent(void)
 {
-	ldouble a;
-
-	if (!floating_mode(mode))
-		return trig_no_sense();
-
-	if (pop(&a)) {
-		push(radians_to_user_angle(atanl(a)));
-		lastx = a;
-		return GOODOP;
-	}
-	return BADOP;
+	return trig(aTAN);
 }
 
 opreturn
 atangent2(void)
 {
-	ldouble a,b;
+	mpd_t *mx, *my;
+	ldouble dx, dy, r;
 
 	if (!floating_mode(mode))
 		return trig_no_sense();
 
-	if (pop(&b)) {
-		if (pop(&a)) {
-			push(radians_to_user_angle(atan2l(a,b)));
-			lastx = b;
+	if (mpop(&mx)) {
+		if (mpop(&my)) {
+			if (!mpd_to_double(&dx, mx) ||
+				!mpd_to_double(&dy, my)) {
+				error("error: trig input likely out of range");
+				mpd_del(mx);
+				mpd_del(my);
+				return BADOP;
+			}
+			r =  atan2l(dy, dx);
+			set_lastx(mx);
+			mpd_from_double(mx, r, ctx);
+			mpd_radians_to_user_angle(mx, mx);
+			mpush(mx);
+			mpd_del(my);
 			return GOODOP;
 		}
-		push(b);
+		mpush(mx);
 	}
 	return BADOP;
 }
-
-#endif
 
 opreturn
 log_base2(void)
@@ -2068,12 +2094,14 @@ print_floating(mpd_t *m)
 			else s = "nan";
 		}
 		fprintf(mp.fp, "%s", s);
+	} else if (mpd_iszero(m)) {
+		fputs("0", mp.fp);
 	} else if (float_specifier[0] == 'a') { // 'a'uto
 		// first construct the format string
 		snprintf(fmt, sizeof fmt, ".%dg",
 			(float_digits < 1) ? 1 : float_digits);
 
-		// use it to get fixed notation
+		// use it to get sci/auto notation
 		char *s = mpd_format(m, fmt, ctx);
 		snprintf(buf, sizeof(buf), "%s", s);
 		free(s);
@@ -3060,16 +3088,15 @@ units_km_mi(void)
 	return unit_worker(DIV, "1.609344", 0);
 }
 
-#if TRIG
 opreturn
 units_deg_rad(void)
 {
-	ldouble a;
+	mpd_t *a;
 
-	if (pop(&a)) {
-		a = to_radians(a);
-		push(a);
-		lastx = a;
+	if (mpop(&a)) {
+		mpd_degrees_to_radians(a, a);
+		mpush(a);
+		set_lastx(a);
 		return GOODOP;
 	}
 	return BADOP;
@@ -3078,17 +3105,16 @@ units_deg_rad(void)
 opreturn
 units_rad_deg(void)
 {
-	ldouble a;
+	mpd_t *a;
 
-	if (pop(&a)) {
-		a = to_degrees(a);
-		push(a);
-		lastx = a;
+	if (mpop(&a)) {
+		mpd_radians_to_degrees(a, a);
+		mpush(a);
+		set_lastx(a);
 		return GOODOP;
 	}
 	return BADOP;
 }
-#endif
 
 
 opreturn
@@ -3980,6 +4006,8 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 	} else if (isdigit(*p) || match_dp(p)) {
 		// decimal
 
+		// just parse the decimal, to find its end.  we
+		// don't want the double, we need the string
 		(void)strtold(p, &np);
 
 		/* don't be strict about what comes next.  mistakes are
@@ -4376,9 +4404,7 @@ struct config {
 	{ "rightalign",		c_int, &rightalignment },
 	{ "zerofill",		c_int, &zerofill },
 	{ "autoprint",		c_int, &autoprint },
-#if TRIG
 	{ "degrees",		c_int, &trig_degrees },
-#endif
 	{ "infix",		c_int, &infix_mode },
 	{ "errorexit",		c_int, &exit_on_error },
 	{ "", c_none },
@@ -4820,8 +4846,8 @@ struct oper opers[] = {
 	{"-", subtract,		"Add and subtract x and y", 2, 24 },
 	{"*", multiply,		0, 2, 26 },
 	{"x", multiply,		"Multiply x and y", 2, 26 },
-	{"/", divide,		"Divide y by x", 2, 26 },
-	{"%", modulo,		"Modulo of y by x", 2, 26 },
+	{"/", divide,		0, 2, 26 },
+	{"%", modulo,		"Divide and modulo of y by x", 2, 26 },
 	{"^", y_to_the_x,	0, 2, 28, 'R'},
 	{"**", y_to_the_x,	"Raise y to the x'th power", 2, 28, 'R'},
 	{">>", rshift,		0, 2, 22 },
@@ -4841,7 +4867,6 @@ struct oper opers[] = {
 	{"negate", chsign,	"Change sign of x (2's complement)", 1, 30, 'R' },
 	{"recip", recip,	0, 1, 30, 'R' },
 	{"sqrt", squarert,	"Reciprocal and square root of x", 1, 30, 'R' },
-#if TRIG
 	{"sin", sine,		0, 1, 30, 'R' },
 	{"cos", cosine,		0, 1, 30, 'R' },
 	{"tan", tangent,	"", 1, 30, 'R' },
@@ -4849,7 +4874,6 @@ struct oper opers[] = {
 	{"acos", acosine,	0, 1, 30, 'R' },
 	{"atan", atangent,	"Trig functions", 1, 30, 'R' },
 	{"atan2", atangent2,	"Arctan of y/x (2 operands)", 2, 27 },
-#endif
 	{"exp", e_to_the_x,	"Raise e to the x'th power", 1, 30, 'R' },
 	{"ln", log_natural,	0, 1, 30, 'R' },
 	{"log2", log_base2,	0, 1, 30, 'R' },
@@ -4885,10 +4909,8 @@ struct oper opers[] = {
 	{"ml2oz", units_ml_oz,	"US fluid ounces / milliliters", 1, 30, 'R' },
 	{"q2l", units_qt_l,	0, 1, 30, 'R' },
 	{"l2q", units_l_qt,	"US quarts / liters", 1, 30, 'R' },
-#if TRIG
 	{"d2r", units_deg_rad,	0, 1, 30, 'R' },
 	{"r2d", units_rad_deg,	"degrees / radians", 1, 30, 'R' },
-#endif
 #if 0
 	{"dd2dms", units_dd_dms, 0, 1, 30, 'R' },
 	{"dms2dd", units_dms_dd,"decimal degrees / deg.mm.sss", 1, 30, 'R' },
@@ -4898,8 +4920,8 @@ struct oper opers[] = {
     {"Constants and storage:"},
 	{"sto", store,		0, 0 },
 	{"rcl", recall,		"Save to or push from off-stack storage", Sym },
-	{"e", push_e,		"Push constant pi or e", Sym },
 	{"pi", push_pi,		0, Sym },
+	{"e", push_e,		"Push constant pi or e", Sym },
 	{"lastx", repush,	0, Sym },
 	{"lx", repush,		"Push previous value of x", Sym },
 	{"_<name>", nop,	"Push variable" },  // function unused
@@ -4960,9 +4982,7 @@ struct oper opers[] = {
 	{"zf", zerof,		"Toggle left-fill with zeros in H, O, and B modes", Auto },
 	{"rightalign", rightalign, 0, Auto },
 	{"ra", rightalign,	"Toggle right alignment of numbers", Auto },
-#if TRIG
 	{"degrees", use_degrees, "Toggle trig functions: degrees (1) or radians (0)" },
-#endif
 	{"autoprint", autop,	0 },
 	{"ap", autop,		"Toggle autoprinting on/off with 0/1" },
 	{"separators", separators, 0, Auto },
