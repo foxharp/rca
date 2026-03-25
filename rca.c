@@ -3170,49 +3170,72 @@ units_mpg_l100km(void)
 	return GOODOP;
 }
 
-#if 0
+/* This converts -74.0444 degrees, to 74°2′40″W (expressed as "-74.0240").
+ * Use "4 digits fixed" to display properly. */
 opreturn
 units_dd_dms(void)
 {
+	mpd_t *m;
 	ldouble dd;
-	if (pop(&dd)) {
-		ldouble deg, min, minsec, sec, sign;
-		sign = (dd < 0) ? -1 : 1;
-		dd = fabsl(dd);
-		deg = floorl(dd);
-		minsec = (dd - deg) * 60.0;
-		min = floorl(minsec);
-		sec = (minsec - min) * 60.0;
-		dd = deg + min/100.0 + sec/10000.0;
-		dd *= sign;
-		push(dd);
-		lastx = dd;
-		return GOODOP;
-	}
-	return BADOP;
+	if (!mpop(&m))
+		return BADOP;
+
+	mpd_to_double(&dd, m);
+
+	ldouble deg, min, minsec, sec, sign;
+
+	sign = (dd < 0) ? -1 : 1;
+	dd = fabsl(dd);
+	deg = floorl(dd);
+	minsec = (dd - deg) * 60.0;
+	min = floorl(minsec);
+	sec = (minsec - min) * 60.0;
+	dd = deg + min/100.0 + sec/10000.0;
+	dd *= sign;
+
+	set_lastx(m);
+
+	mpd_from_double(m, dd, ctx);
+
+	mpush(m);
+
+	return GOODOP;
 }
 
+/* This converts 40°41′21.3″N, expressed as "40.41213", to 40.6892 degrees */
 opreturn
 units_dms_dd(void)
 {
+	mpd_t *m;
 	ldouble dd;
-	if (pop(&dd)) {
-		ldouble deg, min, minsec, sec, sign;
-		sign = (dd < 0) ? -1 : 1;
-		dd = fabsl(dd);
-		deg = floorl(dd);
-		minsec = (dd - deg) * 100.0;
-		min = floorl(minsec);
-		sec = (minsec - min) * 100.0;
-		dd = deg + min/60.0 + sec/3600.0;
-		dd *= sign;
-		push(dd);
-		lastx = dd;
-		return GOODOP;
-	}
-	return BADOP;
+	if (!mpop(&m))
+		return BADOP;
+
+	mpd_to_double(&dd, m);
+
+	/* The variable names, identical to the routine
+	 * above, don't make sense here.  But since the
+	 * algorithm is identical, except for the constants,
+	 * I haven't bothered changing them.
+	 */
+	ldouble deg, min, minsec, sec, sign;
+	sign = (dd < 0) ? -1 : 1;
+	dd = fabsl(dd);
+	deg = floorl(dd);
+	minsec = (dd - deg) * 100.0;
+	min = floorl(minsec);
+	sec = (minsec - min) * 100.0;
+	dd = deg + min/60.0 + sec/3600.0;
+	dd *= sign;
+
+	set_lastx(m);
+
+	mpd_from_double(m, dd, ctx);
+
+	mpush(m);
+
+	return GOODOP;
 }
-#endif
 
 token *out_stack, *oper_stack, *infix_rpn_queue;
 
@@ -4947,10 +4970,8 @@ struct oper opers[] = {
 	{"l2q", units_l_qt,	"US quarts / liters", 1, 30, 'R' },
 	{"d2r", units_deg_rad,	0, 1, 30, 'R' },
 	{"r2d", units_rad_deg,	"degrees / radians", 1, 30, 'R' },
-#if 0
 	{"dd2dms", units_dd_dms, 0, 1, 30, 'R' },
 	{"dms2dd", units_dms_dd,"decimal degrees / deg.mm.sss", 1, 30, 'R' },
-#endif
 	{"mpg2l100km", units_mpg_l100km, "mpg to l/100km and vice versa", 1, 30, 'R' },
 	{""},
     {"Constants and storage:"},
