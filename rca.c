@@ -3127,13 +3127,14 @@ units_deg_rad(void)
 {
 	mpd_t *a;
 
-	if (mpop(&a)) {
-		mpd_degrees_to_radians(a, a);
-		mpush(a);
-		set_lastx(a);
-		return GOODOP;
-	}
-	return BADOP;
+	if (!mpop(&a))
+		return BADOP;
+
+	set_lastx(a);
+	mpd_degrees_to_radians(a, a);
+	mpush(a);
+
+	return GOODOP;
 }
 
 opreturn
@@ -3141,13 +3142,14 @@ units_rad_deg(void)
 {
 	mpd_t *a;
 
-	if (mpop(&a)) {
-		mpd_radians_to_degrees(a, a);
-		mpush(a);
-		set_lastx(a);
-		return GOODOP;
-	}
-	return BADOP;
+	if (!mpop(&a))
+		return BADOP;
+
+	set_lastx(a);
+	mpd_radians_to_degrees(a, a);
+	mpush(a);
+
+	return GOODOP;
 }
 
 
