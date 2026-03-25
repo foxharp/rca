@@ -2126,11 +2126,23 @@ print_floating(mpd_t *m)
 	} else if (mpd_iszero(m)) {
 		fputs("0", mp.fp);
 	} else if (float_specifier[0] == 'a') { // 'a'uto
-		// first construct the format string
-		snprintf(fmt, sizeof fmt, ".%dg",
-			(float_digits < 1) ? 1 : float_digits);
 
-		// use it to get sci/auto notation
+		int precision = (float_digits < 1) ? 1 : float_digits;
+		int exp = (int)mpd_adjexp(m);
+
+		/* we jump through hoops to get our output to look
+		 * like printf %g output, which uses some nice
+		 * heuristics to keep numbers looking familiar (i.e.,
+		 * non-exponential) as much as possible.  */
+		if (exp >= -4 && exp < precision) { /* fixed */
+			int frac = precision - (exp + 1);
+			if (frac < 0) frac = 0;
+			snprintf(fmt, sizeof fmt, ".%df", frac);
+
+		} else { /* scientific */
+			snprintf(fmt, sizeof fmt, ".%de", precision - 1);
+		}
+
 		char *s = mpd_format(m, fmt, ctx);
 		snprintf(buf, sizeof(buf), "%s", s);
 		free(s);
