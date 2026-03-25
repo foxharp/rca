@@ -2193,8 +2193,7 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 
 	if (!mark) mark = "";
 
-	if (!mpd_isfinite(m) ||
-			(floating_mode(mode) && floating_mode(format))) {
+	if (!mpd_isfinite(m) || floating_mode(format)) {
 		char *pf;
 		pf = print_floating(m);
 		align = floating_alignment(pf);
@@ -2678,15 +2677,6 @@ setup_width(int bits)
 	}
 }
 
-void
-mask_stack(void)
-{
-	struct num *s;
-	for (s = stack; s; s = s->next) {
-		mpd_to_integer(s->mpd, s->mpd);
-	}
-}
-
 opreturn
 width(void)
 {
@@ -2708,6 +2698,8 @@ width(void)
 		p_printf(" Width out of range, set to min (%d)\n", bits);
 	}
 
+	long long old_int_mask = int_mask;
+
 	setup_width(bits);
 	mpd_del(mbits);
 
@@ -2716,7 +2708,20 @@ width(void)
 		p_printf(" In floating mode, integer width"
 				" is recorded but ignored.\n");
 	} else {
-		mask_stack();
+		// mask_stack();
+		struct num *s;
+		for (s = stack; s; s = s->next) {
+			mpd_to_integer(s->mpd, s->mpd);
+			uint64_t u = mpd_get_64_bits(s->mpd);
+			/* clear any old sign extension */
+			u &= (ull_t)old_int_mask;
+			/* set new sign extension based on the new sign bit */
+			if (u & (ull_t)int_sign_bit) {
+				u |= ~(ull_t)int_mask;
+			}
+			mpd_set_i64(s->mpd, (int64_t)u, ctx);
+
+		}
 	}
 
 	return GOODOP;
