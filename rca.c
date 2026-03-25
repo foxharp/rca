@@ -4124,7 +4124,7 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 		}
 		if (!op->name) {
 		unknown:
-			error(" error: Unrecognized input '%s'\n",
+			error(" error: unrecognized input '%s'\n",
 				strtok(p, " \t\n"));
 			t->str = p;
 			t->type = UNKNOWN;
