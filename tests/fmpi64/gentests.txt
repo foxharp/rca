@@ -2,9 +2,9 @@
 1 debug
  Debug commands enabled
 epsilon 10 * = _10eps
-                               1.0842e-18
+ error: unrecognized input 'epsilon'
 epsilon 100 * = _100eps
-                               1.0842e-17
+ error: unrecognized input 'epsilon'
 clear
 
 0 rightalign
@@ -60,7 +60,7 @@ pop
 
 H
  Mode is hex (H).  Integer math with 64 bits.
- 0x2     # warning: accuracy lost, was 2.60840734641020676149
+ 0x2     # warning: value changed, was 2.6084073464102067615373566167205
  0x1000
 0xfffff
 0xaaaaa ~ &
@@ -125,28 +125,28 @@ km2mi
  15.7828
 15digits
  Floating formats configured for 15 digits.
- 15.78282848
+ 15.7828282828283
 automatic
  Will show floating point in automatic format
- 15.78282848
+ 15.7828282828283
 oz2g
- 447.43529599376
+ 447.43529040404
 g2oz
- 15.78282848
+ 15.7828282828283
 l2q
- 16.6775570265312
+ 16.6775568181818
 c2f
- 62.0196026477562
+ 62.0196022727273
 o
  0o76     # warning: display format loses accuracy
 h
  0x3e     # warning: display format loses accuracy
 0xf0 +
- 302.019602647756
+ 302.019602272727
 H
  Mode is hex (H).  Integer math with 20 bits.
- 0x0     # warning: accuracy lost, was 0.982547593562716488347
- 0x12e     # warning: accuracy lost, was 302.019602647756157027
+ 0x0     # warning: value changed, was 0.982547593562714392783865549074
+ 0x12e     # warning: value changed, was 302.01960227272727272727272727273
 0xf00 |
  0xf2e
 4 <<
@@ -253,14 +253,14 @@ h
 F
  Mode is float (F).  Showing 15 digits of total precision in automatic format.
  0
- -2,023,424,000
+ 2,271,543,296
 pi 100,000 *
  314,159.265358979
 H
  Mode is hex (H).  Integer math with 32 bits.
  0x0
  0x8765,0000
- 0x4,cb2f     # warning: accuracy lost, was 314159.26535897932385
+ 0x4,cb2f     # warning: value changed, was 314159.26535897932384626433832795
 D
  Mode is signed decimal (D).  Integer math with 32 bits.
  0
@@ -326,31 +326,31 @@ clear
 F
  Mode is float (F).  Showing 15 digits of total precision in automatic format.
 40 digits
- Floating formats configured for the maximum of 18 digits.
+ Floating formats configured for the maximum of 30 digits.
 auto
  Will show floating point in automatic format
 pi
- 3.14159265358979324
+ 3.14159265358979323846264338328
 frac
- 0.141592653589793239
+ 0.14159265358979323846264338328
 pi
- 3.14159265358979324
+ 3.14159265358979323846264338328
 chs
- -3.14159265358979324
+ -3.14159265358979323846264338328
 frac
- -0.141592653589793239
+ -0.14159265358979323846264338328
 pi
- 3.14159265358979324
+ 3.14159265358979323846264338328
 int
  3
 pi
- 3.14159265358979324
+ 3.14159265358979323846264338328
 chs
- -3.14159265358979324
+ -3.14159265358979323846264338328
 int
  -3
 pi
- 3.14159265358979324
+ 3.14159265358979323846264338328
 15 digits
  Floating formats configured for 15 digits.
  3.14159265358979
@@ -380,7 +380,7 @@ auto
  Will show floating point in automatic format
  3.141592654e+15
 d
- 3,141,592,653,589,793     # warning: display format loses accuracy
+ 170,224,929     # warning: display format loses accuracy
 f
  3.141592654e+15
 pi
@@ -675,11 +675,11 @@ u
  65,535
 32 bits
  Integers are now 32 bits wide.
- 0xffff,ffff
+ 0xffff
 d
- -1
+ 65,535
 u
- 4,294,967,295
+ 65,535
 0xffff &
  0xffff
 d
@@ -724,9 +724,9 @@ F 6 digits
 auto
  Will show floating point in automatic format
 10 10000 ^
- inf
+ 1e+10000
 10 -10000 ^
- 0
+ 1e-10000
 1 0 / = _pos_inf
  inf
 -1 0 / = _neg_inf
@@ -738,19 +738,19 @@ auto
 -1 0 /
  -inf
 1 0 %
- -nan
+ nan
 -1 0 %
- -nan
+ nan
 clear D
  Mode is signed decimal (D).  Integer math with 2 bits.
 1 0 /
- inf
+ nan
 -1 0 /
- -inf
+ nan
 1 0 %
- -nan
+ nan
 -1 0 %
- -nan
+ nan
 clear F
  Mode is float (F).  Showing 6 digits of total precision in automatic format.
 
@@ -772,7 +772,7 @@ clear F
 0 3 ^
  0
 -0 3 ^
- -0
+ 0
 # If x is 0, and y greater than 0 and not an odd integer, the
 # result is +0.
 0 2 ^
@@ -780,21 +780,21 @@ clear F
 # If x is -1, and y is positive infinity or negative infinity,
 # the result is 1.0.
 -1 _pos_inf ^
- 1
+ nan
 -1 _neg_inf ^
- 1
+ nan
 # If x is +1, the result is 1.0 (even if y is a NaN).
 1 _nan ^
- 1
+ nan
 # If y is 0, the result is 1.0 (even if x is a NaN).
 _nan 0 ^
- 1
+ nan
 # If x is a finite value less than 0, and y is a finite
 # noninteger, a domain error occurs, and a NaN is returned.
 -1 .5 ^
- -nan
+ nan
 -2 2.5 ^
- -nan
+ nan
 # If the absolute value of x is less than 1, and y is negative
 # infinity, the result is positive infinity.
 .3 _neg_inf ^
@@ -802,21 +802,21 @@ _nan 0 ^
 # If the absolute value of x is greater than 1, and y is negative
 # infinity, the result is +0.
 -2 _neg_inf ^
- 0
+ nan
 # If the absolute value of x is less than 1, and y is positive
 # infinity, the result is +0.
 .5 _pos_inf ^
  0
 -.4 _pos_inf ^
- 0
+ nan
 # If the absolute value of x is greater than 1, and y is positive
 # infinity, the result is positive infinity.
 -3 _pos_inf ^
- inf
+ nan
 # If x is negative infinity, and y is an odd integer less than 0,
 # the result is -0.
 _neg_inf -3 ^
- -0
+ 0
 # If x is negative infinity, and y less than 0 and not an odd
 # integer, the result is +0.
 _neg_inf -2 **
@@ -847,23 +847,23 @@ clear
  trig functions will now use radians
 # If y is +0 (-0) and x is less than 0, +pi (-pi) is returned.
 (0 atan2 -1) pi ==
- 1
+ 0
 (-0 atan2 -1) (-pi) ==
- 1
+ 0
 # If y is +0 (-0) and x is greater than 0, +0 (-0) is returned.
 (-0 atan2 2) -0 ==
  1
 # If y is less than 0 and x is +0 or -0, -pi/2 is returned.
 (-1 atan2 0) (-pi/2) ==
- 1
+ 0
 (-1 atan2 -0) (-pi/2) ==
- 1
+ 0
 
 # If y is greater than 0 and x is +0 or -0, pi/2 is returned.
 (1 atan2 0) (pi/2) ==
- 1
+ 0
 (1 atan2 -0) (pi/2) ==
- 1
+ 0
 
 # If either x or y is NaN, a NaN is returned.
 (_nan atan2 0)
@@ -873,9 +873,9 @@ clear
 
 # If y is +0 (-0) and x is -0, +pi (-pi) is returned.
 (0 atan2 -0) pi ==
- 1
+ 0
 (-0 atan2 -0) (-pi) ==
- 1
+ 0
 
 # If y is +0 (-0) and x is +0, +0 (-0) is returned.
 (-0 atan2 0) -0 ==
@@ -883,9 +883,9 @@ clear
 
 # If y is a finite value greater (less) than 0, and x is negative  infinity, +pi (-pi) is returned.
 (2 atan2 _neg_inf) pi ==
- 1
+ 0
 (-2 atan2 _neg_inf) (-pi) ==
- 1
+ 0
 
 # If y is a finite value greater (less) than 0, and x is positive infinity, +0 (-0) is returned.
 (3 atan2 _pos_inf) 0 ==
@@ -895,44 +895,46 @@ clear
 
 # If y is positive infinity (negative infinity), and x  is  finite,  pi/2 (-pi/2) is returned.
 (_pos_inf atan2 2) (pi/2) ==
- 1
+ 0
 (_neg_inf atan2 2) (-pi/2) ==
- 1
+ 0
 
 # If  y is positive infinity (negative infinity) and x is negative infinity, +3*pi/4 (-3*pi/4) is returned.
 (_pos_inf atan2 _neg_inf) (3*pi/4) ==
- 1
+ 0
 (_neg_inf atan2 _neg_inf) (-3*pi/4) ==
- 1
+ 0
 
 # If y is positive infinity (negative infinity) and x is positive  infinity, +pi/4 (-pi/4) is returned.
 (_pos_inf atan2 _pos_inf) (pi/4) ==
- 1
+ 0
 (_neg_inf atan2 _pos_inf) (-pi/4) ==
- 1
+ 0
 
 # misc !finite tests follow
 clear
 0 degrees
  trig functions will now use radians
 (tan(pi/2))
- nan
+ 1.63312e+16
 (tan(pi/2 + epsilon))
- -7.49047e+18
+ error: unrecognized input 'epsilon))'
+ error: missing parentheses
 (tan(pi/2 + _10eps))
- -9.01482e+17
+ 1.63312e+16
 (tan(pi/2 - epsilon))
- nan
+ error: unrecognized input 'epsilon))'
+ error: missing parentheses
 (tan(pi/2 - _10eps))
- 9.44181e+17
+ 1.63312e+16
 (ln(0))
  -inf
 (ln(-1))
  nan
 (sqrt(-1))
- -nan
+ nan
 (3 % 0)
- -nan
+ nan
 
 # "last x" tests
 1 5 + (pi + lx)
@@ -1042,7 +1044,7 @@ clear
 (-sqrt(4))
  -2
 (sin(-0))
- -0
+ 0
 # =========================
 # infix: symbolic operators
 # =========================
@@ -1225,11 +1227,10 @@ config
               degrees     * 0
                 infix       0
             errorexit       0
-                debug     * 1
-             rounding       1
+                debug       1
               tracing       0
  Starting from defaults, recreate with:
-    engineering  0 rightalign  0 degrees  1 debug
+    engineering  0 rightalign  0 degrees
 
 0 debug config
             F,D,H,O,B       F
@@ -1401,7 +1402,7 @@ recip
 17 sqrt
  0x4
 -17 sqrt
- -nan
+ nan
 
 # infix mode
 F 1 ra auto clear

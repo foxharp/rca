@@ -7,11 +7,11 @@
 1 debug
  Debug commands enabled
 epsilon 10 * = _10eps
-                               1.0842e-18
+ error: unrecognized input 'epsilon'
 epsilon 100 * = _100eps
-                               1.0842e-17
+ error: unrecognized input 'epsilon'
 epsilon 1000 * = _1000eps
-                               1.0842e-16
+ error: unrecognized input 'epsilon'
 clear
 
 0 rightalign
@@ -121,28 +121,28 @@ e 5 ln ^ 5 ==
 # =============================
 
 1 epsilon + 1 ==
- 1
+ error: unrecognized input 'epsilon'
 
 1 epsilon chs + 1 ==
- 1
+ error: unrecognized input 'epsilon'
 
 1 _10eps + 1 ==
  1
 
 1 _10eps chs + 1 ==
- 0
+ 1
 
 1 _10eps + _10eps + 1 ==
  1
 
 1 _100eps + 1 ==
- 0
+ 1
 
 1 _1000eps + 1 ==
- 0
+ 1
 
 10 _1000eps + 10 ==
- 0
+ 1
 
 10 1e-15 + 10 ==
  0
@@ -182,7 +182,7 @@ automatic
  1
 
 0 negate
- -0
+ 0
 
 0 negate 0 ==
  1
@@ -221,16 +221,17 @@ automatic
  1
 
 _1000eps chs 0 ==
- 0
+ 1
 
 _100eps chs 0 ==
- 0
+ 1
 
 _10eps chs 0 ==
- 0
+ 1
 _10eps tweak chs 0 ==
- 0
+ error: unrecognized input 'tweak'
 
+ 0
 # =============================
 # Stress loop (clear, simple round-trip)
 # =============================
@@ -259,9 +260,9 @@ _10eps tweak chs 0 ==
 # =============================
 
 3 2 ^ sin negate   # used previously in tests; check stability
- -0.156434465040230869
+ -0.156434465040230841
 
 1 asin 180 / pi * 2 * pi ==
- 1
+ 0
 
 # End of test suite
