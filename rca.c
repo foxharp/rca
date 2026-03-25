@@ -517,9 +517,7 @@ mpush(mpd_t *a)
 {
 	struct num *p;
 
-	if (floating_mode(mode))
-		mpd_rescale(a, a, -DIGITS, ctx);
-	else
+	if (!floating_mode(mode))
 		mpd_to_integer(a, a);
 
 	p = (struct num *)safe_calloc(sizeof(struct num));
@@ -1427,6 +1425,9 @@ compare_worker(int c)
 	}
 
 	set_lastx(x);
+
+	mpd_rescale(x, x, -DIGITS, ctx);
+	mpd_rescale(y, y, -DIGITS, ctx);
 
 	int r = mpd_cmp(y, x, ctx);
 	switch(c) {
