@@ -2041,6 +2041,34 @@ convert_eng_format(char *buf)
 }
 
 void
+trim_g_trailing_zeros(char *s)
+{
+        char *e = strchr(s, 'e');
+        if (!e)
+                e = strchr(s, 'E');
+
+        /* isolate mantissa */
+        char *end = e ? e : s + strlen(s);
+
+        /* find decimal point */
+        char *dot = strchr(s, '.');
+        if (!dot)
+                return;
+
+        /* walk backwards trimming zeros */
+        char *p = end - 1;
+        while (p > dot && *p == '0')
+                p--;
+
+        /* if we stopped at the dot, remove it too */
+        if (p == dot)
+                p--;
+
+        /* shift remainder (including exponent) left */
+        memmove(p + 1, end, strlen(end) + 1);
+}
+
+void
 zero_pad_exponent(char *s)
 {
 	char *e = strchr(s, 'e');
@@ -2106,6 +2134,7 @@ print_floating(mpd_t *m)
 		snprintf(buf, sizeof(buf), "%s", s);
 		free(s);
 
+		trim_g_trailing_zeros(buf);
 		zero_pad_exponent(buf);
 		add_digit_grouping(buf);
 		fputs(buf, mp.fp);
