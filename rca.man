@@ -845,9 +845,10 @@ requires conversion of all stack values
 to integer.
 If the conversion from mpdecimal to
 .I long long
-can't be done without loss, an error message is issued, but the
-conversion has already occurred, and the loss cannot be undone.  If
-the conversion occurred while simply displaying a float value as
+can't be done without loss, a message is issued, but the
+conversion has already occurred.  (The message shows the value with
+enough digits that it can be restored accurately via copy and paste.)
+If the conversion occurred while simply displaying a float as
 integer, without changing modes, then the original value is unchanged.
 Execution will proceed after the warning unless
 .B errorexit

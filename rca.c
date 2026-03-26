@@ -1928,15 +1928,14 @@ show_int_truncation(boolean changed, mpd_t *old, char *mark)
 
 	pending_show();
 	if (floating_mode(mode)) {
-		error("     # warning: display format loses accuracy\n");
+		error("     # warning: format loses accuracy\n");
 	} else {
+		/* this prints all DIGITS+2 digits (not limited to
+		 * max_digits), so user can copy/paste the full precision. */
 		char *s = mpd_to_sci(old, 0);
-		error("     # warning: value changed, was %s\n", s);
+		error("     # was %s\n", s);
 		free(s);
 	}
-	    // FIXME.  should print more accurately, for copy/paste restore.
-	    // or, save a snapshot.  :-?
-
 }
 
 boolean
