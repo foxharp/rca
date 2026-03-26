@@ -155,6 +155,7 @@ typedef unsigned long long ull_t;
 int g_argc;
 char **g_argv;
 
+/* 101 digits, not including the '.' */
 char *pi_val = "3.1415926535897932384626433832795028841971693993751"
 	       "058209749445923078164062862089986280348253421170679";
 
