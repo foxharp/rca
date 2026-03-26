@@ -85,11 +85,11 @@ _rca_ is simple, yet extremely versatile:
         yes
     ```
 
- - _rca_ is written in C, uses the native floating point library, and
-   is maintained in a single source file.  It's not an an arbitrary
-   precision calculator like _dc_ or _bc_:  it's a convenient,
-   non-programmable, desktop calculator, for typical one-off
-   professional and everyday problems.
+ - _rca_ is written in C, and is maintained in a single source file.
+   It uses the mpdecimal math library, configured for 30 significant
+   decimal digits by default.  It's a convenient, non-programmable,
+   desktop calculator, for typical one-off professional and everyday
+   problems.
 
 The
 [man page](https://foxharp.github.io/rca/rca-man.html)
