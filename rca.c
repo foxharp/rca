@@ -250,7 +250,7 @@ boolean autoprint = TRUE;
 
 /* informative feedback, which is only printed if the command generating
  * it is followed by a newline */
-void p_printf(const char *fmt, ...);
+void p_printf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 /* if this is true, and the locale provides the separator and the
  * grouping information, we will decorate numbers, like "1,333,444" */
@@ -403,6 +403,7 @@ safe_calloc(size_t size)
        return p;
 }
 
+void trace(int level, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 void
 trace(int level, const char *fmt, ...)
 {
@@ -429,6 +430,7 @@ trace_mpd(int level, char *msg, const mpd_t *t)
 }
 
 
+void error(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void
 error(const char *fmt, ...)
 {
@@ -1873,7 +1875,7 @@ putunsigned(unsigned long long u)
 
 	u &= (ull_t)int_mask;
 
-	trace(EXEC, "putunsigned: hex is 0x%Lx\n", u);
+	trace(EXEC, "putunsigned: hex is 0x%llx\n", u);
 
 	snprintf(buf, sizeof(buf), " %llu", u);
 	add_digit_grouping(buf);
