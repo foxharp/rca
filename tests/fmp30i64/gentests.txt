@@ -145,7 +145,7 @@ h
  302.019602272727
 H
  Mode is hex (H).  Integer math with 20 bits.
- 0x0     # warning: value changed, was 0.982547593562714392783865549074
+ 0x0     # warning: value changed, was 0.982547593562716490531141387044
  0x12e     # warning: value changed, was 302.01960227272727272727272727273
 0xf00 |
  0xf2e
@@ -916,17 +916,17 @@ clear
 0 degrees
  trig functions will now use radians
 (tan(pi/2))
- 1.63312e+16
+ -3.9868e+19
 (tan(pi/2 + epsilon))
  error: unrecognized input 'epsilon))'
  error: missing parentheses
 (tan(pi/2 + _10eps))
- 1.63312e+16
+ -3.9868e+19
 (tan(pi/2 - epsilon))
  error: unrecognized input 'epsilon))'
  error: missing parentheses
 (tan(pi/2 - _10eps))
- 1.63312e+16
+ -3.9868e+19
 (ln(0))
  -inf
 (ln(-1))
