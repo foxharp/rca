@@ -198,9 +198,8 @@ Multiple sub-expressions separated by
 .RB ' ; '
 (semicolon) can be enclosed in a single pair of parentheses (or share
 a single line, in full-time infix mode).  The
-result of the parenthesized expression is the result of the last such
-sub-expression.
-The primary use of
+result of the parenthesized expression (or line) is the result of the
+last such sub-expression.  The primary use of
 .RB ' ; '
 is likely for expressions which assign to variables.
 See the example in the SPECIAL VALUES AND VARIABLES section, below.
@@ -460,7 +459,12 @@ commands are read from the environment variable
 and then from any command line arguments.  Initial conditions can be
 established by either method.  Any output from commands run via
 .B $RCA_INIT
-is discarded.
+is discarded.  Also on startup,
+.B rca
+will use the
+.B $RCA_DIGITS
+variable to set the maximum number of displayed digits.  The value is
+clamped into the range 2 to 100.  The default is 30.
 
 Many of the commands that control
 .BR rca 's

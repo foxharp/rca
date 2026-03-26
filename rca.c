@@ -325,7 +325,21 @@ typedef void (*mpd_1_op_func_t)(mpd_t *, const mpd_t *, mpd_context_t *);
 void
 mpd_stuff(void)
 {
-	mpd_init(&context, DIGITS+2);
+
+	char *rdp = getenv("RCA_DIGITS");
+	if (rdp) {
+		char *endp;
+		long digits = strtol(rdp, &endp, 10);
+		if (*endp == '\0') {
+			if (digits < 2)
+				digits = 2;
+			if (digits > 100)
+				digits = 100;
+			max_digits = (int)digits;
+		}
+	}
+
+	mpd_init(&context, max_digits + 2);
 	context.traps = 0;
 
 	zero = mpd_new(ctx);
@@ -1137,7 +1151,7 @@ mpd_to_double(ldouble *dp, mpd_t *m)
 	char fmt[32];
 	char *s, *es;
 
-	snprintf(fmt, sizeof fmt, ".%dg", DIGITS);
+	snprintf(fmt, sizeof fmt, ".%dg", max_digits);
 	s = mpd_format(m, fmt, ctx);
 
 	errno = 0;
@@ -1404,8 +1418,8 @@ compare_worker(int c)
 
 	set_lastx(x);
 
-	mpd_rescale(x, x, -DIGITS, ctx);
-	mpd_rescale(y, y, -DIGITS, ctx);
+	mpd_rescale(x, x, -max_digits, ctx);
+	mpd_rescale(y, y, -max_digits, ctx);
 
 	int r = mpd_cmp(y, x, ctx);
 	switch(c) {
@@ -2425,7 +2439,7 @@ printstate(void)
 		currency[0] ? currency : "<none>");
 	p_printf("\n");
 
-	p_printf(" rca descriptor: fmp%di%u\n", DIGITS, max_int_width);
+	p_printf(" rca descriptor: fmp%di%u\n", max_digits, max_int_width);
 
 	return GOODOP;
 }
