@@ -228,12 +228,12 @@ command, and integer, using one of
 (binary).
 
 Math is always performed using signed arithmetic in all modes, and
-most math is done using "long double" operands.  (Bitwise operators
-are handled differently, see below.) The various integer modes differ
-only in how values are displayed by default.  They all differ from
-floating point in that in integer mode, all stack values are masked to
-the current word width, and sign extended, if necessary (because the
-word width may be narrower than the native width).
+most math is done using "decimal" operands.  The system's floating
+point unit is not used.  The various integer modes differ only in how
+values are displayed by default.  They all differ from floating point
+in that in integer mode, all stack values are masked to the current
+word width, and sign extended, if necessary (because the word width
+may be narrower than the native width).
 
 The input base of a number is independent of the mode, and controlled
 entirely by how it is entered:  10, 0xa, 0o12, 0b1010 and 1e01 are all
@@ -248,18 +248,17 @@ printed.  The more traditional "0" prefix will be interpreted as decimal.
 .SS Floating point
 In floating point mode (i.e.,
 .B F
-mode), all storage and operations use the full capabilities of the "long
-double" type.
+mode), all storage and operations use mpdecimal ("Multi-precision Decimal")
+operands, resulting in far more digits of accuracy than the C floating
+point math library would allow.
 .P
-Because floating point is inherently inexact, values are sometimes
-calculated which are
+Because floating point (even with decimal math) is inherently inexact,
+values are sometimes calculated which are
 .I almost
 correct (like .99999999999... instead of 1), but not quite.
 .B rca
-tries to help by "snapping" values that are very close to integers to
-those integers, and by rounding when the precision limits of the
-floating point representation are reached.  See also the DATA TYPES,
-OVERFLOW, ACCURACY section, below.
+rounds to a set number of digits when displaying and comparing.
+See also the DATA TYPES, OVERFLOW, ACCURACY section, below.
 .P
 Floating point printing can be controlled by the
 .BR automatic ,
@@ -293,11 +292,7 @@ never uses scientific notation, always presenting numbers as just a
 whole and fractional part.  This works well for values with small
 numbers of digits near decimal point, and is convenient for using
 the output in scripts, but gets awkward with extremely large
-or extremely small numbers.  Also, when using
-.BR fixed ,
-.B rca
-can't prevent non-significant digits from being shown to the right of
-very large values.
+or extremely small numbers.
 .P
 The
 .B digits
@@ -326,19 +321,7 @@ enforce silently.  Requesting -1 digits will choose the system maximum.
 .P
 The maximum allowed
 .B digits
-value is based on the number of significant digits the system can
-support.  (That's 18 digits for most modern PC architectures running
-Linux or BSD, but might be 33 on ARM64 Linux, or only 15 on another OS.)
-However, as noted above, if using
-.B fixed
-format it's easy to start seeing "unclean" bits if the magnitude of
-the number grows beyond the number of significant digits.  The numbers
-are really big at that point:  over 1e19 on a modern Linux system.  At that
-point it's wise to choose
-.B automatic
-or
-.BR engineering ,
-which will hide insignificant digits.
+value is configured when rca is built:  currently 30.
 .SS Integer
 Integer mode is selected with any of the following commands, which
 also choose the default display format:
@@ -381,24 +364,8 @@ few as 2 bits using the
 .B width
 (or
 .BR bits )
-command.  Requesting a width of -1 will choose the maximum width.  The
-maximum supported width will be either the width of the
-.I long long
-data type, or of the
-.I long double
-mantissa, whichever is smaller.  This results in 64 bits on most PC
-architectures running Linux/BSD in 2025.  Two counter-examples:  The
-Raspberry Pi 3 has just 52 bits of long double mantissa, so
-.BR rca 's
-maximum integer width there is limited to 52, at least
-on a 32 bit OS.  The Raspberry Pi 4 running Linux supports 128-bit
-"quad-precision" floats with 113 bits of mantissa, so has excellent
-floating point accuracy:  about 33 decimal digits.  But integers in
-.B rca
-are still limited to the largest native integer
-size, 64 bits.)  The author has no personal experience with other OSes,
-but has been told that Windows/MSVC and MacOS on Apple silicon have the
-52 bit limit, due to the ABI chosen on those systems.
+command.  Requesting a width of -1 will choose the maximum width,
+which is 64 bits on all supported platforms.
 
 Values will be masked to the current word width for both
 use and display, whether they are input by the user or result from an
@@ -863,8 +830,7 @@ command or operator.  If not, it will be stripped from all input.
 .SH DATA TYPES, OVERFLOW, ACCURACY
 All stack values in
 .B rca
-are stored in
-.I long double
+are stored in mpdecimal
 format.  This is convenient for a calculator
 which will primarily deal with floating point, but can affect
 .BR rca 's
@@ -873,17 +839,13 @@ mixed model.  Changing
 operating mode from floating point to an integer mode
 requires conversion of all stack values
 to integer.
-If the conversion from
-.I long double
-to
+If the conversion from mpdecimal to
 .I long long
 can't be done without loss, an error message is issued, but the
-conversion has already occurred, and the loss cannot be undone.  The
-error message shows the value with enough digits to ensure it can
-be restored accurately via copy and paste.  If the conversion occurred
-while simply displaying a float value as integer, without changing modes,
-then the original value is unchanged.  Execution will proceed after
-the warning unless
+conversion has already occurred, and the loss cannot be undone.  If
+the conversion occurred while simply displaying a float value as
+integer, without changing modes, then the original value is unchanged.
+Execution will proceed after the warning unless
 .B errorexit
 has been enabled.
 
@@ -899,17 +861,15 @@ could be represented, if only you'd bought a better calculator).  Both
 show as "+/-inf".
 
 Floating point math by its nature is imprecise.  It's not uncommon for
-small rounding errors, and errors introduced by the necessary binary
-to decimal conversions, to change values in obvious ways.  Something
+small rounding errors, and errors introduced by the necessary truncations
+to change values in obvious ways.  Something
 that should be 0 may instead have a very tiny value, or two numbers which
 should be equal may differ by an insignificant amount.
 .B rca
-helps by adjusting displayed values, and values being compared to one
-another:  first, values very close to an integer are forced to that
-integer.  Then, values are rounded to
+helps by rounding displayed values to
 .BR rca 's
-maximum precision (again, usually 18 digits).  The internal representation
-of these values remains unchanged --
+maximum precision (again, currently 30 digits).  The internal representation
+(which uses a few digits more) of these values remains unchanged --
 .I only
 the printed output (or the comparison) is affected.
 
