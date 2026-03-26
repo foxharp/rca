@@ -829,12 +829,17 @@ e_to_the_x(void)
 }
 
 
+int
+bitwise_width(void)
+{
+	return floating_mode(mode) ? 64 : int_width;
+}
 
 void
 rshift_worker(uint64_t *r, uint64_t y, uint64_t x)
 {
-	if (x >= sizeof(y) * CHAR_BIT) {
-		mpush(zero);
+	if (x >= (uint64_t)bitwise_width()) {
+		*r = 0;
 	} else {
 		uint64_t i = x;
 		uint64_t j = y;
@@ -858,8 +863,8 @@ rshift(void)
 void
 lshift_worker(uint64_t *r, uint64_t y, uint64_t x)
 {
-	if (x >= sizeof(y) * CHAR_BIT) {
-		mpush(zero);
+	if (x >= (uint64_t)bitwise_width()) {
+		*r = 0;
 	} else {
 		*r = y << x;
 	}
@@ -876,7 +881,7 @@ ror_worker(uint64_t *r, uint64_t y, uint64_t x)
 	int64_t i = (int64_t)x;
 	int64_t j = (int64_t)y;
 
-	i %= int_width;
+	i %= bitwise_width();
 	while (i--) {
 		long long rbit = (j & 1);
 		j = (((j >> 1) & ~int_sign_bit) | (rbit << (int_width - 1)));
@@ -896,6 +901,7 @@ rol_worker(uint64_t *r, uint64_t y, uint64_t x)
 	int64_t i = (int64_t)x;
 	int64_t j = (int64_t)y;
 
+	i %= bitwise_width();
 	while (i--) {
 		long long rbit = (j & int_sign_bit);
 		j = (((j << 1) & ~1) | (rbit != 0));
@@ -950,7 +956,7 @@ setbit_worker(uint64_t *r, uint64_t y, uint64_t x)
 {
 	uint64_t i = x, j = y;
 
-	if (i < sizeof(j) * CHAR_BIT)
+	if (i < (uint64_t)bitwise_width())
 		j |= (1LL << i);
 
 	*r = j;
@@ -967,7 +973,7 @@ clearbit_worker(uint64_t *r, uint64_t y, uint64_t x)
 {
 	uint64_t i = x, j = y;
 
-	if (i < sizeof(j) * CHAR_BIT)
+	if (i < (uint64_t)bitwise_width())
 		j &= ~(1ULL << i);
 
 	*r = j;
@@ -997,6 +1003,9 @@ void
 bitcount_worker(uint64_t *r, uint64_t x)
 {
 	uint64_t i = 0;
+
+	if (!floating_mode(mode))
+		x &= (uint64_t)int_mask;
 
 	/*
 	 * I wasn't going to include a bitcount operator, until I came
