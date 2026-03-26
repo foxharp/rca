@@ -1,9 +1,9 @@
 
 # if you don't have make, or this makefile doesn't work for you,
 # the simple commands you want are one of these:
-#	gcc -g -o rca -D USE_READLINE rca.c -lm -lreadline
+#	gcc -g -o rca -D USE_READLINE rca.c -lmpdec -lm -lreadline
 # or, without command-line editing:
-#	gcc -g -o rca rca.c -lm
+#	gcc -g -o rca rca.c -lmpdec -lm
 
 all: rca rca.1 copyrightcheck
 

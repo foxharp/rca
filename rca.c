@@ -21,10 +21,16 @@ char *release = "v24";
  *    and my programming style, maybe the 'r' should stand for "retro".
  *             - pgf, January 2026
  *
+ *    The current version now uses the mpdecimal math library, so
+ *    precision is no longer limited by the native FP hardware and API.
  *
- *  If you don't have the Makefile, build with:
- *    doit:           gcc -o rca -D USE_EDITLINE rca.c -lm -ledit
- *    doit-noedit:    gcc -o rca rca.c -lm
+ *
+ *  If you don't have the Makefile, build with one of:
+ *    gcc -o rca -D USE_EDITLINE rca.c -lmpdec -lm -ledit
+ *    gcc -o rca -D USE_READLINE rca.c -lmpdec -lm -lreadline
+ *    gcc -o rca rca.c -lmpdec -lm
+ *	(note: don't distribute readline builds, unless you're
+ *	prepared to support the GPL license requirements)
  *
  */
 
@@ -87,14 +93,21 @@ char licensetext[] = \
 void
 valgrind(char *s)
 {
+	extern int tracing;
 	(void)s;
 
 	if (!RUNNING_ON_VALGRIND)
 		return;
 
-	// fprintf(stderr, ",,, valgrind %s\n", s);
-	VALGRIND_DO_LEAK_CHECK;
-	// fprintf(stderr, ",,, valgrind %s done\n", s);
+	if (tracing)
+		fprintf(stderr, ",,, valgrind %s\n", s);
+
+	/* with this, problems are reported the first time they're
+	 * detected, and again in the full summary when we quit */
+	VALGRIND_DO_ADDED_LEAK_CHECK;
+
+	if (tracing)
+		fprintf(stderr, ",,, valgrind %s done\n", s);
 }
 
 #else
@@ -147,12 +160,10 @@ char *pi_val = "3.1415926535897932384626433832795028841971693993751"
 
 mpd_t *pi, *e, *zero, *one, *two, *oneeighty;
 
-/* internal representation of operands on the stack.  numbers are always
- * stored as long doubles, even when we're in integer mode.  this could
- * be revisited, but since the FP mantissa is usually as big as the integer
- * word size these days (64 bits), it's probably fine.  */
+/* internal representation of operands on the stack.
+ * numbers are always stored as mpdecimals, even when we're in integer
+ * mode.  */
 struct num {
-	// ldouble val;
 	mpd_t *mpd;
 	struct num *next;
 };
@@ -164,7 +175,6 @@ int stack_count;
 /* the snapshot stack */
 struct num *snapstack;
 
-
 /* for command repeat, like "sum" */
 int stack_mark;
 
@@ -172,7 +182,7 @@ int stack_mark;
 int infix_stacklevel;
 
 int infix_mode;
-int debug_enabled = 1;
+int debug_enabled;
 
 
 /* all user input is either a number or a command operator.
@@ -245,11 +255,6 @@ void p_printf(const char *fmt, ...);
  * grouping information, we will decorate numbers, like "1,333,444" */
 boolean digitseparators = 1;
 
-/* this was initially used in controlling floating point error, and to
- * calculate the maximum displayed precision, but now it's simply
- * available as a symbolic constant, for use in tests, mainly.  */
-long double epsilon = LDBL_EPSILON;
-
 /* float_digits may represent either the total displayed precision, or
  * the number of digits after the decimal, depending on float_specifier.
  * it will be capped at max_digits.  */
@@ -270,14 +275,14 @@ boolean zerofill = 0;
  * significant digits (right) or most significant digits (left).  */
 boolean rightalignment = 1;
 
-/* the max number of characters needed to hold float digits on any
- * machine I can access, including sign, exponent, etc, is under 50
- * chars.  binary format takes around 80 chars for a 64 bit long long.
- * this constant is used as the size for various holding buffers for
- * numbers being prepared for display.  */
+/* the max number of characters needed to hold our floating point
+ * values, including sign, exponent, etc, is under 50 chars.  binary
+ * format takes around 80 chars for a 64 bit long long.  this constant
+ * is used as the size for various holding buffers for numbers being
+ * prepared for display.  */
 #define TEMP_BUFSIZE 512
 
-/* these all help limit the word size to anything we want.  */
+/* these all help limit the word size to anything we want in integer mode.  */
 mpd_t *int_modulo;
 int max_int_width;
 int int_width;
@@ -295,11 +300,6 @@ char *grouping;    // how digits should be grouped (not always by 3!)
 char *currency;   // locale currency_symbol
 char *locale;	    // locale name, returned from setlocale()
 char *locale_modified = "";  // indicates if we've changed the locale info
-
-/* we don't allow parsing of floating hex input (e.g., -0x8.0p-63) by
- * default, to avoid confusion.  it's enabled after the first use of
- * floating hex output (with "raw" or "Raw") */
-boolean raw_hex_input_ok;
 
 /* the most recent top-of-stack */
 mpd_t *lastx;
@@ -375,16 +375,6 @@ mpd_free_before_copy(mpd_t **resultp, const mpd_t *a, mpd_context_t *ctx)
 }
 
 void
-mpd_free_before_move(mpd_t **resultp, mpd_t *a, mpd_context_t *ctx)
-{
-	(void)ctx;
-	trace_mpd(EXEC, "freed", *resultp);
-	if (*resultp) mpd_del(*resultp);
-	trace_mpd(EXEC, "moving", a);
-	*resultp = a;
-}
-
-void
 set_lastx(mpd_t *a)
 {
 	mpd_free_before_copy(&lastx, a, ctx);
@@ -397,15 +387,6 @@ ull_from_ll(long long s)
     memcpy(&u, &s, sizeof(u));
     return u;
 }
-
-long long
-ll_from_ull(unsigned long long u)
-{
-    long long s;
-    memcpy(&s, &u, sizeof(s));
-    return s;
-}
-
 
 void
 memory_failure(void)
@@ -549,17 +530,6 @@ mpeek(mpd_t **f)
 
 	return TRUE;
 }
-boolean
-peek(ldouble *f)
-{
-	if (!stack)
-		return FALSE;
-
-	(void) f;
-	// *f = stack->val;
-	return TRUE;
-}
-
 
 boolean
 mpop(mpd_t **a)
@@ -1522,7 +1492,8 @@ rolldown(void)			// aka "pop"
 	mpd_t *b;
 	if (!mpop(&b))
 		return BADOP;
-	mpd_free_before_move(&lastx, b, ctx);
+	mpd_free_before_copy(&lastx, b, ctx);
+	mpd_del(b);
 	return GOODOP;
 }
 
@@ -4030,13 +4001,13 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 	} else if (isdigit(*p) || match_dp(p)) {
 		// decimal
 
-		// just parse the decimal, to find its end.  we
-		// don't want the double, we need the string
+		/* parse the decimal, to find its end.  we don't want
+		 * the double, we just need the string */
 		(void)strtold(p, &np);
 
 		/* don't be strict about what comes next.  mistakes are
-		 * less likely when entering decimal. this makes 3k or 18w
-		 * legal */
+		 * less likely when entering decimal. this makes 3digits
+		 *  or 18bits legal */
 		if (p == np)
 			goto unknown;
 
@@ -5148,6 +5119,9 @@ main(int argc, char *argv[])
 				 * debugging */
 				free(t->valstr);
 				t->valstr = 0;
+			} else {
+				trace(0xff, "\nWarning:  expect leak from main/"
+					"read_token/parse_token/strndup\n\n");
 			}
 			valgrind("main numeric");
 			break;
@@ -5168,9 +5142,9 @@ main(int argc, char *argv[])
 				pending_show();
 			else
 				pending_clear();
-			valgrind("pre main op/symbolic");
+			valgrind("pre main op (or symbolic)");
 			(t->oper->func) ();
-			valgrind("post main op/symbolic");
+			valgrind("post main op (or symbolic)");
 			break;
 		case EOL:
 			do_autoprint(pt);
