@@ -263,10 +263,6 @@ boolean digitseparators = 1;
 int max_digits = DIGITS;
 int float_digits = 6;
 char *float_specifier = "automatic"; // or "engineering" or "fixed decimal"
-/* NB:  If we save/restore externally, values should be written using
- * LDBL_DECIMAL_DIG precision, to guarantee round-trip accuracy.  We
- * do this currently in the "accuracy lost" message sometimes shown
- * when switching modes.  */
 
 /* zerofill controls whether digits to the left of a value are left
  * blank, or shown as zero.  applies in hex, octal, and binary modes. */
@@ -2427,7 +2423,7 @@ printstate(void)
 		currency[0] ? currency : "<none>");
 	p_printf("\n");
 
-	p_printf(" rca descriptor: fmpi%u\n", LDBL_MANT_DIG, max_int_width);
+	p_printf(" rca descriptor: fmp%di%u\n", DIGITS, max_int_width);
 
 	return GOODOP;
 }
