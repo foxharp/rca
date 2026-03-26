@@ -141,8 +141,9 @@ versioncheck:
 			-e 's/^ *\( version v[0-9]\+.*\)/\1/p'
 
 clean:
-	rm -f rca rca rca.1 .test docs/index.html.new \
+	rm -f rca rca rca.1 docs/index.html.new \
 		docs/rca-man.html.new docs/rca-help.html.new
+	rm -fr tests/tmp
 
 # debian packaging uses this target, so be sure it always honors
 # DESTDIR and INSTALL correctly
@@ -171,28 +172,28 @@ pi_approximations:  # with and without rca_float
 	test $$(PATH=:$$PATH bash -c ". ./rca_float; fe '22 / 7 - pi'") = 0.0013
 	test $$(./rca "10 digits fixed ((355 / 113) - pi) q") = 0.0000002668
 
+# RUNVG=valgrind -q --leak-check=full
+# RUNVG=time
+
 gentest:
+	mkdir -p tests/tmp
 	egrep -v '^ ' tests/f64i64/gentests.txt | \
-		( RUNVG="valgrind -q --leak-check=full"; \
-		  which valgrind >/dev/null || RUNVG=; \
-		  $$RUNVG ./rca 1echo 2>&1 \
-		) | tee .test | \
+		( $(RUNVG) ./rca 1echo 2>&1 ) | \
+		tee tests/tmp/gentests.txt | \
 		diff -u tests/$(ID)/gentests.txt -
 
 optest:
+	mkdir -p tests/tmp
 	egrep -v '^ ' tests/f64i64/optests.txt | \
-		( RUNVG="valgrind -q --leak-check=full"; \
-		  which valgrind >/dev/null || RUNVG=; \
-		  $$RUNVG ./rca 1echo 2>&1 \
-		) | tee .test | \
+		( $(RUNVG) ./rca 1echo 2>&1 ) | \
+		tee tests/tmp/optests.txt | \
 		diff -u tests/$(ID)/optests.txt -
 
 tweaktest:
+	mkdir -p tests/tmp
 	egrep -v '^ ' tests/f64i64/tweaktests.txt | \
-		( RUNVG="valgrind -q --leak-check=full"; \
-		  which valgrind >/dev/null || RUNVG=; \
-		  $$RUNVG ./rca 1echo 2>&1 \
-		) | tee .test | \
+		( $(RUNVG) ./rca 1echo 2>&1 ) | \
+		tee tests/tmp/tweaktests.txt | \
 		diff -u tests/$(ID)/tweaktests.txt -
 
 .PHONY: clean all gentest optest tweaktest html htmldiff htmlmv \
