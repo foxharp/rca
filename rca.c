@@ -1,4 +1,4 @@
-char *release = "v24";
+char *release = "vMP";
 /*
  *
  *	This program is a mediocre but practical stack-based floating
@@ -21,7 +21,9 @@ char *release = "v24";
  *    and my programming style, maybe the 'r' should stand for "retro".
  *             - pgf, January 2026
  *
+ *
  *    The current version now uses the mpdecimal math library, so
+ *    except for the trig functions (not available in mpdecimal),
  *    precision is no longer limited by the native FP hardware and API.
  *
  *
@@ -256,11 +258,18 @@ void p_printf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
  * grouping information, we will decorate numbers, like "1,333,444" */
 boolean digitseparators = 1;
 
+/* in the absence of an $RCA_DIGITS environment variable, the
+ * definition of DIGITS sets the number of significant digits for the
+ * calculator.
+ * for now, since the trig functions still use the libm API, we match
+ * the number of digits those functions can give us.
+ * */
+#define DIGITS   LDBL_DIG
+int max_digits = DIGITS;
+
 /* float_digits may represent either the total displayed precision, or
  * the number of digits after the decimal, depending on float_specifier.
  * it will be capped at max_digits.  */
-#define DIGITS 30
-int max_digits = DIGITS;
 int float_digits = 6;
 char *float_specifier = "automatic"; // or "engineering" or "fixed decimal"
 
