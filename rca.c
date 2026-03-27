@@ -1144,15 +1144,6 @@ mpd_user_angle_to_radians(mpd_t *rads, mpd_t *user)
 		mpd_copy(rads, user, ctx);
 }
 
-void
-mpd_user_angle_to_degrees(mpd_t *degrees, mpd_t *user)
-{
-	if (trig_degrees)
-		mpd_copy(degrees, user, ctx);
-	else
-		mpd_radians_to_degrees(degrees, user);
-}
-
 int
 mpd_to_double(ldouble *dp, mpd_t *m)
 {

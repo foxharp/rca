@@ -15,12 +15,17 @@ MAN1DIR ?= $(MANDIR)/man1
 
 CFLAGS += -Wall -Wextra -Wfloat-conversion -Wconversion  \
     -Warray-bounds=2 -Wformat-security -Wsign-conversion \
-    -Wshift-overflow=2 -Wstrict-overflow=2 -pedantic
+    -Wshift-overflow=2 -Wstrict-overflow=2 -pedantic -ffunction-sections
 
-CFLAGS += -I /usr/local/mpdecimal/include
+# LIBS += -lmpdec
+# building against local install, want static link for libmpdec:
 LIBS += -L/usr/local/mpdecimal/lib -Wl,-Bstatic -lmpdec -Wl,-Bdynamic
+CFLAGS += -I /usr/local/mpdecimal/include
 
 LIBS += -lm
+
+# means of finding unused functions:
+# CFLAGS +=  -Wl,--gc-sections -Wl,--print-gc-sections
 
 rca: rca.c
 	gver="$$(git describe --dirty=+ 2>/dev/null || echo '+?')"; \
@@ -116,7 +121,7 @@ htmlmv:
 # to release a new version:
 #   update CHANGES file
 #   vi rca.c (bump release version)
-#   git commit     # "bumped to vNN"
+#   git commit -a     # "bumped to version vNN"
 #   make release
 #   make htmldiff   # check html files
 #   make htmlmv
