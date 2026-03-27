@@ -2491,8 +2491,6 @@ showmode(void)
 				" in %s format.\n",
 				float_digits, float_specifier);
 		}
-	} else if (mode == 'R') {
-		p_printf(" Showing using floating hexadecimal.\n");
 	} else {
 		p_printf(" Integer math with %d bits.\n", int_width);
 	}
@@ -2583,11 +2581,12 @@ void
 float_mode_messages(int both)
 {
 	if (both)
-		p_printf(" Will show floating point in %s format\n", float_specifier);
+		p_printf(" Will show floating point in %s format.\n",
+					float_specifier);
 
 	if (mode != 'F')
-		p_printf(" Not in floating mode, preference"
-				" recorded but ignored.\n");
+		p_printf(" In integer mode, this setting only "
+					"affects the f command.\n");
 }
 
 opreturn
@@ -2700,8 +2699,8 @@ width(void)
 
 	p_printf(" Integers are now %d bits wide.\n", int_width);
 	if (floating_mode(mode)) {
-		p_printf(" In floating mode, integer width"
-				" is recorded but ignored.\n");
+		p_printf(" In floating mode, word width"
+			" only affects the d, h, o, b, u commands.\n");
 	} else {
 		// mask_stack();
 		struct num *s;
