@@ -87,8 +87,7 @@ char licensetext[] = \
 # include <readline/history.h>
 #endif
 
-#define DO_VALGRIND_CHECKS 1
-#if DO_VALGRIND_CHECKS
+#ifdef DO_VALGRIND_CHECKS
 
 #include <valgrind/memcheck.h>
 

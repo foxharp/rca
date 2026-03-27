@@ -33,6 +33,10 @@ rca: rca.c
 		$(CFLAGS) -DGITVERSION=\"$${gver}\" \
 		rca.c $(LIBS)
 
+VALGRIND_CHECK := $(shell which valgrind >/dev/null && echo '-D DO_VALGRIND_CHECKS')
+CFLAGS += $(VALGRIND_CHECK)
+
+
 # build-time check for whether editline is available:
 EDITLINE_CHECK := $(shell echo "int main() { return 0; }" > _tt.c; \
    $(CC) _tt.c -ledit -o _tt 2>/dev/null && echo YES; rm -f _tt.c _tt )
