@@ -86,8 +86,8 @@ _rca_ is simple, yet extremely versatile:
     ```
 
  - _rca_ is written in C, and is maintained in a single source file.
-   It uses the mpdecimal math library, configured for 30 significant
-   decimal digits by default.  It's a convenient, non-programmable,
+   It uses the mpdecimal math library, for more reliable accuracy
+   than native floating point.  It's a convenient, non-programmable,
    desktop calculator, for typical one-off professional and everyday
    problems.
 
