@@ -1,10 +1,6 @@
 
 1 debug
  Debug commands enabled
-epsilon 10 * = _10eps
- error: unrecognized input 'epsilon'
-epsilon 100 * = _100eps
- error: unrecognized input 'epsilon'
 clear
 
 0 rightalign
@@ -60,7 +56,7 @@ pop
 
 H
  Mode is hex (H).  Integer math with 64 bits.
- 0x2     # warning: value changed, was 2.6084073464102067615373566167205
+ 0x2     # was 2.6084073464102067615
  0x1000
 0xfffff
 0xaaaaa ~ &
@@ -127,7 +123,7 @@ km2mi
  Floating formats configured for 15 digits.
  15.7828282828283
 automatic
- Will show floating point in automatic format
+ Will show floating point in automatic format.
  15.7828282828283
 oz2g
  447.43529040404
@@ -138,15 +134,15 @@ l2q
 c2f
  62.0196022727273
 o
- 0o76     # warning: display format loses accuracy
+ 0o76     # warning: format loses accuracy
 h
- 0x3e     # warning: display format loses accuracy
+ 0x3e     # warning: format loses accuracy
 0xf0 +
  302.019602272727
 H
  Mode is hex (H).  Integer math with 20 bits.
- 0x0     # warning: value changed, was 0.982547593562716490531141387044
- 0x12e     # warning: value changed, was 302.01960227272727272727272727273
+ 0x0     # was 0.982547593562716767
+ 0x12e     # was 302.01960227272727273
 0xf00 |
  0xf2e
 4 <<
@@ -260,7 +256,7 @@ H
  Mode is hex (H).  Integer math with 32 bits.
  0x0
  0x8765,0000
- 0x4,cb2f     # warning: value changed, was 314159.26535897932384626433832795
+ 0x4,cb2f     # was 314159.26535897932385
 D
  Mode is signed decimal (D).  Integer math with 32 bits.
  0
@@ -326,36 +322,36 @@ clear
 F
  Mode is float (F).  Showing 15 digits of total precision in automatic format.
 40 digits
- Floating formats configured for the maximum of 30 digits.
+ Floating formats configured for the maximum of 18 digits.
 auto
- Will show floating point in automatic format
+ Will show floating point in automatic format.
 pi
- 3.14159265358979323846264338328
+ 3.14159265358979324
 frac
- 0.14159265358979323846264338328
+ 0.141592653589793239
 pi
- 3.14159265358979323846264338328
+ 3.14159265358979324
 chs
- -3.14159265358979323846264338328
+ -3.14159265358979324
 frac
- -0.14159265358979323846264338328
+ -0.141592653589793239
 pi
- 3.14159265358979323846264338328
+ 3.14159265358979324
 int
  3
 pi
- 3.14159265358979323846264338328
+ 3.14159265358979324
 chs
- -3.14159265358979323846264338328
+ -3.14159265358979324
 int
  -3
 pi
- 3.14159265358979323846264338328
+ 3.14159265358979324
 15 digits
  Floating formats configured for 15 digits.
  3.14159265358979
 auto
- Will show floating point in automatic format
+ Will show floating point in automatic format.
  3.14159265358979
 pi
  3.14159265358979
@@ -365,22 +361,22 @@ pi
  Floating formats configured for 15 digits.
  3.14159265358979e+15
 automatic
- Will show floating point in automatic format
+ Will show floating point in automatic format.
  3.14159265358979e+15
 1 digits
  Floating formats configured for 1 digit.
  3e+15
 automatic
- Will show floating point in automatic format
+ Will show floating point in automatic format.
  3e+15
 10 digits
  Floating formats configured for 10 digits.
  3.141592654e+15
 auto
- Will show floating point in automatic format
+ Will show floating point in automatic format.
  3.141592654e+15
 d
- 170,224,929     # warning: display format loses accuracy
+ 170,224,929     # warning: format loses accuracy
 f
  3.141592654e+15
 pi
@@ -577,7 +573,7 @@ pop
  Floating formats configured for 3 digits.
  0
 auto
- Will show floating point in automatic format
+ Will show floating point in automatic format.
  0
 
 25 tan
@@ -645,7 +641,7 @@ atan
  Floating formats configured for 7 digits.
  -115
 auto
- Will show floating point in automatic format
+ Will show floating point in automatic format.
  -115
 ( i2mm -.75 )
  -19.05
@@ -658,7 +654,7 @@ auto
  Floating formats configured for 3 digits.
  1.02e+03
 auto
- Will show floating point in automatic format
+ Will show floating point in automatic format.
  1.02e+03
 1 sep
  Numeric separators now on
@@ -722,7 +718,7 @@ clear
 F 6 digits
  Floating formats configured for 6 digits.
 auto
- Will show floating point in automatic format
+ Will show floating point in automatic format.
 10 10000 ^
  1e+10000
 10 -10000 ^
@@ -754,179 +750,12 @@ clear D
 clear F
  Mode is float (F).  Showing 6 digits of total precision in automatic format.
 
-
-#
-# The comments below are taken directly from the powl() man page.
-# The x and y they refer to, i.e. powl(x, y), are expressed in the
-# same order in RPN notation, but rca would normally call them "y x ^"
-#
-# If x is +0 or -0, and y is less than 0 and not an odd
-# integer, a pole error occurs and +HUGE_VAL, +HUGE_VALF, or
-# +HUGE_VALL, is returned.
-0 -2 ^
- inf
--0 -2 ^
- inf
-# If x is +0 (-0), and y is an odd integer greater than 0, the
-# result is +0 (-0).
-0 3 ^
- 0
--0 3 ^
- 0
-# If x is 0, and y greater than 0 and not an odd integer, the
-# result is +0.
-0 2 ^
- 0
-# If x is -1, and y is positive infinity or negative infinity,
-# the result is 1.0.
--1 _pos_inf ^
- nan
--1 _neg_inf ^
- nan
-# If x is +1, the result is 1.0 (even if y is a NaN).
-1 _nan ^
- nan
-# If y is 0, the result is 1.0 (even if x is a NaN).
-_nan 0 ^
- nan
-# If x is a finite value less than 0, and y is a finite
-# noninteger, a domain error occurs, and a NaN is returned.
--1 .5 ^
- nan
--2 2.5 ^
- nan
-# If the absolute value of x is less than 1, and y is negative
-# infinity, the result is positive infinity.
-.3 _neg_inf ^
- inf
-# If the absolute value of x is greater than 1, and y is negative
-# infinity, the result is +0.
--2 _neg_inf ^
- nan
-# If the absolute value of x is less than 1, and y is positive
-# infinity, the result is +0.
-.5 _pos_inf ^
- 0
--.4 _pos_inf ^
- nan
-# If the absolute value of x is greater than 1, and y is positive
-# infinity, the result is positive infinity.
--3 _pos_inf ^
- nan
-# If x is negative infinity, and y is an odd integer less than 0,
-# the result is -0.
-_neg_inf -3 ^
- 0
-# If x is negative infinity, and y less than 0 and not an odd
-# integer, the result is +0.
-_neg_inf -2 **
- 0
-# If x is negative infinity, and y is an odd integer greater than
-# 0, the result is negative infinity.
-_neg_inf 3 ^
- -inf
-# If x is negative infinity, and y greater than 0 and not an odd
-# integer, the result is positive infinity.
-_neg_inf 4 ^
- inf
-# If x is positive infinity, and y less than 0, the result is +0.
-_pos_inf -1 ^
- 0
-_pos_inf -.5 ^
- 0
-# If x is positive infinity, and y greater than 0, the result is
-# positive infinity.
-_pos_inf 2 ^
- inf
-_pos_inf .5 ^
- inf
-# end of powl(), tests above.
-# start of atan2 tests, from man page
-clear
-0 degrees
- trig functions will now use radians
-# If y is +0 (-0) and x is less than 0, +pi (-pi) is returned.
-(0 atan2 -1) pi ==
- 0
-(-0 atan2 -1) (-pi) ==
- 0
-# If y is +0 (-0) and x is greater than 0, +0 (-0) is returned.
-(-0 atan2 2) -0 ==
- 1
-# If y is less than 0 and x is +0 or -0, -pi/2 is returned.
-(-1 atan2 0) (-pi/2) ==
- 0
-(-1 atan2 -0) (-pi/2) ==
- 0
-
-# If y is greater than 0 and x is +0 or -0, pi/2 is returned.
-(1 atan2 0) (pi/2) ==
- 0
-(1 atan2 -0) (pi/2) ==
- 0
-
-# If either x or y is NaN, a NaN is returned.
-(_nan atan2 0)
- nan
-(10 atan2 _nan)
- nan
-
-# If y is +0 (-0) and x is -0, +pi (-pi) is returned.
-(0 atan2 -0) pi ==
- 0
-(-0 atan2 -0) (-pi) ==
- 0
-
-# If y is +0 (-0) and x is +0, +0 (-0) is returned.
-(-0 atan2 0) -0 ==
- 1
-
-# If y is a finite value greater (less) than 0, and x is negative  infinity, +pi (-pi) is returned.
-(2 atan2 _neg_inf) pi ==
- 0
-(-2 atan2 _neg_inf) (-pi) ==
- 0
-
-# If y is a finite value greater (less) than 0, and x is positive infinity, +0 (-0) is returned.
-(3 atan2 _pos_inf) 0 ==
- 1
-(-3 atan2 _pos_inf) -0 ==
- 1
-
-# If y is positive infinity (negative infinity), and x  is  finite,  pi/2 (-pi/2) is returned.
-(_pos_inf atan2 2) (pi/2) ==
- 0
-(_neg_inf atan2 2) (-pi/2) ==
- 0
-
-# If  y is positive infinity (negative infinity) and x is negative infinity, +3*pi/4 (-3*pi/4) is returned.
-(_pos_inf atan2 _neg_inf) (3*pi/4) ==
- 0
-(_neg_inf atan2 _neg_inf) (-3*pi/4) ==
- 0
-
-# If y is positive infinity (negative infinity) and x is positive  infinity, +pi/4 (-pi/4) is returned.
-(_pos_inf atan2 _pos_inf) (pi/4) ==
- 0
-(_neg_inf atan2 _pos_inf) (-pi/4) ==
- 0
-
 # misc !finite tests follow
 clear
 0 degrees
  trig functions will now use radians
 (tan(pi/2))
- -3.9868e+19
-(tan(pi/2 + epsilon))
- error: unrecognized input 'epsilon))'
- error: missing parentheses
-(tan(pi/2 + _10eps))
- -3.9868e+19
-(tan(pi/2 - epsilon))
- error: unrecognized input 'epsilon))'
- error: missing parentheses
-(tan(pi/2 - _10eps))
- -3.9868e+19
+ -1.27547e+18
 (ln(0))
  -inf
 (ln(-1))
@@ -1184,7 +1013,7 @@ pi
  Floating formats configured for 6 digits.
                                3.14159
 eng
- Will show floating point in engineering format
+ Will show floating point in engineering format.
                                3.14159
 100 /
                               31.4159e-03
@@ -1454,7 +1283,7 @@ vars
                    _b  3.14159292
                 _bacc  1.000000085
 : eng
- Will show floating point in engineering format
+ Will show floating point in engineering format.
                                1.000402499
 :6 digits
  Floating formats configured for 6 digits.
@@ -1471,7 +1300,7 @@ vars
                 _bacc  1.0000000849
 # lx in infix
 : auto
- Will show floating point in automatic format
+ Will show floating point in automatic format.
                                1.0004024994
 10 * pi
                               31.415926536

@@ -2429,7 +2429,7 @@ printstate(void)
 		currency[0] ? currency : "<none>");
 	p_printf("\n");
 
-	p_printf(" rca descriptor: fmp%di%u\n", max_digits, max_int_width);
+	p_printf(" rca descriptor: mp%d\n", max_digits);
 
 	return GOODOP;
 }
