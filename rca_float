@@ -28,6 +28,9 @@ _rca_run()    # support routine
         )
     exitcode=$?
 
+    # strip leading/trailing whitespace
+    read -rd '' output <<< "$output"
+
     case $exitcode in
     0|1)
         echo "$output"

@@ -949,19 +949,22 @@ _rca_run()    # support routine
 {
     local output exitcode
 
-    export RCA_INIT="$RCA_INIT_DEFAULTS ${RCA_INIT:-}"
-
-    output=$(rca "$*" q 2>&1)
-
+    output=$(
+        RCA_INIT="$RCA_INIT_DEFAULTS ${RCA_INIT:-}" \
+            rca "$*" q 2>&1
+        )
     exitcode=$?
+
+    # strip leading/trailing whitespace
+    read -rd '' output <<< "$output"
 
     case $exitcode in
     0|1)
-        echo $output
+        echo "$output"
         return $exitcode ;;
     esac
 
-    echo rca failure: $output >&2
+    echo "rca failure: '$output'" >&2
     exit $exitcode
 }
 
