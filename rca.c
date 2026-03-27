@@ -235,11 +235,10 @@ typedef struct token {
 #define VARIABLE 'V'
 
 
-/* 6 major modes:  float, decimal, hex, octal, binary, and raw float.
- * all but float and raw float are integer modes.  (raw float is a
- * debug mode:  it uses the printf %a format) */
-int mode = 'F';			// 'F', 'D', 'H', 'O', 'B', 'R'
-boolean floating_mode(int m) { return (m == 'F' || m == 'R'); }
+/* 5 major modes:  float, decimal, hex, octal, and binary.
+ * all but float is an integer mode. */
+int mode = 'F';		// can be one of 'F', 'D', 'H', 'O', 'B'
+boolean floating_mode(int m) { return (m == 'F'); }
 
 /* if true, exit(4) on error, warning, or access to empty operand stack */
 boolean exit_on_error = FALSE;
@@ -2394,13 +2393,6 @@ printuns(void)
 }
 
 opreturn
-printrawhex(void)
-{
-	print_top('R');
-	return GOODOP;
-}
-
-opreturn
 printbin(void)
 {
 	print_top('B');
@@ -2464,8 +2456,6 @@ mode2name(void)
 		return "hex";
 	case 'B':
 		return "binary";
-	case 'R':
-		return "raw hex float";
 	case 'F':
 	default: // can't happen.  set it to default
 		mode = 'F';
@@ -2508,15 +2498,6 @@ opreturn
 modehex(void)
 {
 	mode = 'H';
-	showmode();
-	printstack(1,stack);
-	return GOODOP;
-}
-
-opreturn
-moderawhex(void)
-{
-	mode = 'R';
 	showmode();
 	printstack(1,stack);
 	return GOODOP;
