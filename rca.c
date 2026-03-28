@@ -346,7 +346,7 @@ mpd_stuff(void)
 		}
 	}
 
-	mpd_init(&context, max_digits + 2);
+	mpd_init(&context, max_digits + 4);
 	context.traps = 0;
 
 	zero = mpd_new(ctx);
@@ -1177,6 +1177,184 @@ mpd_from_double(mpd_t *m, ldouble d, mpd_context_t *ctx)
 #define aCOS 5
 #define aTAN 6
 
+#define NTRIG 1
+#if NTRIG
+#define nSIN 1-10
+#define nCOS 2-10
+#define nTAN 3-10
+#define naSIN 4+10
+#define naCOS 5+10
+#define naTAN 6+10
+
+// workers:
+
+ldouble lpi = 3.1415926535897932384626433832795028841971693993751L;
+
+ldouble
+ncos(ldouble x)
+{
+	/*
+	    T0 = 1
+	    Tn = -(Tn-1) * ((x^2) / (2n * (2n - 1))
+	    cos = T0 + T1 + ...
+	*/
+	ldouble n;
+	ldouble t, c, lim;
+	int flip, negate;
+
+	x = fmodl(x, 2 * lpi);
+
+	if (x > 3 * lpi/2) {
+		negate = 0;
+		flip = 1;
+	} else if (x > lpi) {
+		negate = 1;
+		flip = 0;
+	} else if (x > lpi/2) {
+		negate = 1;
+		flip = 1;
+	} else {
+		negate = 0;
+		flip = 0;
+	}
+
+	x = fmodl(x, lpi/2);
+	if (flip)
+		x = lpi/2 - x;
+
+	ldouble xsq = x * x;
+
+	int iterlim = 30;
+	t = 1;
+	n = 1;
+	c = 0;
+	lim = powl(10, -max_digits);
+	while (n < iterlim) {
+		c += t;
+		t = -t * (xsq / ((2 * n) * ((2 * n) - 1)));
+		// trace(EXEC, "n:%d t is %Lg, c is %Lg\n", n, t, c);
+		if (fabsl(t) < lim)
+			break;
+		n++;
+	}
+	if (n >= iterlim) {
+		error("warning: cosine taylor series didn't converge after %d iterations\n", iterlim);
+		return 0;
+	}
+
+	if (negate)
+		c = -c;
+	return c;
+}
+
+ldouble
+nsin(ldouble x)
+{
+	if (fabsl(x) == 0) return 0;
+	x = ncos(x - (lpi/2));
+	return x;
+}
+
+ldouble
+ntan(ldouble x)
+{
+	return tanl(x);
+	x = nsin(x) / ncos(x);
+	return x;
+}
+
+ldouble
+nasin(ldouble dx)
+{
+	return atanl(dx / sqrtl(1 - dx*dx));
+}
+
+ldouble
+nacos(ldouble dx)
+{
+	return atanl(sqrtl(1 - dx*dx) / dx);
+}
+
+ldouble
+natan(ldouble dx)
+{
+	// trace(EXEC, "natan called with %Lg\n", dx);
+
+	if (dx > 1)
+		return  lpi/2 - natan(1/dx);
+	else if (dx < -1)
+		return -lpi/2 - natan(1/dx);
+
+	if (dx > .5)
+		 return 2 * natan(dx / (1 + sqrtl(1 + dx * dx)));
+
+	// series is:
+	// Tn = (Tn-1) * (-x^^2 * (2n - 1)/(n + 1))
+
+	ldouble n, t, at, lim;
+	ldouble xsq = dx * dx;
+	int iterlim = 100;
+	n = 1;
+	t = dx;
+	at = 0;
+	lim = powl(10, -max_digits);
+	while (n < iterlim) {
+		at += t;
+		t = -t * xsq * ((2 * n - 1) / (2 * n + 1));
+		// trace(EXEC, "n:%Lf t is %Lg, at is %Lg\n", n, t, at);
+		if (fabsl(t) < lim)
+			break;
+		n++;
+	}
+	if (n >= iterlim) {
+		error("warning: cosine taylor series didn't converge after %d iterations\n", iterlim);
+		return 0;
+	}
+	return at;
+}
+
+// commands:
+
+opreturn trig(int);
+
+opreturn
+nsine(void)
+{
+	return trig(nSIN);
+}
+
+opreturn
+ncosine(void)
+{
+	return trig(nCOS);
+}
+
+opreturn
+ntangent(void)
+{
+	return trig(nTAN);
+}
+opreturn
+nasine(void)
+{
+	return trig(naSIN);
+}
+
+opreturn
+nacosine(void)
+{
+	return trig(naCOS);
+}
+
+opreturn
+natangent(void)
+{
+	return trig(naTAN);
+
+}
+
+#endif
+
 opreturn
 trig(int which)
 {
@@ -1206,6 +1384,14 @@ trig(int which)
 	case aSIN:  dx = asinl(dx); break;
 	case aCOS:  dx = acosl(dx); break;
 	case aTAN:  dx = atanl(dx); break;
+#if NTRIG
+	case nSIN:  dx = nsin(dx); break;
+	case nCOS:  dx = ncos(dx); break;
+	case nTAN:  dx = ntan(dx); break;
+	case naSIN: dx = nasin(dx); break;
+	case naCOS: dx = nacos(dx); break;
+	case naTAN: dx = natan(dx); break;
+#endif
 	}
 
 	mpd_from_double(mx, dx, ctx);
@@ -4862,6 +5048,14 @@ struct oper opers[] = {
 	{"negate", chsign,	"Change sign of x (2's complement)", 1, 30, 'R' },
 	{"recip", recip,	0, 1, 30, 'R' },
 	{"sqrt", squarert,	"Reciprocal and square root of x", 1, 30, 'R' },
+#if NTRIG
+	{"ncos", ncosine,	0, 1, 30, 'R' },
+	{"nsin", nsine,		0, 1, 30, 'R' },
+	{"ntan", ntangent,	"", 1, 30, 'R' },
+	{"nasin", nasine,	0, 1, 30, 'R' },
+	{"nacos", nacosine,	0, 1, 30, 'R' },
+	{"natan", natangent,	"Reimplemented trig", 1, 30, 'R' },
+#endif
 	{"sin", sine,		0, 1, 30, 'R' },
 	{"cos", cosine,		0, 1, 30, 'R' },
 	{"tan", tangent,	"", 1, 30, 'R' },
