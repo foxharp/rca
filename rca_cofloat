@@ -25,8 +25,6 @@
 
 # Use RCA_INIT to set the display format.  Default is provided here, but
 # values set externally will override.
-: ${RCA_INIT:="5 digits auto"}
-
 
 # rca will calculate with as much precision as it can.  hopefully,
 # that precision can be maintained for intermediate results by the
