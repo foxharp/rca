@@ -160,7 +160,7 @@ char **g_argv;
 char *pi_val = "3.1415926535897932384626433832795028841971693993751"
 	       "058209749445923078164062862089986280348253421170679";
 
-mpd_t *pi, *e, *zero, *one, *two, *oneeighty;
+mpd_t *pi, *two_pi, *pi_over_2, *e, *zero, *one, *two, *oneeighty;
 
 /* internal representation of operands on the stack.
  * numbers are always stored as mpdecimals, even when we're in integer
@@ -262,7 +262,7 @@ boolean digitseparators = 1;
  * for now, since the trig functions still use the libm API, we match
  * the number of digits those functions can give us.
  * */
-#define DIGITS   LDBL_DIG
+#define DIGITS   30
 int max_digits = DIGITS;
 
 /* float_digits may represent either the total displayed precision, or
@@ -328,6 +328,12 @@ typedef void (*mpd_2_op_func_t)(mpd_t *, const mpd_t *, const mpd_t *,
 			mpd_context_t *);
 typedef void (*mpd_1_op_func_t)(mpd_t *, const mpd_t *, mpd_context_t *);
 
+/* debugging assist:  "p mdb(foo)" is easy to type in gdb */
+char *
+mpd(mpd_t *m)
+{
+	return mpd_to_sci(m, 0);
+}
 
 void
 mpd_stuff(void)
@@ -346,26 +352,32 @@ mpd_stuff(void)
 		}
 	}
 
-	mpd_init(&context, max_digits + 4);
+	mpd_init(&context, DIGITS + 10);
 	context.traps = 0;
 
 	zero = mpd_new(ctx);
-	mpd_set_i64(zero, 0, ctx);
+	mpd_set_string(zero, "0", ctx);
 
 	one = mpd_new(ctx);
-	mpd_set_i64(one, 1, ctx);
+	mpd_set_string(one, "1", ctx);
 
 	two = mpd_new(ctx);
-	mpd_set_i64(two, 2, ctx);
+	mpd_set_string(two, "2", ctx);
 
 	oneeighty = mpd_new(ctx);
-	mpd_set_i64(oneeighty, 180, ctx);
+	mpd_set_string(oneeighty, "180", ctx);
 
 	e = mpd_new(ctx);
 	mpd_exp(e, one, ctx);
 
 	pi = mpd_new(ctx);
 	mpd_set_string(pi, pi_val, ctx);
+
+	two_pi = mpd_new(ctx);
+	mpd_mul(two_pi, pi, two, ctx);
+
+	pi_over_2 = mpd_new(ctx);
+	mpd_div_i64(pi_over_2, pi, 2L, ctx);
 
 	lastx = mpd_new(ctx);
 	mpd_copy(lastx, zero, ctx);
@@ -1170,25 +1182,7 @@ mpd_from_double(mpd_t *m, ldouble d, mpd_context_t *ctx)
 	mpd_set_string(m, buf, ctx);
 }
 
-#define SIN 1
-#define COS 2
-#define TAN 3
-#define aSIN 4
-#define aCOS 5
-#define aTAN 6
-
-#define NTRIG 1
-#if NTRIG
-#define nSIN 1-10
-#define nCOS 2-10
-#define nTAN 3-10
-#define naSIN 4+10
-#define naCOS 5+10
-#define naTAN 6+10
-
-// workers:
-
-ldouble lpi = 3.1415926535897932384626433832795028841971693993751L;
+#if 0
 
 ldouble
 ncos(ldouble x)
@@ -1312,163 +1306,221 @@ natan(ldouble dx)
 	}
 	return at;
 }
-
-// commands:
-
-opreturn trig(int);
-
-opreturn
-nsine(void)
-{
-	return trig(nSIN);
-}
-
-opreturn
-ncosine(void)
-{
-	return trig(nCOS);
-}
-
-opreturn
-ntangent(void)
-{
-	return trig(nTAN);
-}
-opreturn
-nasine(void)
-{
-	return trig(naSIN);
-}
-
-opreturn
-nacosine(void)
-{
-	return trig(naCOS);
-}
-
-opreturn
-natangent(void)
-{
-	return trig(naTAN);
-
-}
-
 #endif
 
-opreturn
-trig(int which)
+
+void mpd_cos(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 {
-	mpd_t *mx;
-	ldouble dx;
 
-	if (!floating_mode(mode))
-		return trig_no_sense();
+	/*
+	    T0 = 1
+	    Tn = -(Tn-1) * ((x^2) / (2n * (2n - 1))
+	    cos = T0 + T1 + ...
+	*/
+	static mpd_t *x, *t, *nt, *c, *lim, *xsq, *denom, *two_n;
+	int flip, negate;
+	int in; mpd_t *n;	// these two mirror one another (when
+				// n isn't being used as a temp variable)
 
-	if (!mpop(&mx))
-		return BADOP;
-
-	set_lastx(mx);
-	if (which <= TAN)
-		mpd_user_angle_to_radians(mx, mx);
-
-	if (!mpd_to_double(&dx, mx)) {
-		error("error: trig input angle likely out of range\n");
-		mpd_del(mx);
-		return BADOP;
+	if (!t) {
+		x = mpd_new(ctx);
+		t = mpd_new(ctx);
+		nt = mpd_new(ctx);
+		c = mpd_new(ctx);
+		lim = mpd_new(ctx);
+		xsq = mpd_new(ctx);
+		denom = mpd_new(ctx);
+		two_n = mpd_new(ctx);
+		n = mpd_new(ctx);
 	}
 
-	switch (which) {
-	case SIN:  dx = sinl(dx); break;
-	case COS:  dx = cosl(dx); break;
-	case TAN:  dx = tanl(dx); break;
-	case aSIN:  dx = asinl(dx); break;
-	case aCOS:  dx = acosl(dx); break;
-	case aTAN:  dx = atanl(dx); break;
-#if NTRIG
-	case nSIN:  dx = nsin(dx); break;
-	case nCOS:  dx = ncos(dx); break;
-	case nTAN:  dx = ntan(dx); break;
-	case naSIN: dx = nasin(dx); break;
-	case naCOS: dx = nacos(dx); break;
-	case naTAN: dx = natan(dx); break;
+
+	mpd_copy(x, ix, ctx);
+
+	mpd_user_angle_to_radians(x, x);
+
+	// x = fmodl(x, 2 * lpi);
+	mpd_divmod(t, x, x, two_pi, ctx);
+
+	// t = 3 * pi/2
+	mpd_mul_i64(t, pi_over_2, 3, ctx);
+
+	negate = 0;
+	flip = 0;
+	if (mpd_cmp(x, t, ctx) > 0) { // if (x > (3*pi/2)) {
+		negate = 0;
+		flip = 1;
+	} else if (mpd_cmp(x, pi, ctx) > 0) { // if (x > pi)
+		negate = 1;
+		flip = 0;
+	} else if (mpd_cmp(x, pi_over_2, ctx) > 0) { // if (x > lpi/2)
+		negate = 1;
+		flip = 1;
+	}
+
+	mpd_divmod(t, x, x, pi_over_2, ctx);  // x = fmodl(x, lpi/2);
+	if (flip)
+		mpd_sub(x, pi_over_2, x, ctx);  // x = lpi/2 - x;
+
+	// t = 10;    (temporary use)
+	mpd_set_i64(t, 10, ctx);
+	// n = -DIGITS;    (temporary use)
+	mpd_set_i64(n, -(DIGITS+5), ctx);
+	mpd_scaleb(lim, t, n, ctx);  // lim = 10 ^ -(DIGITS+5)
+
+	mpd_mul(xsq, x, x, ctx);  // xsq = x * x
+	mpd_copy(t, one, ctx);  // t = 1;
+	mpd_copy(c, zero, ctx);  // c = 0;
+
+	in = 1; mpd_copy(n, one, ctx);  // n = 1;
+	mpd_copy(two_n, two, ctx);
+	int iterlim = 30;
+
+	while (in < iterlim) {
+		mpd_add(c, c, t, ctx);  // c += t;
+
+		// nt = -(xsq / ((2 * n) * ((2 * n) - 1)));
+		mpd_copy(denom, two_n, ctx);		// d = 2*n
+		mpd_sub(denom, denom, one, ctx);	// d now (2n - 1)
+		mpd_mul(denom, denom, two_n, ctx);	// d now (2n * (2n-1))
+		mpd_div(nt, xsq, denom, ctx);
+		mpd_copy_negate(nt, nt, ctx);
+
+		// t = t * nt
+		mpd_mul(t, t, nt, ctx);
+
+		// trace(EXEC, "n:%d t is %Lg, c is %Lg\n", n, t, c);
+		mpd_copy_abs(nt, t, ctx);
+		if (mpd_cmp(nt, lim, ctx) < 0) //  if (fabsl(t) < lim)
+			break;
+		in++;
+		mpd_add(n, n, one, ctx);  // n++
+		mpd_add(two_n, two_n, two, ctx); // "(2 * n)++", so to speak
+	}
+	if (in >= iterlim)
+		error("warning: cosine taylor series didn't converge after %d iterations\n", iterlim);
+	trace(EXEC, "mpd_cos: iterated %d times\n", in);
+	trace_mpd(EXEC, "mpd_cos: lim is", lim);
+
+	if (negate)
+		mpd_copy_negate(m, c, ctx); // c = -c;
+	else
+		mpd_copy(m, c, ctx); // c = -c;
+}
+
+void mpd_sin(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
+{
+	// ncos(x - (lpi/2));
+	(void)m;
+	(void)x;
+	(void)ctx;
+}
+
+void mpd_tan(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
+{
+	// nsin(x) / ncos(x);
+	(void)m;
+	(void)x;
+	(void)ctx;
+}
+
+void mpd_acos(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
+{
+	// atanl(sqrtl(1 - dx*dx) / dx);
+	(void)m;
+	(void)x;
+	(void)ctx;
+}
+
+void mpd_asin(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
+{
+	// atanl(dx / sqrtl(1 - dx*dx));
+	(void)m;
+	(void)x;
+	(void)ctx;
+}
+
+void mpd_atan(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
+{
+	(void)m;
+	(void)x;
+	(void)ctx;
+#if SOON
+	// trace(EXEC, "natan called with %Lg\n", dx);
+
+	if (dx > 1)
+		return  lpi/2 - natan(1/dx);
+	else if (dx < -1)
+		return -lpi/2 - natan(1/dx);
+
+	if (dx > .5)
+		 return 2 * natan(dx / (1 + sqrtl(1 + dx * dx)));
+
+	// series is:
+	// Tn = (Tn-1) * (-x^^2 * (2n - 1)/(n + 1))
+
+	ldouble n, t, at, lim;
+	ldouble xsq = dx * dx;
+	int iterlim = 100;
+	n = 1;
+	t = dx;
+	at = 0;
+	lim = powl(10, -max_digits);
+	while (n < iterlim) {
+		at += t;
+		t = -t * xsq * ((2 * n - 1) / (2 * n + 1));
+		// trace(EXEC, "n:%Lf t is %Lg, at is %Lg\n", n, t, at);
+		if (fabsl(t) < lim)
+			break;
+		n++;
+	}
+	if (n >= iterlim) {
+		error("warning: cosine taylor series didn't converge after %d iterations\n", iterlim);
+		return 0;
+	}
+	return at;
 #endif
-	}
-
-	mpd_from_double(mx, dx, ctx);
-
-	if (which >= aSIN)
-		mpd_radians_to_user_angle(mx, mx);
-
-	mpush(mx);
-
-	return GOODOP;
 }
 
 opreturn
 sine(void)
 {
-	return trig(SIN);
+	// soon: return mpd_1_op_shell(mpd_sine);
+	return GOODOP;
 }
 
 opreturn
 cosine(void)
 {
-	return trig(COS);
+	return mpd_1_op_shell(mpd_cos);
 }
 
 opreturn
 tangent(void)
 {
-	return trig(TAN);
+	// soon: return mpd_1_op_shell(mpd_tangent);
+	return GOODOP;
 }
 
 opreturn
 asine(void)
 {
-	return trig(aSIN);
+	// soon: return mpd_1_op_shell(mpd_asine);
+	return GOODOP;
 }
 
 opreturn
 acosine(void)
 {
-	return trig(aCOS);
+	// soon: return mpd_1_op_shell(mpd_acosine);
+	return GOODOP;
 }
 
 opreturn
 atangent(void)
 {
-	return trig(aTAN);
-}
-
-opreturn
-atangent2(void)
-{
-	mpd_t *mx, *my;
-	ldouble dx, dy, r;
-
-	if (!floating_mode(mode))
-		return trig_no_sense();
-
-	if (mpop(&mx)) {
-		if (mpop(&my)) {
-			if (!mpd_to_double(&dx, mx) ||
-				!mpd_to_double(&dy, my)) {
-				error("error: trig input likely out of range");
-				mpd_del(mx);
-				mpd_del(my);
-				return BADOP;
-			}
-			r =  atan2l(dy, dx);
-			set_lastx(mx);
-			mpd_from_double(mx, r, ctx);
-			mpd_radians_to_user_angle(mx, mx);
-			mpush(mx);
-			mpd_del(my);
-			return GOODOP;
-		}
-		mpush(mx);
-	}
-	return BADOP;
+	// soon: return mpd_1_op_shell(mpd_atangent);
+	return GOODOP;
 }
 
 opreturn
@@ -2114,7 +2166,7 @@ show_int_truncation(boolean changed, mpd_t *old, char *mark)
 	if (floating_mode(mode)) {
 		error("     # warning: format loses accuracy\n");
 	} else {
-		/* this prints all DIGITS+2 digits (not limited to
+		/* this prints all DIGITS+10 digits (not limited to
 		 * max_digits), so user can copy/paste the full precision. */
 		char *s = mpd_to_sci(old, 0);
 		error("     # was %s\n", s);
@@ -2805,7 +2857,7 @@ digits(void)
 }
 
 void
-setup_width(int bits)
+setup_integer_width(int bits)
 {
 	if (!bits || !max_int_width) {	/* first call */
 		max_int_width = LONGLONG_BITS;
@@ -2851,7 +2903,7 @@ width(void)
 
 	long long old_int_mask = int_mask;
 
-	setup_width(bits);
+	setup_integer_width(bits);
 	mpd_del(mbits);
 
 	p_printf(" Integers are now %d bits wide.\n", int_width);
@@ -5062,7 +5114,7 @@ struct oper opers[] = {
 	{"asin", asine,		0, 1, 30, 'R' },
 	{"acos", acosine,	0, 1, 30, 'R' },
 	{"atan", atangent,	"Trig functions", 1, 30, 'R' },
-	{"atan2", atangent2,	"Arctan of y/x (2 operands)", 2, 27 },
+	// {"atan2", atangent2,	"Arctan of y/x (2 operands)", 2, 27 },
 	{"exp", e_to_the_x,	"Raise e to the x'th power", 1, 30, 'R' },
 	{"ln", log_natural,	0, 1, 30, 'R' },
 	{"log2", log_base2,	0, 1, 30, 'R' },
@@ -5259,7 +5311,7 @@ main(int argc, char *argv[])
 
 	locale_init();
 
-	setup_width(0);
+	setup_integer_width(0);
 
 	create_infix_support_tokens();
 
