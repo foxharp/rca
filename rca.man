@@ -468,13 +468,7 @@ is discarded.  Also on startup,
 will use the
 .B $RCA_DIGITS
 variable to set the maximum number of displayed digits.  That value is
-clamped into the range 2 to 100.  The current default is the number
-of significant digits available from the system's "long double" data
-type.  This value is chosen to match the precision available from the
-trig functions (sin, cos, etc), which are implemented using standard C
-library calls.  This results in 18 significant digits for modern PC
-architectures running Linux/BSD, but might be 33 on ARM64 Linux, or
-only 15 on another OS.)
+clamped into the range 2 to 100.  The current default is 30 digits.
 
 Many of the commands that control
 .BR rca 's
@@ -887,12 +881,6 @@ maximum precision.  The internal representation
 (which uses a few digits more) of these values remains unchanged --
 .I only
 the printed output (or the comparison) is affected.
-
-Finally, as noted earlier, the trig functions (sin, cos, tan, asin,
-acos, atan, atan2) are not available from the mpdecimal library, and
-are implemented instead using C library functions.  They thus limit
-the default maximum precision.  RCA_DIGITS can raise that limit, but
-using the trig functions in that case may introduce big errors.
 
 .SH EXIT STATUS
 .B rca
