@@ -186,21 +186,21 @@ pi_approximations:  # with and without rca_float
 
 gentest:
 	mkdir -p tests/tmp
-	egrep -v '^ ' tests/mp18/gentests.txt | \
+	egrep -v '^ ' tests/mp30/gentests.txt | \
 		( $(RUNVG) ./rca 1echo 2>&1 ) | \
 		tee tests/tmp/gentests.txt | \
 		diff -u tests/$(ID)/gentests.txt -
 
 optest:
 	mkdir -p tests/tmp
-	egrep -v '^ ' tests/mp18/optests.txt | \
+	egrep -v '^ ' tests/mp30/optests.txt | \
 		( $(RUNVG) ./rca 1echo 2>&1 ) | \
 		tee tests/tmp/optests.txt | \
 		diff -u tests/$(ID)/optests.txt -
 
 tweaktest:
 	mkdir -p tests/tmp
-	egrep -v '^ ' tests/mp18/tweaktests.txt | \
+	egrep -v '^ ' tests/mp30/tweaktests.txt | \
 		( $(RUNVG) ./rca 1echo 2>&1 ) | \
 		tee tests/tmp/tweaktests.txt | \
 		diff -u tests/$(ID)/tweaktests.txt -

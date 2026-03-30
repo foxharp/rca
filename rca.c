@@ -1498,6 +1498,47 @@ atangent(void)
 	return mpd_1_op_shell(mpd_atan);
 }
 
+void mpd_atan2(mpd_t *m, const mpd_t *y, const mpd_t *x, mpd_context_t *ctx)
+{
+	int rx, ry;
+	static mpd_t *tmp;
+	if (!tmp) tmp = mpd_new(ctx);
+
+	rx = mpd_cmp(x, zero, ctx);
+	ry = mpd_cmp(y, zero, ctx);
+
+	if (rx == 0) {  // x == 0
+		if (ry > 0) { // y > 0
+			mpd_copy(m, pi_over_2, ctx);
+		} else if (ry < 0) { // y < 0
+			mpd_copy_negate(m, pi_over_2, ctx);
+		} else { // y == 0 and x == 0
+			mpd_copy(m, zero, ctx);  // undefined, return 0
+		}
+	} else {
+		mpd_div(tmp, y, x, ctx);
+		int save_degrees = trig_degrees;
+		trig_degrees = 0;
+		mpd_atan(m, tmp, ctx);
+		trig_degrees = save_degrees;
+		if (rx < 0) { // x < 0
+			if (ry >= 0) {	// y >= 0
+				mpd_add(m, m, pi, ctx);
+			} else {   	// y < 0
+				mpd_sub(m, m, pi, ctx);
+			}
+		}
+	}
+
+	mpd_radians_to_user_angle(m, m);
+}
+
+opreturn
+atangent2(void)
+{
+	return mpd_2_op_shell(mpd_atan2);
+}
+
 opreturn
 log_base2(void)
 {
@@ -5081,7 +5122,7 @@ struct oper opers[] = {
 	{"asin", asine,		0, 1, 30, 'R' },
 	{"acos", acosine,	0, 1, 30, 'R' },
 	{"atan", atangent,	"Trig functions", 1, 30, 'R' },
-	// {"atan2", atangent2,	"Arctan of y/x (2 operands)", 2, 27 },
+	{"atan2", atangent2,	"Arctan of y/x (2 operands)", 2, 27 },
 	{"exp", e_to_the_x,	"Raise e to the x'th power", 1, 30, 'R' },
 	{"ln", log_natural,	0, 1, 30, 'R' },
 	{"log2", log_base2,	0, 1, 30, 'R' },

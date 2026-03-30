@@ -56,7 +56,7 @@ pop
 
 H
  Mode is hex (H).  Integer math with 64 bits.
- 0x2     # was 2.6084073464102067615
+ 0x2     # was 2.6084073464102067615373566167204971158
  0x1000
 0xfffff
 0xaaaaa ~ &
@@ -141,8 +141,8 @@ h
  302.019602272727
 H
  Mode is hex (H).  Integer math with 20 bits.
- 0x0     # was 0.982547593562716767
- 0x12e     # was 302.01960227272727273
+ 0x0     # was 0.982547593562716487180581021483683837
+ 0x12e     # was 302.01960227272727272727272727272727273
 0xf00 |
  0xf2e
 4 <<
@@ -256,7 +256,7 @@ H
  Mode is hex (H).  Integer math with 32 bits.
  0x0
  0x8765,0000
- 0x4,cb2f     # was 314159.26535897932385
+ 0x4,cb2f     # was 314159.26535897932384626433832795028842
 D
  Mode is signed decimal (D).  Integer math with 32 bits.
  0
@@ -322,31 +322,31 @@ clear
 F
  Mode is float (F).  Showing 15 digits of total precision in automatic format.
 40 digits
- Floating formats configured for the maximum of 18 digits.
+ Floating formats configured for the maximum of 30 digits.
 auto
  Will show floating point in automatic format.
 pi
- 3.14159265358979324
+ 3.14159265358979323846264338328
 frac
- 0.141592653589793239
+ 0.14159265358979323846264338328
 pi
- 3.14159265358979324
+ 3.14159265358979323846264338328
 chs
- -3.14159265358979324
+ -3.14159265358979323846264338328
 frac
- -0.141592653589793239
+ -0.14159265358979323846264338328
 pi
- 3.14159265358979324
+ 3.14159265358979323846264338328
 int
  3
 pi
- 3.14159265358979324
+ 3.14159265358979323846264338328
 chs
- -3.14159265358979324
+ -3.14159265358979323846264338328
 int
  -3
 pi
- 3.14159265358979324
+ 3.14159265358979323846264338328
 15 digits
  Floating formats configured for 15 digits.
  3.14159265358979
@@ -722,7 +722,7 @@ auto
 10 10000 ^
  1e+10000
 10 -10000 ^
- 1e-10000
+ 0
 1 0 / = _pos_inf
  inf
 -1 0 / = _neg_inf
@@ -755,7 +755,7 @@ clear
 0 degrees
  trig functions will now use radians
 (tan(pi/2))
- -1.27547e+18
+ 3.24451e+34
 (ln(0))
  -inf
 (ln(-1))
