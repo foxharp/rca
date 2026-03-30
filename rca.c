@@ -160,7 +160,8 @@ char **g_argv;
 char *pi_val = "3.1415926535897932384626433832795028841971693993751"
 	       "058209749445923078164062862089986280348253421170679";
 
-mpd_t *pi, *two_pi, *pi_over_2, *e, *zero, *one, *two, *oneeighty;
+const mpd_t *lim, *pi, *two_pi, *pi_over_2, *e,
+	*zero, *one, *two, *half, *ninety, *oneeighty;
 
 /* internal representation of operands on the stack.
  * numbers are always stored as mpdecimals, even when we're in integer
@@ -328,6 +329,9 @@ typedef void (*mpd_2_op_func_t)(mpd_t *, const mpd_t *, const mpd_t *,
 			mpd_context_t *);
 typedef void (*mpd_1_op_func_t)(mpd_t *, const mpd_t *, mpd_context_t *);
 
+void trace_mpd(int level, char *msg, const mpd_t *t);
+
+
 /* debugging assist:  "p mdb(foo)" is easy to type in gdb */
 char *
 mpd(mpd_t *m)
@@ -352,32 +356,47 @@ mpd_stuff(void)
 		}
 	}
 
-	mpd_init(&context, DIGITS + 10);
+	mpd_init(&context, DIGITS + 8);
 	context.traps = 0;
 
 	zero = mpd_new(ctx);
-	mpd_set_string(zero, "0", ctx);
-
 	one = mpd_new(ctx);
-	mpd_set_string(one, "1", ctx);
+
+	// iteration limit for cos and atan Taylor series.
+	// lim = 10 ^ -(DIGITS+4)
+	lim = mpd_new(ctx);
+	/* borrow a couple of mpd temp variables */
+	mpd_set_i64((mpd_t *)one, 10, ctx);
+	mpd_set_i64((mpd_t *)zero, -(DIGITS+4), ctx);
+	mpd_scaleb((mpd_t *)lim, one, zero, ctx);
+	trace_mpd(EXEC, "taylor limit: ", (mpd_t *)lim);
+
+	mpd_set_string((mpd_t *)zero, "0", ctx);
+	mpd_set_string((mpd_t *)one, "1", ctx);
 
 	two = mpd_new(ctx);
-	mpd_set_string(two, "2", ctx);
+	mpd_set_string((mpd_t *)two, "2", ctx);
+
+	half = mpd_new(ctx);
+	mpd_set_string((mpd_t *)half, ".3", ctx);
+
+	ninety = mpd_new(ctx);
+	mpd_set_string((mpd_t *)ninety, "90", ctx);
 
 	oneeighty = mpd_new(ctx);
-	mpd_set_string(oneeighty, "180", ctx);
+	mpd_set_string((mpd_t *)oneeighty, "180", ctx);
 
 	e = mpd_new(ctx);
-	mpd_exp(e, one, ctx);
+	mpd_exp((mpd_t *)e, one, ctx);
 
 	pi = mpd_new(ctx);
-	mpd_set_string(pi, pi_val, ctx);
+	mpd_set_string((mpd_t *)pi, pi_val, ctx);
 
 	two_pi = mpd_new(ctx);
-	mpd_mul(two_pi, pi, two, ctx);
+	mpd_mul((mpd_t *)two_pi, pi, two, ctx);
 
 	pi_over_2 = mpd_new(ctx);
-	mpd_div_i64(pi_over_2, pi, 2L, ctx);
+	mpd_div_i64((mpd_t *)pi_over_2, pi, 2L, ctx);
 
 	lastx = mpd_new(ctx);
 	mpd_copy(lastx, zero, ctx);
@@ -388,8 +407,6 @@ mpd_stuff(void)
 	offstack = mpd_new(ctx);
 	mpd_copy(offstack, zero, ctx);
 }
-
-void trace_mpd(int level, char *msg, const mpd_t *t);
 
 void
 mpd_free_before_copy(mpd_t **resultp, const mpd_t *a, mpd_context_t *ctx)
@@ -543,7 +560,7 @@ mpush(mpd_t *a)
 }
 
 void
-mpush_copy(mpd_t *a)
+mpush_copy(const mpd_t *a)
 {
     mpd_t *n;
 
@@ -1122,23 +1139,23 @@ use_degrees(void)
 }
 
 void
-mpd_radians_to_degrees(mpd_t *r, mpd_t *a)
+mpd_radians_to_degrees(mpd_t *r, const mpd_t *a)
 {
 	// return (angle * 180.0L) / pi;
-	mpd_mul(a, a, oneeighty, ctx);
-	mpd_div(r, a, pi, ctx);
+	mpd_mul(r, a, oneeighty, ctx);
+	mpd_div(r, r, pi, ctx);
 }
 
 void
-mpd_degrees_to_radians(mpd_t *r, mpd_t *a)
+mpd_degrees_to_radians(mpd_t *r, const mpd_t *a)
 {
 	// return (angle * pi) / 180.0L;
-	mpd_mul(a, a, pi, ctx);
-	mpd_div(r, a, oneeighty, ctx);
+	mpd_mul(r, a, pi, ctx);
+	mpd_div(r, r, oneeighty, ctx);
 }
 
 void
-mpd_radians_to_user_angle(mpd_t *user, mpd_t *rads)
+mpd_radians_to_user_angle(mpd_t *user, const mpd_t *rads)
 {
 	if (trig_degrees)
 		mpd_radians_to_degrees(user, rads);
@@ -1147,7 +1164,7 @@ mpd_radians_to_user_angle(mpd_t *user, mpd_t *rads)
 }
 
 void
-mpd_user_angle_to_radians(mpd_t *rads, mpd_t *user)
+mpd_user_angle_to_radians(mpd_t *rads, const mpd_t *user)
 {
 	if (trig_degrees)
 		mpd_degrees_to_radians(rads, user);
@@ -1182,171 +1199,38 @@ mpd_from_double(mpd_t *m, ldouble d, mpd_context_t *ctx)
 	mpd_set_string(m, buf, ctx);
 }
 
-#if 0
-
-ldouble
-ncos(ldouble x)
+void mpd_cos(mpd_t *m, const mpd_t *in_x, mpd_context_t *ctx)
 {
-	/*
-	    T0 = 1
-	    Tn = -(Tn-1) * ((x^2) / (2n * (2n - 1))
-	    cos = T0 + T1 + ...
-	*/
-	ldouble n;
-	ldouble t, c, lim;
+
+	static mpd_t *x, *t, *nt, *c, *xsq, *denom, *n, *two_n;
 	int flip, negate;
-
-	x = fmodl(x, 2 * lpi);
-
-	if (x > 3 * lpi/2) {
-		negate = 0;
-		flip = 1;
-	} else if (x > lpi) {
-		negate = 1;
-		flip = 0;
-	} else if (x > lpi/2) {
-		negate = 1;
-		flip = 1;
-	} else {
-		negate = 0;
-		flip = 0;
-	}
-
-	x = fmodl(x, lpi/2);
-	if (flip)
-		x = lpi/2 - x;
-
-	ldouble xsq = x * x;
-
-	int iterlim = 30;
-	t = 1;
-	n = 1;
-	c = 0;
-	lim = powl(10, -max_digits);
-	while (n < iterlim) {
-		c += t;
-		t = -t * (xsq / ((2 * n) * ((2 * n) - 1)));
-		// trace(EXEC, "n:%d t is %Lg, c is %Lg\n", n, t, c);
-		if (fabsl(t) < lim)
-			break;
-		n++;
-	}
-	if (n >= iterlim) {
-		error("warning: cosine taylor series didn't converge after %d iterations\n", iterlim);
-		return 0;
-	}
-
-	if (negate)
-		c = -c;
-	return c;
-}
-
-ldouble
-nsin(ldouble x)
-{
-	if (fabsl(x) == 0) return 0;
-	x = ncos(x - (lpi/2));
-	return x;
-}
-
-ldouble
-ntan(ldouble x)
-{
-	return tanl(x);
-	x = nsin(x) / ncos(x);
-	return x;
-}
-
-ldouble
-nasin(ldouble dx)
-{
-	return atanl(dx / sqrtl(1 - dx*dx));
-}
-
-ldouble
-nacos(ldouble dx)
-{
-	return atanl(sqrtl(1 - dx*dx) / dx);
-}
-
-ldouble
-natan(ldouble dx)
-{
-	// trace(EXEC, "natan called with %Lg\n", dx);
-
-	if (dx > 1)
-		return  lpi/2 - natan(1/dx);
-	else if (dx < -1)
-		return -lpi/2 - natan(1/dx);
-
-	if (dx > .5)
-		 return 2 * natan(dx / (1 + sqrtl(1 + dx * dx)));
-
-	// series is:
-	// Tn = (Tn-1) * (-x^^2 * (2n - 1)/(n + 1))
-
-	ldouble n, t, at, lim;
-	ldouble xsq = dx * dx;
-	int iterlim = 100;
-	n = 1;
-	t = dx;
-	at = 0;
-	lim = powl(10, -max_digits);
-	while (n < iterlim) {
-		at += t;
-		t = -t * xsq * ((2 * n - 1) / (2 * n + 1));
-		// trace(EXEC, "n:%Lf t is %Lg, at is %Lg\n", n, t, at);
-		if (fabsl(t) < lim)
-			break;
-		n++;
-	}
-	if (n >= iterlim) {
-		error("warning: cosine taylor series didn't converge after %d iterations\n", iterlim);
-		return 0;
-	}
-	return at;
-}
-#endif
-
-
-void mpd_cos(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
-{
-
-	/*
-	    T0 = 1
-	    Tn = -(Tn-1) * ((x^2) / (2n * (2n - 1))
-	    cos = T0 + T1 + ...
-	*/
-	static mpd_t *x, *t, *nt, *c, *lim, *xsq, *denom, *two_n;
-	int flip, negate;
-	int in; mpd_t *n;	// these two mirror one another (when
-				// n isn't being used as a temp variable)
 
 	if (!t) {
 		x = mpd_new(ctx);
 		t = mpd_new(ctx);
 		nt = mpd_new(ctx);
 		c = mpd_new(ctx);
-		lim = mpd_new(ctx);
 		xsq = mpd_new(ctx);
 		denom = mpd_new(ctx);
 		two_n = mpd_new(ctx);
 		n = mpd_new(ctx);
 	}
 
+	mpd_user_angle_to_radians(x, in_x);
 
-	mpd_copy(x, ix, ctx);
-
-	mpd_user_angle_to_radians(x, x);
-
-	// x = fmodl(x, 2 * lpi);
+	// x = mod(x, 2 * lpi);
 	mpd_divmod(t, x, x, two_pi, ctx);
 
 	// t = 3 * pi/2
 	mpd_mul_i64(t, pi_over_2, 3, ctx);
 
+	trace_mpd(EXEC, "x after mod", x);
 	negate = 0;
 	flip = 0;
+	if (mpd_cmp(x, zero, ctx) < 0) {  // add 2 * pi
+		mpd_add(x, x, pi, ctx);
+		mpd_add(x, x, pi, ctx);
+	}
 	if (mpd_cmp(x, t, ctx) > 0) { // if (x > (3*pi/2)) {
 		negate = 0;
 		flip = 1;
@@ -1362,21 +1246,17 @@ void mpd_cos(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 	if (flip)
 		mpd_sub(x, pi_over_2, x, ctx);  // x = lpi/2 - x;
 
-	// t = 10;    (temporary use)
-	mpd_set_i64(t, 10, ctx);
-	// n = -DIGITS;    (temporary use)
-	mpd_set_i64(n, -(DIGITS+5), ctx);
-	mpd_scaleb(lim, t, n, ctx);  // lim = 10 ^ -(DIGITS+5)
-
 	mpd_mul(xsq, x, x, ctx);  // xsq = x * x
 	mpd_copy(t, one, ctx);  // t = 1;
 	mpd_copy(c, zero, ctx);  // c = 0;
 
-	in = 1; mpd_copy(n, one, ctx);  // n = 1;
+	mpd_copy(n, one, ctx);  // n = 1;
 	mpd_copy(two_n, two, ctx);
-	int iterlim = 30;
+	int iterlim = 50;
+	int i_n = 1; // "i_n" and "n" mirror one another (when n isn't being
+			// used as a temp variable)
 
-	while (in < iterlim) {
+	while (i_n < iterlim) {
 		mpd_add(c, c, t, ctx);  // c += t;
 
 		// nt = -(xsq / ((2 * n) * ((2 * n) - 1)));
@@ -1389,18 +1269,21 @@ void mpd_cos(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 		// t = t * nt
 		mpd_mul(t, t, nt, ctx);
 
-		// trace(EXEC, "n:%d t is %Lg, c is %Lg\n", n, t, c);
+		// trace(EXEC, "i_n: %d\n", i_n);
+		// trace_mpd(EXEC, "t: ", t);
+		// trace_mpd(EXEC, "c: ", c);
+
 		mpd_copy_abs(nt, t, ctx);
-		if (mpd_cmp(nt, lim, ctx) < 0) //  if (fabsl(t) < lim)
+		if (mpd_cmp(nt, lim, ctx) < 0) //  if (abs(t) < lim)
 			break;
-		in++;
+		i_n++;
 		mpd_add(n, n, one, ctx);  // n++
 		mpd_add(two_n, two_n, two, ctx); // "(2 * n)++", so to speak
 	}
-	if (in >= iterlim)
+	if (i_n >= iterlim)
 		error("warning: cosine taylor series didn't converge after %d iterations\n", iterlim);
-	trace(EXEC, "mpd_cos: iterated %d times\n", in);
-	trace_mpd(EXEC, "mpd_cos: lim is", lim);
+
+	trace(EXEC, "cos iters: %d\n", i_n);
 
 	if (negate)
 		mpd_copy_negate(m, c, ctx); // c = -c;
@@ -1411,82 +1294,178 @@ void mpd_cos(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 void mpd_sin(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
 {
 	// ncos(x - (lpi/2));
-	(void)m;
-	(void)x;
-	(void)ctx;
+	static mpd_t *t;
+	if (!t) t = mpd_new(ctx);
+
+	if (trig_degrees)
+		mpd_sub(t, ninety, x, ctx);
+	else
+		mpd_sub(t, pi_over_2, x, ctx);
+	mpd_cos(m, t, ctx);
 }
 
 void mpd_tan(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
 {
 	// nsin(x) / ncos(x);
-	(void)m;
-	(void)x;
-	(void)ctx;
+	static mpd_t *s, *c;
+	if (!s) s = mpd_new(ctx);
+	if (!c) c = mpd_new(ctx);
+
+	mpd_cos(c, x, ctx);
+	mpd_sin(s, x, ctx);
+	mpd_div(m, s, c, ctx);
+}
+
+/* keep track of recursions and iterations used in atan() */
+static int max_a_r, max_iters;
+
+void mpd_atan(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
+{
+	static int atan_recurse;
+	if (max_a_r < atan_recurse)
+		max_a_r = atan_recurse;
+
+	// NB: this routine is recursive, and these are all static.
+	static mpd_t *at, *xsq, *n, *two_n, *t, *denom, *tmp;
+	if (!t) {
+		at = mpd_new(ctx);
+		xsq = mpd_new(ctx);
+		n = mpd_new(ctx);
+		two_n = mpd_new(ctx);
+		t = mpd_new(ctx);
+		denom = mpd_new(ctx);
+		tmp = mpd_new(ctx);
+	}
+
+	mpd_t *x = mpd_new(ctx);  // not static, due to mpd_atan() recursion
+
+	mpd_copy(x, ix, ctx);
+
+	/*
+	 *  if (x > 1)
+	 *	return  pi/2 - atan(1/x);
+	 *   else if (x < -1)
+	 *	return -pi/2 - atan(1/x);
+	 */
+	mpd_copy_abs(tmp, x, ctx);
+	if (mpd_cmp(tmp, one, ctx) > 0) { // |x| > 1
+		int sign = mpd_arith_sign(x);
+		mpd_div(m, one, x, ctx);  // m = 1/x
+		trace_mpd(EXEC, "|gt| than 1, recursing with m: ", m);
+		atan_recurse++;
+		mpd_atan(m, m, ctx);	  // m = atan(1/x)
+		atan_recurse--;
+		mpd_sub(m, pi_over_2, m, ctx); // m = pi/2 - atan(1/x)
+		if (sign < 0)
+			mpd_sub(m, m, pi, ctx); // m = m - pi
+		if (!atan_recurse)
+			mpd_radians_to_user_angle(m, m);
+		mpd_del(x);
+		return;
+	}
+
+
+	/*
+	 *  if (x > .5)
+	 *	 return 2 * atan(x / (1 + sqrt(1 + x * x)));
+	 */
+	mpd_copy_abs(tmp, x, ctx);
+	if (mpd_cmp(tmp, half, ctx) > 0) { // |x| > .5
+		mpd_mul(xsq, x, x, ctx);  // xsq = x * x
+		mpd_add(m, one, xsq, ctx);    // m = 1 + x*x
+		mpd_sqrt(m, m, ctx);	    // m = sqrt(1+x*x)
+		mpd_add(m, one, m, ctx);    // m = 1 + sqrt(1+x*x)
+		mpd_div(m, x, m, ctx);	    // m = x / (1 + sqrt(1+x*x))
+		atan_recurse++;
+		trace_mpd(EXEC, "gt than .5, recursing with m: ", m);
+		mpd_atan(m, m, ctx);	    // atan of above
+		atan_recurse--;
+		mpd_mul(m, m, two, ctx);    // m = 2 * m
+		if (!atan_recurse)
+			mpd_radians_to_user_angle(m, m);
+		mpd_del(x);
+		return;
+	}
+
+	mpd_mul(xsq, ix, ix, ctx);  // xsq = x * x
+
+	// series is:
+	// Tn = (Tn-1) * (-x^^2 * (2n - 1)/(2n + 1))
+
+	int iterlim = 50;
+	int i_n = 1;
+	mpd_copy(n, one, ctx);
+	mpd_copy(two_n, two, ctx);
+	mpd_copy(t, x, ctx);
+	mpd_copy(at, zero, ctx);
+	mpd_copy(denom, zero, ctx);
+
+	while (	i_n < iterlim) {
+		mpd_add(at, at, t, ctx);  // at += t;
+
+		// t = -t * xsq * ((2 * n - 1) / (2 * n + 1));
+		mpd_sub(tmp, two_n, one, ctx);	// 2*n - 1
+		mpd_add(denom, two_n, one, ctx);// 2*n + 1
+		mpd_div(tmp, tmp, denom, ctx);	// (2n - 1) / (2n + 1)
+		mpd_mul(tmp, xsq, tmp, ctx);	// xsq * (2n - 1) / (2n + 1)
+		mpd_mul(tmp, t, tmp, ctx);	// t * above
+		mpd_copy_negate(t, tmp, ctx);	// -t * above
+		// trace_mpd(EXEC, "at: ", at);
+		// trace_mpd(EXEC, "t: ", t);
+		// trace_mpd(EXEC, "lim: ", lim);
+		mpd_copy_abs(tmp, t, ctx);
+		if (mpd_cmp(tmp, lim, ctx) < 0) //  if (abs(t) < lim)
+			break;
+		i_n++;
+		mpd_add(n, n, one, ctx);  // n++
+		mpd_add(two_n, two_n, two, ctx); // "(2 * n)++", so to speak
+	}
+	trace(EXEC, "atan iters: %d\n", i_n);
+	if (max_iters < i_n) max_iters = i_n;
+
+	if (i_n >= iterlim)
+		error("warning: arctan taylor series didn't converge after %d iterations\n", iterlim);
+	trace_mpd(EXEC, "at after loop: ", at);
+
+	if (!atan_recurse)
+		mpd_radians_to_user_angle(at, at);
+
+	mpd_del(x);
+
+	mpd_copy(m, at, ctx);
+
 }
 
 void mpd_acos(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
 {
-	// atanl(sqrtl(1 - dx*dx) / dx);
-	(void)m;
-	(void)x;
-	(void)ctx;
+	// atan(sqrt(1 - x^2) / x);
+	static mpd_t *t;
+	if (!t) t = mpd_new(ctx);
+
+	mpd_mul(t, x, x, ctx);
+	mpd_sub(t, one, t, ctx);
+	mpd_sqrt(t, t, ctx);
+	mpd_div(t, t, x, ctx);
+	mpd_atan(m, t, ctx);
 }
 
 void mpd_asin(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
 {
-	// atanl(dx / sqrtl(1 - dx*dx));
-	(void)m;
-	(void)x;
-	(void)ctx;
-}
+	// atan(x / sqrt(1 - x^2));
+	static mpd_t *t;
+	if (!t) t = mpd_new(ctx);
 
-void mpd_atan(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
-{
-	(void)m;
-	(void)x;
-	(void)ctx;
-#if SOON
-	// trace(EXEC, "natan called with %Lg\n", dx);
-
-	if (dx > 1)
-		return  lpi/2 - natan(1/dx);
-	else if (dx < -1)
-		return -lpi/2 - natan(1/dx);
-
-	if (dx > .5)
-		 return 2 * natan(dx / (1 + sqrtl(1 + dx * dx)));
-
-	// series is:
-	// Tn = (Tn-1) * (-x^^2 * (2n - 1)/(n + 1))
-
-	ldouble n, t, at, lim;
-	ldouble xsq = dx * dx;
-	int iterlim = 100;
-	n = 1;
-	t = dx;
-	at = 0;
-	lim = powl(10, -max_digits);
-	while (n < iterlim) {
-		at += t;
-		t = -t * xsq * ((2 * n - 1) / (2 * n + 1));
-		// trace(EXEC, "n:%Lf t is %Lg, at is %Lg\n", n, t, at);
-		if (fabsl(t) < lim)
-			break;
-		n++;
-	}
-	if (n >= iterlim) {
-		error("warning: cosine taylor series didn't converge after %d iterations\n", iterlim);
-		return 0;
-	}
-	return at;
-#endif
+	mpd_mul(t, x, x, ctx);
+	mpd_sub(t, one, t, ctx);
+	mpd_sqrt(t, t, ctx);
+	mpd_div(t, x, t, ctx);
+	mpd_atan(m, t, ctx);
 }
 
 opreturn
 sine(void)
 {
-	// soon: return mpd_1_op_shell(mpd_sine);
-	return GOODOP;
+	return mpd_1_op_shell(mpd_sin);
 }
 
 opreturn
@@ -1498,29 +1477,25 @@ cosine(void)
 opreturn
 tangent(void)
 {
-	// soon: return mpd_1_op_shell(mpd_tangent);
-	return GOODOP;
+	return mpd_1_op_shell(mpd_tan);
 }
 
 opreturn
 asine(void)
 {
-	// soon: return mpd_1_op_shell(mpd_asine);
-	return GOODOP;
+	return mpd_1_op_shell(mpd_asin);
 }
 
 opreturn
 acosine(void)
 {
-	// soon: return mpd_1_op_shell(mpd_acosine);
-	return GOODOP;
+	return mpd_1_op_shell(mpd_acos);
 }
 
 opreturn
 atangent(void)
 {
-	// soon: return mpd_1_op_shell(mpd_atangent);
-	return GOODOP;
+	return mpd_1_op_shell(mpd_atan);
 }
 
 opreturn
@@ -2166,7 +2141,7 @@ show_int_truncation(boolean changed, mpd_t *old, char *mark)
 	if (floating_mode(mode)) {
 		error("     # warning: format loses accuracy\n");
 	} else {
-		/* this prints all DIGITS+10 digits (not limited to
+		/* this prints all DIGITS+8 digits (not limited to
 		 * max_digits), so user can copy/paste the full precision. */
 		char *s = mpd_to_sci(old, 0);
 		error("     # was %s\n", s);
@@ -5100,14 +5075,6 @@ struct oper opers[] = {
 	{"negate", chsign,	"Change sign of x (2's complement)", 1, 30, 'R' },
 	{"recip", recip,	0, 1, 30, 'R' },
 	{"sqrt", squarert,	"Reciprocal and square root of x", 1, 30, 'R' },
-#if NTRIG
-	{"ncos", ncosine,	0, 1, 30, 'R' },
-	{"nsin", nsine,		0, 1, 30, 'R' },
-	{"ntan", ntangent,	"", 1, 30, 'R' },
-	{"nasin", nasine,	0, 1, 30, 'R' },
-	{"nacos", nacosine,	0, 1, 30, 'R' },
-	{"natan", natangent,	"Reimplemented trig", 1, 30, 'R' },
-#endif
 	{"sin", sine,		0, 1, 30, 'R' },
 	{"cos", cosine,		0, 1, 30, 'R' },
 	{"tan", tangent,	"", 1, 30, 'R' },
