@@ -1218,11 +1218,8 @@ void mpd_cos(mpd_t *m, const mpd_t *in_x, mpd_context_t *ctx)
 
 	mpd_user_angle_to_radians(x, in_x);
 
-	// x = mod(x, 2 * lpi);
+	// x = mod(x, 2 * pi);
 	mpd_divmod(t, x, x, two_pi, ctx);
-
-	// t = 3 * pi/2
-	mpd_mul_i64(t, pi_over_2, 3, ctx);
 
 	trace_mpd(EXEC, "x after mod", x);
 	negate = 0;
@@ -1231,20 +1228,24 @@ void mpd_cos(mpd_t *m, const mpd_t *in_x, mpd_context_t *ctx)
 		mpd_add(x, x, pi, ctx);
 		mpd_add(x, x, pi, ctx);
 	}
-	if (mpd_cmp(x, t, ctx) > 0) { // if (x > (3*pi/2)) {
+
+	// t = 3 * pi/2
+	mpd_mul_i64(t, pi_over_2, 3, ctx);
+
+	if (mpd_cmp(x, t, ctx) >= 0) { // if (x > (3*pi/2)) {
 		negate = 0;
 		flip = 1;
-	} else if (mpd_cmp(x, pi, ctx) > 0) { // if (x > pi)
+	} else if (mpd_cmp(x, pi, ctx) >= 0) { // if (x > pi)
 		negate = 1;
 		flip = 0;
-	} else if (mpd_cmp(x, pi_over_2, ctx) > 0) { // if (x > lpi/2)
+	} else if (mpd_cmp(x, pi_over_2, ctx) >= 0) { // if (x > pi/2)
 		negate = 1;
 		flip = 1;
 	}
 
-	mpd_divmod(t, x, x, pi_over_2, ctx);  // x = fmodl(x, lpi/2);
+	mpd_divmod(t, x, x, pi_over_2, ctx);  // x = fmodl(x, pi/2);
 	if (flip)
-		mpd_sub(x, pi_over_2, x, ctx);  // x = lpi/2 - x;
+		mpd_sub(x, pi_over_2, x, ctx);  // x = pi/2 - x;
 
 	mpd_mul(xsq, x, x, ctx);  // xsq = x * x
 	mpd_copy(t, one, ctx);  // t = 1;
@@ -1293,7 +1294,7 @@ void mpd_cos(mpd_t *m, const mpd_t *in_x, mpd_context_t *ctx)
 
 void mpd_sin(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
 {
-	// ncos(x - (lpi/2));
+	// ncos(x - (pi/2));
 	static mpd_t *t;
 	if (!t) t = mpd_new(ctx);
 
@@ -1447,6 +1448,12 @@ void mpd_acos(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
 	mpd_sqrt(t, t, ctx);
 	mpd_div(t, t, x, ctx);
 	mpd_atan(m, t, ctx);
+	if (mpd_cmp(m, zero, ctx) < 0) {
+		if (trig_degrees)
+			mpd_add(m, m, oneeighty, ctx);
+		else
+			mpd_add(m, m, pi, ctx);
+	}
 }
 
 void mpd_asin(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
@@ -2349,6 +2356,9 @@ print_floating(mpd_t *m)
 {
 	char fmt[30];
 	char buf[TEMP_BUFSIZE];
+	static mpd_t *absm;
+	if (!absm) absm = mpd_new(ctx);
+	mpd_copy_abs(absm, m, ctx);
 
 	m_file_start();
 	fputc(' ', mp.fp);
@@ -2368,6 +2378,8 @@ print_floating(mpd_t *m)
 		}
 		fprintf(mp.fp, "%s", s);
 	} else if (mpd_iszero(m)) {
+		fputs("0", mp.fp);
+	} else if (mpd_cmp(absm, lim, ctx) < 0) {
 		fputs("0", mp.fp);
 	} else if (float_specifier[0] == 'a') { // 'a'uto
 
