@@ -160,7 +160,7 @@ char **g_argv;
 char *pi_val = "3.1415926535897932384626433832795028841971693993751"
 	       "058209749445923078164062862089986280348253421170679";
 
-const mpd_t *lim, *pi, *two_pi, *pi_over_2, *e,
+const mpd_t *pi, *two_pi, *pi_over_2, *e,
 	*zero, *one, *two, *half, *ninety, *oneeighty;
 
 /* internal representation of operands on the stack.
@@ -258,13 +258,21 @@ void p_printf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 boolean digitseparators = 1;
 
 /* in the absence of an $RCA_DIGITS environment variable, the
- * definition of DIGITS sets the number of significant digits for the
- * calculator.
- * for now, since the trig functions still use the libm API, we match
- * the number of digits those functions can give us.
- * */
-#define DIGITS   30
-int max_digits = DIGITS;
+ * definition of USERDIGITS sets the number of significant digits for
+ * the calculator.  the user may opt not to see them all, but can if
+ * they choose.  */
+#define USERDIGITS   30
+int max_digits = USERDIGITS;  // may be overridden by $RCA_DIGITS
+
+/* when comparing arithmetically, we use the same threshold the user
+ * can see.  i.e., if they match at the visible precision, they match */
+#define COMPARISON_DIGITS   (max_digits)
+/* computation cutoff:  when we calculate cosine and arctan, we stop when
+ * the next term is less than this cutoff: (1e-NN) */
+#define TRIG_CALC_DIGITS    (max_digits+4)
+/* working precision -- how mpdecimal is initialized, and what the
+ * calculator really uses */
+#define MPDECIMAL_DIGITS    (max_digits+8)
 
 /* float_digits may represent either the total displayed precision, or
  * the number of digits after the decimal, depending on float_specifier.
@@ -339,6 +347,22 @@ mpd(mpd_t *m)
 	return mpd_to_sci(m, 0);
 }
 
+int
+mpd_mag_lessthan(const mpd_t *x, int exp)
+{
+	if (mpd_isspecial(x))
+		return 0;
+
+	if (mpd_iszero(x))
+		return 1;
+
+	// if adj_exp < -34, magnitude is < 1e-34
+	if (mpd_adjexp(x) < exp)
+		return 1;
+
+	return 0;
+}
+
 void
 mpd_stuff(void)
 {
@@ -356,22 +380,13 @@ mpd_stuff(void)
 		}
 	}
 
-	mpd_init(&context, DIGITS + 8);
+	mpd_init(&context, MPDECIMAL_DIGITS);
 	context.traps = 0;
 
 	zero = mpd_new(ctx);
-	one = mpd_new(ctx);
-
-	// iteration limit for cos and atan Taylor series.
-	// lim = 10 ^ -(DIGITS+4)
-	lim = mpd_new(ctx);
-	/* borrow a couple of mpd temp variables */
-	mpd_set_i64((mpd_t *)one, 10, ctx);
-	mpd_set_i64((mpd_t *)zero, -(DIGITS+4), ctx);
-	mpd_scaleb((mpd_t *)lim, one, zero, ctx);
-	trace_mpd(EXEC, "taylor limit: ", (mpd_t *)lim);
-
 	mpd_set_string((mpd_t *)zero, "0", ctx);
+
+	one = mpd_new(ctx);
 	mpd_set_string((mpd_t *)one, "1", ctx);
 
 	two = mpd_new(ctx);
@@ -1172,33 +1187,6 @@ mpd_user_angle_to_radians(mpd_t *rads, const mpd_t *user)
 		mpd_copy(rads, user, ctx);
 }
 
-int
-mpd_to_double(ldouble *dp, mpd_t *m)
-{
-	char fmt[32];
-	char *s, *es;
-
-	snprintf(fmt, sizeof fmt, ".%dg", max_digits);
-	s = mpd_format(m, fmt, ctx);
-
-	errno = 0;
-	*dp = strtold(s, &es);
-
-	int ok = ((*es == '\0') && (errno == 0));
-
-	free(s);
-
-	return ok;
-}
-
-void
-mpd_from_double(mpd_t *m, ldouble d, mpd_context_t *ctx)
-{
-	char buf[128];
-	snprintf(buf, sizeof(buf), "%.*Lg", LDBL_DECIMAL_DIG, d);
-	mpd_set_string(m, buf, ctx);
-}
-
 void mpd_cos(mpd_t *m, const mpd_t *in_x, mpd_context_t *ctx)
 {
 
@@ -1274,8 +1262,7 @@ void mpd_cos(mpd_t *m, const mpd_t *in_x, mpd_context_t *ctx)
 		// trace_mpd(EXEC, "t: ", t);
 		// trace_mpd(EXEC, "c: ", c);
 
-		mpd_copy_abs(nt, t, ctx);
-		if (mpd_cmp(nt, lim, ctx) < 0) //  if (abs(t) < lim)
+		if (mpd_mag_lessthan(t, -TRIG_CALC_DIGITS))
 			break;
 		i_n++;
 		mpd_add(n, n, one, ctx);  // n++
@@ -1411,11 +1398,12 @@ void mpd_atan(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 		mpd_mul(tmp, xsq, tmp, ctx);	// xsq * (2n - 1) / (2n + 1)
 		mpd_mul(tmp, t, tmp, ctx);	// t * above
 		mpd_copy_negate(t, tmp, ctx);	// -t * above
-		// trace_mpd(EXEC, "at: ", at);
+
+		// trace(EXEC, "i_n: %d\n", i_n);
 		// trace_mpd(EXEC, "t: ", t);
-		// trace_mpd(EXEC, "lim: ", lim);
-		mpd_copy_abs(tmp, t, ctx);
-		if (mpd_cmp(tmp, lim, ctx) < 0) //  if (abs(t) < lim)
+		// trace_mpd(EXEC, "at: ", at);
+
+		if (mpd_mag_lessthan(t, -TRIG_CALC_DIGITS))
 			break;
 		i_n++;
 		mpd_add(n, n, one, ctx);  // n++
@@ -1677,8 +1665,8 @@ compare_worker(int c)
 
 	set_lastx(x);
 
-	mpd_rescale(x, x, -max_digits, ctx);
-	mpd_rescale(y, y, -max_digits, ctx);
+	mpd_rescale(x, x, -COMPARISON_DIGITS, ctx);
+	mpd_rescale(y, y, -COMPARISON_DIGITS, ctx);
 
 	int r = mpd_cmp(y, x, ctx);
 	switch(c) {
@@ -2187,12 +2175,12 @@ show_int_truncation(boolean changed, mpd_t *old, char *mark)
 
 	pending_show();
 	if (floating_mode(mode)) {
-		error("     # warning: format loses accuracy\n");
+		error("  # warning: format loses accuracy\n");
 	} else {
-		/* this prints all DIGITS+8 digits (not limited to
+		/* this prints the full mpdecimal precision (not limited by
 		 * max_digits), so user can copy/paste the full precision. */
 		char *s = mpd_to_sci(old, 0);
-		error("     # was %s\n", s);
+		error(" # was %s\n", s);
 		free(s);
 	}
 }
@@ -2356,9 +2344,6 @@ print_floating(mpd_t *m)
 {
 	char fmt[30];
 	char buf[TEMP_BUFSIZE];
-	static mpd_t *absm;
-	if (!absm) absm = mpd_new(ctx);
-	mpd_copy_abs(absm, m, ctx);
 
 	m_file_start();
 	fputc(' ', mp.fp);
@@ -2379,7 +2364,7 @@ print_floating(mpd_t *m)
 		fprintf(mp.fp, "%s", s);
 	} else if (mpd_iszero(m)) {
 		fputs("0", mp.fp);
-	} else if (mpd_cmp(absm, lim, ctx) < 0) {
+	} else if (mpd_mag_lessthan(m, -COMPARISON_DIGITS )) {
 		fputs("0", mp.fp);
 	} else if (float_specifier[0] == 'a') { // 'a'uto
 
@@ -3372,6 +3357,34 @@ units_mpg_l100km(void)
 	return GOODOP;
 }
 
+/* this is almost certainly a lossy conversion */
+int
+mpd_to_ldouble(ldouble *dp, mpd_t *m)
+{
+	char fmt[32];
+	char *s, *es;
+
+	snprintf(fmt, sizeof fmt, ".%dg", max_digits);
+	s = mpd_format(m, fmt, ctx);
+
+	errno = 0;
+	*dp = strtold(s, &es);
+
+	int ok = ((*es == '\0') && (errno == 0));
+
+	free(s);
+
+	return ok;
+}
+
+void
+mpd_from_double(mpd_t *m, ldouble d, mpd_context_t *ctx)
+{
+	char buf[128];
+	snprintf(buf, sizeof(buf), "%.*Lg", LDBL_DECIMAL_DIG, d);
+	mpd_set_string(m, buf, ctx);
+}
+
 /* This converts -74.0444 degrees, to 74°2′40″W (expressed as "-74.0240").
  * Use "4 digits fixed" to display properly. */
 opreturn
@@ -3382,7 +3395,7 @@ units_dd_dms(void)
 	if (!mpop(&m))
 		return BADOP;
 
-	mpd_to_double(&dd, m);
+	mpd_to_ldouble(&dd, m);
 
 	ldouble deg, min, minsec, sec, sign;
 
@@ -3413,7 +3426,7 @@ units_dms_dd(void)
 	if (!mpop(&m))
 		return BADOP;
 
-	mpd_to_double(&dd, m);
+	mpd_to_ldouble(&dd, m);
 
 	/* The variable names, identical to the routine
 	 * above, don't make sense here.  But since the
