@@ -4782,8 +4782,8 @@ config(void)
 }
 
 /* useful for resetting width from debugger, to generate the
- * (narrower) man page copy of the precedence table. */
-size_t precedence_width = 68;
+ * (narrower) man page copy of the precedence table. (try 62) */
+size_t precedence_width = 62;
 
 opreturn
 precedence(void)
@@ -4797,6 +4797,7 @@ precedence(void)
 	size_t linelen[NUM_PRECEDENCE] = {0};
 	char *prefix[NUM_PRECEDENCE] = {0};
 	int prec, i;
+	int one_operand_prec = -1;
 
 	p_printf(" Precedence for operators in infix expressions, from\n"
 	       "  top to bottom in order of descending precedence.\n"
@@ -4810,7 +4811,7 @@ precedence(void)
 	}
 
 	/* do single char commands first, then the rest, then never
-	 * regenerate the table again.  */
+	 * regenerate the table again (unless debug mode changes).  */
 	for ( ; pass < 2; pass++) {
 
 		op = opers;
@@ -4845,7 +4846,14 @@ precedence(void)
 				prefix[op->prec] = "";
 				linelen[op->prec] = 12;
 			}
-			if (strcmp(op->name, "chs") == 0) {
+
+			// all single operand opers have the same
+			// precedence.  we want to put + and -, which
+			// aren't in the table, onto that line
+			if ((pass == 0) && (op->operands == 1))
+				one_operand_prec = op->prec;
+			if ((pass == 1) && op->prec == one_operand_prec) {
+				one_operand_prec = -1;
 				if (*prec_ops[op->prec])
 					strcat(prec_ops[op->prec], " ");
 				strcat(prec_ops[op->prec], "+ -");
