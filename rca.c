@@ -4848,7 +4848,7 @@ precedence(void)
 	size_t linelen[NUM_PRECEDENCE] = {0};
 	char *prefix[NUM_PRECEDENCE] = {0};
 	int prec, i;
-	int one_operand_prec = -1;
+	int unarydone = -0;
 
 	p_printf(" Precedence for operators in infix expressions, from\n"
 	       "  top to bottom in order of descending precedence.\n"
@@ -4898,17 +4898,15 @@ precedence(void)
 				linelen[op->prec] = 12;
 			}
 
-			// all single operand opers have the same
-			// precedence.  we want to put + and -, which
-			// aren't in the table, onto that line
-			if ((pass == 0) && (op->operands == 1))
-				one_operand_prec = op->prec;
-			if ((pass == 1) && op->prec == one_operand_prec) {
-				one_operand_prec = -1;
+			/* all single operand opers have the same
+			 * precedence.  we want to add unary + and -,
+			 * which aren't in the table, onto that line */
+			if (pass == 0 && op->operands == 1 && !unarydone) {
 				if (*prec_ops[op->prec])
 					strcat(prec_ops[op->prec], " ");
 				strcat(prec_ops[op->prec], "+ -");
 				linelen[op->prec] += 4;
+				unarydone = 1;
 			}
 			if (!assoc[op->prec])
 				assoc[op->prec] = op->assoc;
