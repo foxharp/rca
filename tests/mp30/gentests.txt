@@ -755,7 +755,7 @@ clear
 0 degrees
  trig functions will now use radians
 (tan(pi/2))
- 3.24451e+34
+ inf
 (ln(0))
  -inf
 (ln(-1))

@@ -427,18 +427,19 @@ void
 mpd_free_before_copy(mpd_t **resultp, const mpd_t *a, mpd_context_t *ctx)
 {
 	if (*resultp) {
-	    trace_mpd(EXEC, "mpd_del'ing", *resultp);
+	    // trace_mpd(EXEC, "mpd_del'ing", *resultp);
 	    mpd_del(*resultp);
 	    *resultp = 0;
 	}
 	if (!*resultp) *resultp = mpd_new(ctx);
-	trace_mpd(EXEC, "copying", a);
+	// trace_mpd(EXEC, "copying", a);
 	mpd_copy(*resultp, a, ctx);
 }
 
 void
 set_lastx(mpd_t *a)
 {
+	trace_mpd(EXEC, "lx is now", a);
 	mpd_free_before_copy(&lastx, a, ctx);
 }
 
@@ -489,9 +490,13 @@ trace_mpd(int level, char *msg, const mpd_t *t)
 {
 	if ((tracing & level) == 0)
 		return;
-	fprintf(stderr, "%s: (%p) ", msg, (void*)t);
+
+	// char flagbuf[256];
+	// mpd_snprint_flags(flagbuf, 256, t->flags);
+	// fprintf(stderr, "%s %s: ", msg, flagbuf);
+
+	fprintf(stderr, "%s: ", msg);
 	mpd_fprint(stderr, t);
-	fprintf(stderr, "\n");
 }
 
 
@@ -1193,6 +1198,11 @@ void mpd_cos(mpd_t *m, const mpd_t *in_x, mpd_context_t *ctx)
 	static mpd_t *x, *t, *nt, *c, *xsq, *denom, *n, *two_n;
 	int flip, negate;
 
+	if (mpd_isspecial(in_x)) {
+		mpd_setspecial(m, MPD_NEG, MPD_NAN);
+		return;
+	}
+
 	if (!t) {
 		x = mpd_new(ctx);
 		t = mpd_new(ctx);
@@ -1204,7 +1214,10 @@ void mpd_cos(mpd_t *m, const mpd_t *in_x, mpd_context_t *ctx)
 		n = mpd_new(ctx);
 	}
 
-	mpd_user_angle_to_radians(x, in_x);
+	if (mpd_mag_lessthan(in_x, -TRIG_CALC_DIGITS))
+		mpd_copy(x, zero, ctx);
+	else
+		mpd_user_angle_to_radians(x, in_x);
 
 	// x = mod(x, 2 * pi);
 	mpd_divmod(t, x, x, two_pi, ctx);
@@ -1273,6 +1286,10 @@ void mpd_cos(mpd_t *m, const mpd_t *in_x, mpd_context_t *ctx)
 
 	trace(EXEC, "cos iters: %d\n", i_n);
 
+	if (mpd_mag_lessthan(c, -TRIG_CALC_DIGITS)) {
+		mpd_copy(m, zero, ctx);
+		return;
+	}
 	if (negate)
 		mpd_copy_negate(m, c, ctx); // c = -c;
 	else
@@ -1282,6 +1299,12 @@ void mpd_cos(mpd_t *m, const mpd_t *in_x, mpd_context_t *ctx)
 void mpd_sin(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
 {
 	// ncos(x - (pi/2));
+
+	if (mpd_isspecial(x)) {
+		mpd_setspecial(m, MPD_NEG, MPD_NAN);
+		return;
+	}
+
 	static mpd_t *t;
 	if (!t) t = mpd_new(ctx);
 
@@ -1295,12 +1318,22 @@ void mpd_sin(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
 void mpd_tan(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
 {
 	// nsin(x) / ncos(x);
-	static mpd_t *s, *c;
-	if (!s) s = mpd_new(ctx);
-	if (!c) c = mpd_new(ctx);
 
-	mpd_cos(c, x, ctx);
+	if (mpd_isspecial(x)) {
+		mpd_setspecial(m, MPD_NEG, MPD_NAN);
+		return;
+	}
+
+	static mpd_t *s, *c;
+	if (!s) {
+		s = mpd_new(ctx);
+		c = mpd_new(ctx);
+	}
+
 	mpd_sin(s, x, ctx);
+	trace_mpd(EXEC, "tan called sin", s);
+	mpd_cos(c, x, ctx);
+	trace_mpd(EXEC, "tan called cos", c);
 	mpd_div(m, s, c, ctx);
 }
 
@@ -1312,6 +1345,12 @@ void mpd_atan(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 	static int atan_recurse;
 	if (max_a_r < atan_recurse)
 		max_a_r = atan_recurse;
+
+	if (mpd_isnan(ix)) {
+		mpd_setspecial(m, MPD_NEG, MPD_NAN);
+		return;
+	}
+
 
 	// NB: this routine is recursive, and these are all static.
 	static mpd_t *at, *xsq, *n, *two_n, *t, *denom, *tmp;
@@ -1428,6 +1467,12 @@ void mpd_atan(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 void mpd_acos(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
 {
 	// atan(sqrt(1 - x^2) / x);
+
+	if (mpd_isspecial(x)) {
+		mpd_setspecial(m, MPD_NEG, MPD_NAN);
+		return;
+	}
+
 	static mpd_t *t;
 	if (!t) t = mpd_new(ctx);
 
@@ -1447,6 +1492,12 @@ void mpd_acos(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
 void mpd_asin(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
 {
 	// atan(x / sqrt(1 - x^2));
+
+	if (mpd_isspecial(x)) {
+		mpd_setspecial(m, MPD_NEG, MPD_NAN);
+		return;
+	}
+
 	static mpd_t *t;
 	if (!t) t = mpd_new(ctx);
 
