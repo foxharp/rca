@@ -33,8 +33,12 @@ rca: rca.c
 		$(CFLAGS) -DGITVERSION=\"$${gver}\" \
 		rca.c $(LIBS)
 
-VALGRIND_CHECK := $(shell which valgrind >/dev/null && echo '-D DO_VALGRIND_CHECKS')
-CFLAGS += $(VALGRIND_CHECK)
+VALGRIND_CHECK := $(shell which valgrind >/dev/null && \
+			echo '-D DO_VALGRIND_CHECKS')
+ifneq ($(VALGRIND_CHECK),)
+ RUNVG=valgrind -q --leak-check=full
+ CFLAGS += $(VALGRIND_CHECK)
+endif
 
 
 # build-time check for whether editline is available:
@@ -181,8 +185,6 @@ pi_approximations:  # with and without rca_float
 	test $$(PATH=:$$PATH bash -c ". ./rca_float; fe '22 / 7 - pi'") = 0.0013
 	test $$(./rca "10 digits fixed ((355 / 113) - pi) q") = 0.0000002668
 
-# RUNVG=valgrind -q --leak-check=full
-# RUNVG=time
 
 gentest:
 	mkdir -p tests/tmp
