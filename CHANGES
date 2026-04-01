@@ -1,4 +1,43 @@
-v40 changes (03/27/2026
+
+
+v41 changes (04/01/2026)
+
+    implemented trig functions with taylor series using the mpdecimal
+    library.  cos and atan use the series, the rest use identity
+    equations.  the conversion to mpdecimal is now complete.
+
+    rationalized the use of DIGITS/max_digits for setting various
+    limits.  there are now separate cutoffs for a) user visibility
+    (i.e., rounding), b) some internal calculations (e.g., when to
+    consider a taylor series complete), and c) the full precision that
+    mpdecimal uses.  the 'a' level (30, by default) is "max_digits":
+    it's what the user sees, and can be adjusted using $RCA_DIGITS.
+    it controls display rounding, and also the precision used when
+    doing equality comparisons.  the 'b' level (4 more, or 34, by
+    default) is used by the trig functions, because they're so
+    sensitive to tiny input values.  the 'c' level (8 more, or 38, by
+    default) is what mpdecimal uses.  that feels like a lot of
+    headroom, but it's cheap.
+
+    added more protection against argument aliasing when using the
+    mpdecimal API internally.  if you call foo(a, a, ctx), and foo is
+    declared as foo(r, x, ctx), then if foo() modifies r, perhaps with
+    an intermediate result, before finishing its calculations, it will
+    change the value of x, which may still be needed.  protect by
+    taking a local copy of x inside of foo(), and using that rather
+    than the original x.
+
+    valgrind now auto-enables (for tests) if it's present on the system
+
+    adjusted precedence command output so all single char commands are
+    first on line.
+
+    adjusted defaults in rca_float/rca_cofloat
+
+    proofread the man page again
+
+
+v40 changes (03/27/2026)
 
     (intentional gap in the release numbers, in case I feel the need
     to do more changes to the floating point version.)
