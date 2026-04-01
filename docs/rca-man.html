@@ -31,20 +31,21 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        provide floating point support.
 
        Whitespace in <span style="font-weight:bold;">rca</span>'s input is often optional, though some cases
-       will cause ambiguity.  Any text following (and including) a <span style="font-weight:bold;">#</span>
-       character is ignored as a comment.
+       will cause ambiguity.  A <span style="font-weight:bold;"># </span>character starts a comment.  The rest
+       of the line is ignored.
 
        The value at the top of the stack can be shown with the <span style="font-weight:bold;">p </span>command,
-       and the entire stack with <span style="font-weight:bold;">P</span>.  Any time <span style="font-weight:bold;">rca </span>prints the stack, the
-       top of stack will be printed last, i.e., closest to the bottom of
-       the screen.
+       and the entire stack with <span style="font-weight:bold;">P</span>.  When <span style="font-weight:bold;">rca </span>prints the stack, the top
+       of stack will be printed last, i.e., closest to the bottom of the
+       screen.
 
-       Autoprinting will print the top of the stack after most input
-       lines.  This is on by default; it can be toggled off with <span style="font-weight:bold;">0</span>
-       <span style="font-weight:bold;">autoprint </span>(or <span style="font-weight:bold;">0 ap</span>).
+       Autoprinting will print the value at the top of the stack after
+       most input lines.  This is on by default; it can be toggled off
+       with <span style="font-weight:bold;">0 autoprint </span>(or <span style="font-weight:bold;">0 ap</span>).
 
        Depending on how <span style="font-weight:bold;">rca </span>is built, command-line editing, command
-       history, and command completion may be available.
+       history, and command completion may be available, using either the
+       editline or readline library.
 
 <span style="font-weight:bold;">REVERSE POLISH NOTATION</span>
        Numbers entered by the user are pushed onto a stack.  An operator
@@ -87,13 +88,12 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
               <span style="font-weight:bold;">rca </span>commands for printing, quitting, configuration, etc,
               those commands (and any other valid RPN) must be entered
               following a <span style="font-weight:bold;">: </span>(colon) character.  In full-time infix mode,
-              use <span style="font-weight:bold;">: q </span>to quit, <span style="font-weight:bold;">:p </span>to print (the whitespace is optional),
-              <span style="font-weight:bold;">: config </span>to view configuration, <span style="font-weight:bold;">: H zf ra </span>to switch to hex
-              mode with zero-fill and right alignment, etc.  All infix
-              expressions put a result on the stack, so while in full-
-              time infix mode, the stack will slowly grow.  It can be
-              viewed, of course, with <span style="font-weight:bold;">:P</span>.  Use <span style="font-weight:bold;">:0 infix </span>to leave full-
-              time infix mode.
+              use <span style="font-weight:bold;">:q </span>to quit, <span style="font-weight:bold;">:p </span>to print, <span style="font-weight:bold;">:config </span>to view configuration,
+              <span style="font-weight:bold;">:H zf ra </span>to switch to hex mode with zero-fill and right
+              alignment, etc.  All infix expressions put a result on the
+              stack, so while in full-time infix mode, the stack will
+              slowly grow.  It can be viewed, of course, with <span style="font-weight:bold;">:P</span>.  Use <span style="font-weight:bold;">:0</span>
+              <span style="font-weight:bold;">infix </span>to leave full-time infix mode.
 
        Infix expressions are evaluated with fairly typical rules of
        precedence (see OPERATOR PRECEDENCE below).  All input number
@@ -107,8 +107,8 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        follow the operator.  For two operand operators, one operand will
        be to either side of the operator.  Exponentiation would be
        written as <span style="font-weight:bold;">( 3 ** 2 )</span>, (giving 9), and bit-setting as <span style="font-weight:bold;">(2 setb 3)</span>
-       (giving 10).  The expression <span style="font-weight:bold;">(sin 180 == cos 90) </span>yields the value
-       1, i.e. &quot;true&quot;.
+       (giving 0x0a, or 10).  The expression <span style="font-weight:bold;">(sin 180 == cos 90) </span>yields
+       the value 1, i.e. &quot;true&quot;.
 
        The <span style="font-weight:bold;">lastx </span>(or <span style="font-weight:bold;">lx</span>) operator can be used in an infix expression.  It
        returns the value of <span style="font-style:italic;">x</span> (i.e., the top of stack) prior to the
@@ -140,26 +140,28 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        <span style="font-weight:bold;">D </span>(signed decimal), <span style="font-weight:bold;">H </span>(hex), <span style="font-weight:bold;">O </span>(octal), or <span style="font-weight:bold;">B </span>(binary).
 
        Math is always performed using signed arithmetic in all modes, and
-       most math is done using &quot;decimal&quot; operands.  The system's floating
-       point unit is not used.  The various integer modes differ only in
-       how values are displayed by default.  They all differ from
-       floating point in that in integer mode, all stack values are
-       masked to the current word width, and sign extended, if necessary
-       (because the word width may be narrower than the native width).
+       most math is done using multi-precision floating point &quot;decimal&quot;
+       operands.  The system's floating point unit is not used.  The
+       various integer modes differ only in how values are displayed by
+       default.  They all differ from floating point in that in integer
+       mode, all stack values are masked to the currently set word width,
+       and fractional parts are discarded.
 
-       The input base of a number is independent of the mode, and
-       controlled entirely by how it is entered:  10, 0xa, 0o12, 0b1010
-       and 1e01 are all the same value.  The mode does not affect how
-       input is done:  for example, hex values must include the &quot;0x&quot;
-       prefix even in <span style="font-weight:bold;">H </span>mode.  Note that octal <span style="font-style:italic;">must</span> be entered using the
-       &quot;0o&quot; prefix, which is also how octal will be printed.  The more
-       traditional &quot;0&quot; prefix will be interpreted as decimal.
+       The input base of a number is independent of the calculator mode,
+       and is controlled entirely by how it is entered:  10, 0xa, 0o12,
+       0b1010 and 1e01 are all the same value.  The calculator mode has
+       no affect how input is done:  for example, hex values must include
+       the &quot;0x&quot; prefix even in <span style="font-weight:bold;">H </span>mode, and may also be used when in float
+       mode.  Note that octal <span style="font-style:italic;">must</span> be entered using the &quot;0o&quot; prefix,
+       which is also how octal will be printed.  The more traditional &quot;0&quot;
+       prefix will be interpreted as decimal.
 
    <span style="font-weight:bold;">Floating point</span>
        In floating point mode (i.e., <span style="font-weight:bold;">F </span>mode), all storage and operations
        use mpdecimal (&quot;Multi-precision Decimal&quot;) operands, resulting in
        far more digits of accuracy than the C floating point math library
-       would allow.
+       would allow.  (mpdecimal is also used in the integer modes, except
+       for the bitwise operators.)
 
        Because floating point (even with decimal math) is inherently
        inexact, values are sometimes calculated which are <span style="font-style:italic;">almost</span> correct
@@ -197,8 +199,8 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        <span style="font-weight:bold;">digits </span>will allow setting a value as low as 0, since this can be
        useful with <span style="font-weight:bold;">fixed </span>format (to print no fractional part whatever).
        The <span style="font-weight:bold;">auto </span>and <span style="font-weight:bold;">eng </span>formats have their own minimums (1, and 3,
-       respectively) which they enforce silently.  Requesting -1 digits
-       will choose the system maximum.
+       respectively) which they enforce silently.  Requesting <span style="font-weight:bold;">-1 digits</span>
+       will choose the calculator maximum.
 
        The maximum allowed <span style="font-weight:bold;">digits </span>value is configured when rca is built,
        but can be modified by setting an environment variable at startup.
@@ -206,12 +208,12 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
 
    <span style="font-weight:bold;">Integer</span>
        Integer mode is selected with any of the following commands, which
-       also choose the default display format: <span style="font-weight:bold;">D </span>(signed decimal), <span style="font-weight:bold;">H</span>
+       also choose the default printing format: <span style="font-weight:bold;">D </span>(signed decimal), <span style="font-weight:bold;">H</span>
        (hex), <span style="font-weight:bold;">O </span>(octal), or <span style="font-weight:bold;">B </span>(binary).  The default printing format is
        used by the <span style="font-weight:bold;">p</span>, <span style="font-weight:bold;">P</span>, and <span style="font-weight:bold;">autoprint </span>commands.  Regardless of the
-       default format, individual values can be viewed at any time in any
-       format by using <span style="font-weight:bold;">f</span>, <span style="font-weight:bold;">d</span>, <span style="font-weight:bold;">u</span>, <span style="font-weight:bold;">h</span>, <span style="font-weight:bold;">o</span>, and <span style="font-weight:bold;">b</span>, which correspond to the
-       similarly named modes.  When using these display commands, the
+       default format, individual values can be viewed in any format,
+       from any mode, by using <span style="font-weight:bold;">f</span>, <span style="font-weight:bold;">d</span>, <span style="font-weight:bold;">u</span>, <span style="font-weight:bold;">h</span>, <span style="font-weight:bold;">o</span>, and <span style="font-weight:bold;">b</span>, which correspond to
+       the similarly named modes.  When using these display commands, the
        value will be printed as if you had entered the corresponding
        (uppercase) mode, including any masking due to word width.  (The
        '<span style="font-weight:bold;">u</span>' command prints as unsigned decimal. There is no corresponding
@@ -257,13 +259,14 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        reference, either by assigning a value ( <span style="font-weight:bold;">_var = 42</span>), or by using
        it ( <span style="font-weight:bold;">_var + 17</span>).  Variables' names must start with an underscore
        character.  In RPN, simply naming the variable will push its value
-       to the stack.  To write to a variable in RPN, the &quot;assign to&quot;
+       to the stack.  To assign to a variable in RPN, the &quot;assign to&quot;
        operator (<span style="font-weight:bold;">=</span>) must be used immediately before naming the variable.
        If <span style="font-weight:bold;">= </span>is not followed by a variable name, it's a no-op.  (This is
        the only &quot;stateful&quot; RPN operation.)
 
        The following two sequences are equivalent.  Both set 4 variables:
-       _w, _l, _area, and _diagonal.
+       _w, _l, _area, and _diagonal.  It works best to say &quot;assign to&quot;
+       for <span style="font-weight:bold;">= </span>when reading the RPN version.
            <span style="font-weight:bold;">3=_w 4=_l * = _area _l 2 ^ _w 2 ^ + sqrt = _diagonal</span>
        and
            <span style="font-weight:bold;">(_w=3; _l=4; _area=_l * _w; _diagonal = sqrt (_w^2 + _l^2))</span>
@@ -281,13 +284,8 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        either method.  Any output from commands run via <span style="font-weight:bold;">$RCA_INIT </span>is
        discarded.  Also on startup, <span style="font-weight:bold;">rca </span>will use the <span style="font-weight:bold;">$RCA_DIGITS </span>variable
        to set the maximum number of displayed digits.  That value is
-       clamped into the range 2 to 100.  The current default is the
-       number of significant digits available from the system's &quot;long
-       double&quot; data type.  This value is chosen to match the precision
-       available from the trig functions (sin, cos, etc), which are
-       implemented using standard C library calls.  This results in 18
-       significant digits for modern PC architectures running Linux/BSD,
-       but might be 33 on ARM64 Linux, or only 15 on another OS.)
+       clamped into the range 2 to 100.  The current built-in default is
+       30 digits.
 
        Many of the commands that control <span style="font-weight:bold;">rca</span>'s operation and appearance
        have been described elsewhere, but a concise list may be useful:
@@ -309,12 +307,12 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
 
               <span style="font-weight:bold;">digits </span>chooses the number of digits used by the floating
               point formats.  The maximum is the number of significant
-              digits supported by the system.  Selecting a count of -1
-              will select the system maxiumum.  (Startup:  6)
+              digits supported by the calculator.  Selecting a count of
+              -1 will select the calculator's maxiumum.  (Startup:  6)
 
               <span style="font-weight:bold;">width </span>(or <span style="font-weight:bold;">bits</span>) chooses the size of integers, in bits.
-              Selecting a size of -1 will select the system maxiumum.
-              (Startup: system maximum, likely 64).
+              Selecting a size of -1 will select the maxiumum.  (Startup:
+              calculator maximum, likely 64).
 
               <span style="font-weight:bold;">separators </span>(or <span style="font-weight:bold;">sep</span>) toggles whether output will include
               separators (usually ',', but see the LOCALE section) for
@@ -356,11 +354,11 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        the last on its line of input.
 
 <span style="font-weight:bold;">HELP</span>
-       The <span style="font-weight:bold;">help </span>or <span style="font-weight:bold;">?  </span>gives a complete list of operators/commands.  If
-       $PAGER is set in the environment, the shell command it names will
-       be used to display the help text.  (The command must read the text
-       from standard input.)  Otherwise the text will be sent directly to
-       stdout.
+       The <span style="font-weight:bold;">help </span>or <span style="font-weight:bold;">?  </span>command gives a complete list of
+       operators/commands.  If $PAGER is set in the environment, the
+       shell command it names will be used to display the help text.
+       (The command must read the text from standard input.)  Otherwise
+       the text will be sent directly to stdout.
 
        The <span style="font-weight:bold;">state </span>command will print a summary of <span style="font-weight:bold;">rca</span>'s current state.
 
@@ -371,11 +369,11 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        All others group left to right.  (This list has no meaning for
        RPN.)
 
-         1      <span style="font-weight:bold;">( ) ;</span>
-         2  R   <span style="font-weight:bold;">~ ! + - chs negate recip sqrt sin cos tan asin acos</span>
-                 <span style="font-weight:bold;">atan exp ln log2 log10 abs frac int i2mm mm2i ft2m</span>
-                 <span style="font-weight:bold;">m2ft mi2km km2mi f2c c2f oz2g g2oz oz2ml ml2oz q2l</span>
-                 <span style="font-weight:bold;">l2q d2r r2d dd2dms dms2dd mpg2l100km nop</span>
+         1      <span style="font-weight:bold;">( ; )</span>
+         2  R   <span style="font-weight:bold;">+ - ~ ! bitc chs negate recip sqrt sin cos tan asin acos</span>
+                    <span style="font-weight:bold;">atan exp ln log2 log10 abs frac int i2mm mm2i ft2m</span>
+                    <span style="font-weight:bold;">m2ft mi2km km2mi f2c c2f oz2g g2oz oz2ml ml2oz q2l</span>
+                    <span style="font-weight:bold;">l2q d2r r2d dd2dms dms2dd mpg2l100km</span>
          3  R   <span style="font-weight:bold;">^ **</span>
          4      <span style="font-weight:bold;">atan2</span>
          5      <span style="font-weight:bold;">* x / %</span>
@@ -417,7 +415,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        mark or the end of stack.  The copied entries are undisturbed.
        Its complement, <span style="font-weight:bold;">restore</span>, will set the stack mark at the top of
        stack, and then push the entire saved snapshot.  (The mark is set
-       as a convenience for later uses of the restored entries.)  A full
+       as a convenience for later use of the restored entries.)  A full
        exact copy of the stack is ensured by <span style="font-weight:bold;">-1 mark snapshot </span>followed
        later by <span style="font-weight:bold;">clear restore</span>.  The <span style="font-weight:bold;">clearsnapshot </span>command will discard
        any existing snapshot.
@@ -445,8 +443,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
 
                      <span style="font-weight:bold;">((-3 ^ 2) == ((-3) ^ 2))) </span><span style="font-style:italic;font-weight:bold;"></span><span style="font-style:italic;">#</span> <span style="font-style:italic;">i.e.,</span> <span style="font-style:italic;">9</span>
 
-              <span style="font-weight:bold;">modulo </span>is a floating point operation, not integer.  It uses
-              the C fmodl() library.
+              <span style="font-weight:bold;">modulo </span>is a floating point operation, not integer.
 
               <span style="font-weight:bold;">frac </span>applied to negative values will give a negative
               result.
@@ -454,11 +451,11 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
               In an infix expression, operators with two arguments expect
               them to the left and right.  This is intuitive for symbolic
               operators (as in <span style="font-weight:bold;">1 + 2 </span>), but for named operators it can
-              look odd.  <span style="font-weight:bold;">(0xf0 setb 3 )</span>, for example, sets bit 3 in 0xf0.
-              <span style="font-weight:bold;">atan2 </span>works similarly.  This expression: <span style="font-weight:bold;">(sin 30 atan2 cos</span>
-              <span style="font-weight:bold;">30) </span>could also be written as <span style="font-weight:bold;">((sin 30) atan2 (cos 30)) </span>and
-              will evaluate to &quot;30&quot;.  (In RPN, this would be <span style="font-weight:bold;">30 sin 30</span>
-              <span style="font-weight:bold;">cos atan2</span>.)
+              look odd.  <span style="font-weight:bold;">(0xf0 setb 3) </span>sets bit 3 in 0xf0.  <span style="font-weight:bold;">atan2 </span>works
+              similarly.  This expression: <span style="font-weight:bold;">(sin 30 atan2 cos 30) </span>could
+              also be written as <span style="font-weight:bold;">((sin 30) atan2 (cos 30)) </span>and will
+              evaluate to &quot;30&quot;.  (In RPN, this would be <span style="font-weight:bold;">30 sin 30 cos</span>
+              <span style="font-weight:bold;">atan2</span>.)
 
               The trigonometric functions (<span style="font-weight:bold;">sin</span>, <span style="font-weight:bold;">cos</span>, <span style="font-weight:bold;">tan</span>, <span style="font-weight:bold;">asin</span>, <span style="font-weight:bold;">acos</span>,
               <span style="font-weight:bold;">atan</span>, and <span style="font-weight:bold;">atan2</span>) take and return angles in degrees by
@@ -475,7 +472,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
 
               <span style="font-weight:bold;">dd2dms </span>and <span style="font-weight:bold;">dms2dd </span>convert between decimal degrees and
               degrees/minutes/seconds.  The d/m/s format (ab)uses the
-              standard number format: a) whole degrees are left alone, b)
+              floating point format: a) whole degrees are left alone, b)
               minutes use the two digits immediately following the
               decimal, c) seconds (and fractions) come next, starting at
               the &quot;thousandths&quot; digit.  So 40°41′21.3″N, 74°2′40″W would
@@ -487,9 +484,9 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
               least 4 fractional digits, to ensure seeing the DMS format
               correctly.
 
-              <span style="font-weight:bold;">nop </span>does nothing.  If used at the end of a line, <span style="font-weight:bold;">nop </span>has
-              the side effect of suppressing normal printed output, which
-              can be useful in scripts.
+              <span style="font-weight:bold;">nop </span>does nothing.  If used as the last command on a line,
+              <span style="font-weight:bold;">nop </span>has the side effect of suppressing normal printed
+              output, which can be useful in scripts.
 
               The <span style="font-weight:bold;">: </span>(colon) command does nothing, but signifies to the
               parser that the rest of the line should be interpreted as
@@ -497,8 +494,8 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
               accomplish printing and mode changing, or to quit.
 
 <span style="font-weight:bold;">LOCALE</span>
-       The locale is consulted for just a few things:  the decimal point,
-       the thousands separator (and grouping specification), and the
+       The locale is consulted for just three things:  the decimal point,
+       the thousands separator and grouping specification, and the
        currency symbol.  If using the minimal C/POSIX locale, defaults
        will be provided:  the thousands separator will be set to ',' (at
        every 3 digits), and the currency symbol to '$'.
@@ -506,12 +503,12 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        The locale always chooses the decimal point.  Usually this is '.',
        but is also commonly ','.
 
-       The thousands separator will be stripped from all input, and
-       optionally used for numeric grouping of output,
+       The thousands separator will be stripped from all input, and on
+       output will optionally be used for numeric grouping.
 
-       The currency symbol will first be checked to see if its value
-       occurs anywhere in the name of any <span style="font-weight:bold;">rca </span>command or operator.  If
-       not, it will be stripped from all input.
+       The currency symbol will be checked to see if its value occurs
+       anywhere in the name of any <span style="font-weight:bold;">rca </span>command or operator.  If not, it
+       will be stripped from all input.
 
 <span style="font-weight:bold;">DATA TYPES, OVERFLOW, ACCURACY</span>
        All stack values in <span style="font-weight:bold;">rca </span>are stored in mpdecimal format.  This is
@@ -527,8 +524,8 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        the original value is unchanged.  Execution will proceed after the
        warning unless <span style="font-weight:bold;">errorexit </span>has been enabled.
 
-       Some floating point operations give results which are invalid
-       (&quot;nan&quot;, i.e., &quot;not a number&quot;) or &quot;+inf&quot; or &quot;-inf&quot; (i.e.,
+       Some floating point operations give results which are invalid:
+       &quot;nan&quot; (i.e., &quot;not a number&quot;), or &quot;+inf&quot; or &quot;-inf&quot; (i.e.,
        infinity).  When converting to integer mode, these values will be
        preserved, along with their semantics:  any computation involving
        nan will return nan, and any conditionals involving nan will
@@ -543,16 +540,9 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        should be 0 may instead have a very tiny value, or two numbers
        which should be equal may differ by an insignificant amount.  <span style="font-weight:bold;">rca</span>
        helps by rounding displayed values to <span style="font-weight:bold;">rca</span>'s maximum precision.
-       The internal representation (which uses a few digits more) of
-       these values remains unchanged -- <span style="font-style:italic;">only</span> the printed output (or the
+       The internal representation (using a few digits more) of these
+       values remains unchanged -- <span style="font-style:italic;">only</span> the printed output (or the
        comparison) is affected.
-
-       Finally, as noted earlier, the trig functions (sin, cos, tan,
-       asin, acos, atan, atan2) are not available from the mpdecimal
-       library, and are implemented instead using C library functions.
-       They thus limit the default maximum precision.  RCA_DIGITS can
-       raise that limit, but using the trig functions in that case may
-       introduce big errors.
 
 <span style="font-weight:bold;">EXIT STATUS</span>
        <span style="font-weight:bold;">rca </span>will normally exit with status 0 or 1.  To satisfy normal
@@ -587,7 +577,8 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
                   local output exitcode
 
                   output=$(
-                      RCA_INIT=&quot;$RCA_INIT_DEFAULTS ${RCA_INIT:-}&quot;             rca &quot;$*&quot; q 2&gt;&amp;1
+                      RCA_INIT=&quot;$RCA_INIT_DEFAULTS ${RCA_INIT:-}&quot; \
+                          rca &quot;$*&quot; q 2&gt;&amp;1
                       )
                   exitcode=$?
 
@@ -619,7 +610,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        Paul Fox created <span style="font-weight:bold;">rca </span>(formerly called &quot;ca&quot;) very slowly over a
        span of decades, starting in 1993.
 
-                       version v40     Mar 27, 2026                <span style="font-style:italic;">rca</span>(1)
+                        version v41     Apr 1, 2026                <span style="font-style:italic;">rca</span>(1)
 </pre>
 </body>
 </html>
