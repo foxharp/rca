@@ -1340,3 +1340,20 @@ lx == 10 * e
  warning: extra parentheses
 ((0)
  error: missing parentheses
+
+clear 15 digits
+ Floating formats configured for 15 digits.
+1 degrees 0 ra
+ Right alignment of integer modes is now off
+0 asin
+ 0
+.5 asin
+ 30
+1 asin
+ 90
+-.5 asin
+ -30
+-.999 asin
+ -87.4374412668769
+-1 asin
+ -90
