@@ -519,15 +519,14 @@ error(const char *fmt, ...)
 boolean
 mpd_to_integer(mpd_t *r, mpd_t *a)
 {
-	mpd_t *t, *q;
-	t = mpd_new(ctx);
-	q = mpd_new(ctx);
+	static mpd_t *t, *q;
+	if (!t) {
+		t = mpd_new(ctx);
+		q = mpd_new(ctx);
+	}
 
 	mpd_trunc(t, a, ctx); // remove fractional part
 	mpd_divmod(q, r, t, int_modulo, ctx); // modulo word-length
-
-	mpd_del(q);
-	mpd_del(t);
 
 	return (mpd_cmp(r, a, ctx) != 0);
 }
@@ -862,21 +861,26 @@ divide(void)
 	return mpd_2_op_shell(mpd_div);
 }
 
-void mpd_mod(mpd_t *m, const mpd_t *y, const mpd_t *x, mpd_context_t *ctx)
+void mpd_mod(mpd_t *m, const mpd_t *iy, const mpd_t *ix, mpd_context_t *ctx)
 {
+	static mpd_t *x, *y, *q, *t;
+	if (!x) {
+		x = mpd_new(ctx);
+		y = mpd_new(ctx);
+		q = mpd_new(ctx);
+		t = mpd_new(ctx);
+	}
+	mpd_copy(x, ix, ctx);
+	mpd_copy(y, iy, ctx);
+
 	trace_mpd(EXEC, "y is ", y);
 	trace_mpd(EXEC, "x is ", x);
-
-	mpd_t *q = mpd_new(ctx);
-	mpd_t *t = mpd_new(ctx);
 
 	mpd_div(q, y, x, ctx);  // divide
 	mpd_trunc(t, q, ctx);   // truncate
 	mpd_mul(t, t, x, ctx);  // multiply the truncated value by divisor
 	mpd_sub(m, y, t, ctx);  // subtract from original dividend
 
-	mpd_del(t);
-	mpd_del(q);
 }
 
 opreturn
@@ -1192,13 +1196,13 @@ mpd_user_angle_to_radians(mpd_t *rads, const mpd_t *user)
 		mpd_copy(rads, user, ctx);
 }
 
-void mpd_cos(mpd_t *m, const mpd_t *in_x, mpd_context_t *ctx)
+void mpd_cos(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 {
 
 	static mpd_t *x, *t, *nt, *c, *xsq, *denom, *n, *two_n;
 	int flip, negate;
 
-	if (mpd_isspecial(in_x)) {
+	if (mpd_isspecial(ix)) {
 		mpd_setspecial(m, MPD_NEG, MPD_NAN);
 		return;
 	}
@@ -1214,10 +1218,10 @@ void mpd_cos(mpd_t *m, const mpd_t *in_x, mpd_context_t *ctx)
 		n = mpd_new(ctx);
 	}
 
-	if (mpd_mag_lessthan(in_x, -TRIG_CALC_DIGITS))
+	if (mpd_mag_lessthan(ix, -TRIG_CALC_DIGITS))
 		mpd_copy(x, zero, ctx);
 	else
-		mpd_user_angle_to_radians(x, in_x);
+		mpd_user_angle_to_radians(x, ix);
 
 	// x = mod(x, 2 * pi);
 	mpd_divmod(t, x, x, two_pi, ctx);
@@ -1366,7 +1370,6 @@ void mpd_atan(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 	}
 
 	mpd_t *x = mpd_new(ctx);  // not static, due to mpd_atan() recursion
-
 	mpd_copy(x, ix, ctx);
 
 	/*
@@ -1466,11 +1469,18 @@ void mpd_atan(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 }
 
 void
-mpd_atan2(mpd_t *m, const mpd_t *y, const mpd_t *x, mpd_context_t *ctx)
+mpd_atan2(mpd_t *m, const mpd_t *iy, const mpd_t *ix, mpd_context_t *ctx)
 {
 	int rx, ry;
-	static mpd_t *tmp;
-	if (!tmp) tmp = mpd_new(ctx);
+
+	static mpd_t *tmp, *x, *y;
+	if (!tmp) {
+		tmp = mpd_new(ctx);
+		x = mpd_new(ctx);
+		y = mpd_new(ctx);
+	}
+	mpd_copy(x, ix, ctx);
+	mpd_copy(y, iy, ctx);
 
 	rx = mpd_cmp(x, zero, ctx);
 	ry = mpd_cmp(y, zero, ctx);
@@ -1501,17 +1511,21 @@ mpd_atan2(mpd_t *m, const mpd_t *y, const mpd_t *x, mpd_context_t *ctx)
 	mpd_radians_to_user_angle(m, m);
 }
 
-void mpd_acos(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
+void mpd_acos(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 {
 	// atan(sqrt(1 - x^2) / x);
 
-	if (mpd_isspecial(x)) {
+	if (mpd_isspecial(ix)) {
 		mpd_setspecial(m, MPD_NEG, MPD_NAN);
 		return;
 	}
 
-	static mpd_t *t;
-	if (!t) t = mpd_new(ctx);
+	static mpd_t *t, *x;
+	if (!t) {
+		x = mpd_new(ctx);
+		t = mpd_new(ctx);
+	}
+	mpd_copy(x, ix, ctx);
 
 	mpd_mul(t, x, x, ctx);
 	mpd_sub(t, one, t, ctx);
@@ -1534,17 +1548,22 @@ void mpd_acos(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
 #endif
 }
 
-void mpd_asin(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
+void mpd_asin(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 {
 	// atan(x / sqrt(1 - x^2));
 
-	if (mpd_isspecial(x)) {
+	if (mpd_isspecial(ix)) {
 		mpd_setspecial(m, MPD_NEG, MPD_NAN);
 		return;
 	}
 
-	static mpd_t *t;
-	if (!t) t = mpd_new(ctx);
+	static mpd_t *t, *x;
+	if (!t) {
+		x = mpd_new(ctx);
+		t = mpd_new(ctx);
+	}
+	mpd_copy(x, ix, ctx);
+
 
 	mpd_mul(t, x, x, ctx);
 	mpd_sub(t, one, t, ctx);
