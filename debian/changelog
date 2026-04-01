@@ -1,3 +1,9 @@
+rca (41-1) unstable; urgency=medium
+
+  * All mathematics now done using the mpdecimal multi-precision library, for better accuracy.
+
+ -- Paul Fox <pgf@foxharp.boston.ma.us>  Wed, 01 Apr 2026 18:00:11 -0400
+
 rca (22-1) unstable; urgency=medium
 
   * First packaged version of rca
