@@ -99,6 +99,11 @@ docs/index.html.new: README.md
 	docs/html_preamble >docs/index.html.new
 	docs/gfm README.md >>docs/index.html.new
 
+# target for testing/proofreading only.  all we deploy is the .md file.
+docs/branch_info.html.new: BRANCH_INFO.md
+	docs/html_preamble >docs/branch_info.html.new
+	docs/gfm BRANCH_INFO.md >>docs/branch_info.html.new
+
 docs/rca-man.html.new: rca.1
 	MAN_KEEP_FORMATTING=1 MANWIDTH=75 \
 	    man --no-justification --no-hyphenation --local-file rca.1 | \
