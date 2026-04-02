@@ -157,7 +157,7 @@ int g_argc;
 char **g_argv;
 
 const mpd_t *pi, *two_pi, *pi_over_2, *e,
-	*zero, *one, *two, *half, *ninety, *oneeighty;
+	*zero, *one, *two, *point3, *ninety, *oneeighty;
 
 /* internal representation of operands on the stack.
  * numbers are always stored as mpdecimals, even when we're in integer
@@ -272,11 +272,11 @@ int max_digits = USERDIGITS;  // may be overridden by $RCA_DIGITS
  * the next term is less than this cutoff: (1e-NN).  Also at the input
  * and output of the cosine routine, if we're within this cutoff of zero,
  * we set (the input or ouput) to zero */
-#define TRIG_CALC_DIGITS    (max_digits+4)
+#define TRIG_CALC_DIGITS    (max_digits+5)
 
 /* working precision -- how mpdecimal is initialized, and what the
  * calculator really uses */
-#define MPDECIMAL_DIGITS    (max_digits+8)
+#define MPDECIMAL_DIGITS    (max_digits+10)
 
 /* there's one more level of precision, which doesn't show up here.
  * when calculating some initial values which remain constant through
@@ -405,8 +405,8 @@ mpd_stuff(void)
 	two = mpd_new(ctx);
 	mpd_set_string((mpd_t *)two, "2", ctx);
 
-	half = mpd_new(ctx);
-	mpd_set_string((mpd_t *)half, ".5", ctx);
+	point3 = mpd_new(ctx);
+	mpd_set_string((mpd_t *)point3, ".3", ctx);
 
 	ninety = mpd_new(ctx);
 	mpd_set_string((mpd_t *)ninety, "90", ctx);
@@ -1439,7 +1439,7 @@ mpd_atan(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 	 *	 return 2 * atan(x / (1 + sqrt(1 + x * x)));
 	 */
 	mpd_copy_abs(tmp, x, ctx);
-	if (mpd_cmp(tmp, half, ctx) > 0) { // |x| > .5
+	if (mpd_cmp(tmp, point3, ctx) > 0) { // |x| > .5
 		mpd_mul(xsq, x, x, ctx);  // xsq = x * x
 		mpd_add(m, one, xsq, ctx);    // m = 1 + x*x
 		mpd_sqrt(m, m, ctx);	    // m = sqrt(1+x*x)
