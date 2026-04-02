@@ -1197,7 +1197,7 @@ use_degrees(void)
 }
 
 void
-mpd_radians_to_degrees(mpd_t *r, const mpd_t *a)
+mpd_radians_to_degrees(mpd_t *r, const mpd_t *a, mpd_context_t *ctx)
 {
 	// return (angle * 180.0L) / pi;
 	mpd_mul(r, a, oneeighty, ctx);
@@ -1205,7 +1205,7 @@ mpd_radians_to_degrees(mpd_t *r, const mpd_t *a)
 }
 
 void
-mpd_degrees_to_radians(mpd_t *r, const mpd_t *a)
+mpd_degrees_to_radians(mpd_t *r, const mpd_t *a, mpd_context_t *ctx)
 {
 	// return (angle * pi) / 180.0L;
 	mpd_mul(r, a, pi, ctx);
@@ -1213,23 +1213,22 @@ mpd_degrees_to_radians(mpd_t *r, const mpd_t *a)
 }
 
 void
-mpd_radians_to_user_angle(mpd_t *user, const mpd_t *rads)
+mpd_radians_to_user_angle(mpd_t *user, const mpd_t *rads, mpd_context_t *ctx)
 {
 	if (trig_degrees)
-		mpd_radians_to_degrees(user, rads);
+		mpd_radians_to_degrees(user, rads, ctx);
 	else
 		mpd_copy(user, rads, ctx);
 }
 
 void
-mpd_user_angle_to_radians(mpd_t *rads, const mpd_t *user)
+mpd_user_angle_to_radians(mpd_t *rads, const mpd_t *user, mpd_context_t *ctx)
 {
 	if (trig_degrees)
-		mpd_degrees_to_radians(rads, user);
+		mpd_degrees_to_radians(rads, user, ctx);
 	else
 		mpd_copy(rads, user, ctx);
 }
-
 
 void
 mpd_cos(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
@@ -1257,7 +1256,7 @@ mpd_cos(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 	if (mpd_mag_lessthan(ix, -TRIG_CALC_DIGITS))
 		mpd_copy(x, zero, ctx);
 	else
-		mpd_user_angle_to_radians(x, ix);
+		mpd_user_angle_to_radians(x, ix, ctx);
 
 	// x = mod(x, 2 * pi);
 	mpd_divmod(t, x, x, two_pi, ctx);
@@ -1429,7 +1428,7 @@ mpd_atan(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 		if (sign < 0)
 			mpd_sub(m, m, pi, ctx); // m = m - pi
 		if (!atan_recurse)
-			mpd_radians_to_user_angle(m, m);
+			mpd_radians_to_user_angle(m, m, ctx);
 		mpd_del(x);
 		return;
 	}
@@ -1452,7 +1451,7 @@ mpd_atan(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 		atan_recurse--;
 		mpd_mul(m, m, two, ctx);    // m = 2 * m
 		if (!atan_recurse)
-			mpd_radians_to_user_angle(m, m);
+			mpd_radians_to_user_angle(m, m, ctx);
 		mpd_del(x);
 		return;
 	}
@@ -1499,7 +1498,7 @@ mpd_atan(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 	trace_mpd(EXEC, "at after loop: ", at);
 
 	if (!atan_recurse)
-		mpd_radians_to_user_angle(at, at);
+		mpd_radians_to_user_angle(at, at, ctx);
 
 	mpd_del(x);
 
@@ -1547,7 +1546,7 @@ mpd_atan2(mpd_t *m, const mpd_t *iy, const mpd_t *ix, mpd_context_t *ctx)
 		}
 	}
 
-	mpd_radians_to_user_angle(m, m);
+	mpd_radians_to_user_angle(m, m, ctx);
 }
 
 void
@@ -3445,7 +3444,7 @@ units_deg_rad(void)
 		return BADOP;
 
 	set_lastx(a);
-	mpd_degrees_to_radians(a, a);
+	mpd_degrees_to_radians(a, a, ctx);
 	mpush(a);
 
 	return GOODOP;
@@ -3460,7 +3459,7 @@ units_rad_deg(void)
 		return BADOP;
 
 	set_lastx(a);
-	mpd_radians_to_degrees(a, a);
+	mpd_radians_to_degrees(a, a, ctx);
 	mpush(a);
 
 	return GOODOP;
