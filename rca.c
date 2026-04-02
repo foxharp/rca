@@ -156,10 +156,6 @@ typedef unsigned long long ull_t;
 int g_argc;
 char **g_argv;
 
-/* 101 digits, not including the '.' */
-char *pi_val = "3.1415926535897932384626433832795028841971693993751"
-	       "058209749445923078164062862089986280348253421170679";
-
 const mpd_t *pi, *two_pi, *pi_over_2, *e,
 	*zero, *one, *two, *half, *ninety, *oneeighty;
 
@@ -260,19 +256,33 @@ boolean digitseparators = 1;
 /* in the absence of an $RCA_DIGITS environment variable, the
  * definition of USERDIGITS sets the number of significant digits for
  * the calculator.  the user may opt not to see them all, but can if
- * they choose.  */
+ * they choose.  once the calculator is running, this limit can't be
+ * raised (by the user). */
 #define USERDIGITS   30
 int max_digits = USERDIGITS;  // may be overridden by $RCA_DIGITS
 
 /* when comparing arithmetically, we use the same threshold the user
- * can see.  i.e., if they match at the visible precision, they match */
-#define COMPARISON_DIGITS   (max_digits)
+ * can see, though we give it a different name, for clarity.  i.e., if
+ * the values match at the visible precision, they match.  also used
+ * when displaying:  if a value is within 1e-COMPARISON_DIGITS of
+ * zero, we show it as zero.  */
+#define COMPARISON_DIGITS (max_digits)
+
 /* computation cutoff:  when we calculate cosine and arctan, we stop when
- * the next term is less than this cutoff: (1e-NN) */
+ * the next term is less than this cutoff: (1e-NN).  Also at the input
+ * and output of the cosine routine, if we're within this cutoff of zero,
+ * we set (the input or ouput) to zero */
 #define TRIG_CALC_DIGITS    (max_digits+4)
+
 /* working precision -- how mpdecimal is initialized, and what the
  * calculator really uses */
 #define MPDECIMAL_DIGITS    (max_digits+8)
+
+/* there's one more level of precision, which doesn't show up here.
+ * when calculating some initial values which remain constant through
+ * the life of the calculator (in particular, pi), we use a context
+ * with MPDECIMAL+10 digits of precision.
+ */
 
 /* float_digits may represent either the total displayed precision, or
  * the number of digits after the decimal, depending on float_specifier.
@@ -380,7 +390,10 @@ mpd_stuff(void)
 		}
 	}
 
-	mpd_init(&context, MPDECIMAL_DIGITS);
+	/* we use a single mpdecimal context everywhere, except while
+	 * we're here establishing constants (especially pi).  we add
+	 * 10 digits here, and take it off down below.  */
+	mpd_init(&context, MPDECIMAL_DIGITS+10);
 	context.traps = 0;
 
 	zero = mpd_new(ctx);
@@ -393,7 +406,7 @@ mpd_stuff(void)
 	mpd_set_string((mpd_t *)two, "2", ctx);
 
 	half = mpd_new(ctx);
-	mpd_set_string((mpd_t *)half, ".3", ctx);
+	mpd_set_string((mpd_t *)half, ".5", ctx);
 
 	ninety = mpd_new(ctx);
 	mpd_set_string((mpd_t *)ninety, "90", ctx);
@@ -404,14 +417,30 @@ mpd_stuff(void)
 	e = mpd_new(ctx);
 	mpd_exp((mpd_t *)e, one, ctx);
 
-	pi = mpd_new(ctx);
-	mpd_set_string((mpd_t *)pi, pi_val, ctx);
+	{ // establish pi and its multiples
+		void mpd_atan(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx);
+		extern int trig_degrees;
+		int save_degrees = trig_degrees;
+		trig_degrees = 0;  // definitely want radians for this
 
-	two_pi = mpd_new(ctx);
-	mpd_mul((mpd_t *)two_pi, pi, two, ctx);
+		mpd_t *pi_over_4 = mpd_new(ctx);
 
-	pi_over_2 = mpd_new(ctx);
-	mpd_div_i64((mpd_t *)pi_over_2, pi, 2L, ctx);
+		int save_max_digits = max_digits;
+		max_digits = (int)ctx->prec;  // guarantee full precision
+		mpd_atan(pi_over_4, one, ctx);
+		max_digits = save_max_digits;
+
+		pi_over_2 = mpd_new(ctx);
+		pi = mpd_new(ctx);
+		two_pi = mpd_new(ctx);
+
+		mpd_mul((mpd_t *)pi_over_2, pi_over_4, two, ctx);
+		mpd_mul((mpd_t *)pi, pi_over_2, two, ctx);
+		mpd_mul((mpd_t *)two_pi, pi, two, ctx);
+
+		mpd_del(pi_over_4);
+		trig_degrees = save_degrees;
+	}
 
 	lastx = mpd_new(ctx);
 	mpd_copy(lastx, zero, ctx);
@@ -421,6 +450,8 @@ mpd_stuff(void)
 
 	offstack = mpd_new(ctx);
 	mpd_copy(offstack, zero, ctx);
+
+	ctx->prec -= 10;
 }
 
 void
@@ -1263,7 +1294,7 @@ mpd_cos(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 
 	mpd_copy(n, one, ctx);  // n = 1;
 	mpd_copy(two_n, two, ctx);
-	int iterlim = 50;
+	int iterlim = 500;
 	int i_n = 1; // "i_n" and "n" mirror one another (when n isn't being
 			// used as a temp variable)
 
@@ -1431,7 +1462,7 @@ mpd_atan(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 	// series is:
 	// Tn = (Tn-1) * (-x^^2 * (2n - 1)/(2n + 1))
 
-	int iterlim = 50;
+	int iterlim = 500;
 	int i_n = 1;
 	mpd_copy(n, one, ctx);
 	mpd_copy(two_n, two, ctx);
@@ -2759,6 +2790,7 @@ printstate(void)
 	p_printf("  - when in floating mode,");
 	p_printf(" display is \"%s\", with %d digits\n",
 		float_specifier, float_digits );
+	p_printf("    max number of significant digits is %d\n", max_digits);
 
 	p_printf("  - when in integer modes,");
 	p_printf(" word width is %d bits\n", int_width);
