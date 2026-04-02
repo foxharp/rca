@@ -469,7 +469,8 @@ safe_calloc(size_t size)
        return p;
 }
 
-void trace(int level, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+void
+trace(int level, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 void
 trace(int level, const char *fmt, ...)
 {
@@ -500,7 +501,8 @@ trace_mpd(int level, char *msg, const mpd_t *t)
 }
 
 
-void error(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+void
+error(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void
 error(const char *fmt, ...)
 {
@@ -861,7 +863,8 @@ divide(void)
 	return mpd_2_op_shell(mpd_div);
 }
 
-void mpd_mod(mpd_t *m, const mpd_t *iy, const mpd_t *ix, mpd_context_t *ctx)
+void
+mpd_mod(mpd_t *m, const mpd_t *iy, const mpd_t *ix, mpd_context_t *ctx)
 {
 	static mpd_t *x, *y, *q, *t;
 	if (!x) {
@@ -1196,7 +1199,9 @@ mpd_user_angle_to_radians(mpd_t *rads, const mpd_t *user)
 		mpd_copy(rads, user, ctx);
 }
 
-void mpd_cos(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
+
+void
+mpd_cos(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 {
 
 	static mpd_t *x, *t, *nt, *c, *xsq, *denom, *n, *two_n;
@@ -1301,7 +1306,8 @@ void mpd_cos(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 		mpd_copy(m, c, ctx); // c = -c;
 }
 
-void mpd_sin(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
+void
+mpd_sin(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
 {
 	// ncos(x - (pi/2));
 
@@ -1320,7 +1326,8 @@ void mpd_sin(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
 	mpd_cos(m, t, ctx);
 }
 
-void mpd_tan(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
+void
+mpd_tan(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
 {
 	// nsin(x) / ncos(x);
 
@@ -1345,7 +1352,8 @@ void mpd_tan(mpd_t *m, const mpd_t *x, mpd_context_t *ctx)
 /* keep track of recursions and iterations used in atan() */
 static int max_a_r, max_iters;
 
-void mpd_atan(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
+void
+mpd_atan(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 {
 	static int atan_recurse;
 	if (max_a_r < atan_recurse)
@@ -1511,7 +1519,8 @@ mpd_atan2(mpd_t *m, const mpd_t *iy, const mpd_t *ix, mpd_context_t *ctx)
 	mpd_radians_to_user_angle(m, m);
 }
 
-void mpd_acos(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
+void
+mpd_acos(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 {
 	// atan(sqrt(1 - x^2) / x);
 
@@ -1548,7 +1557,8 @@ void mpd_acos(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 #endif
 }
 
-void mpd_asin(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
+void
+mpd_asin(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 {
 	// atan(x / sqrt(1 - x^2));
 
@@ -3791,7 +3801,8 @@ prev_tok_was_semicolon(token *pt)
 #define pt_op pt->oper
 #define tp_op tp->oper
 
-void shunt(token *t)
+void
+shunt(token *t)
 {
 	token *tp;
 
