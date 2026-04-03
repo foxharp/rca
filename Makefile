@@ -90,7 +90,7 @@ endif
 
 
 rca.1: rca.man
-	v="\"$$(rca version q)\""; \
+	v="\"$$(./rca version q)\""; \
 	sed -e "s/VERSIONSTRING/$${v}/g" rca.man > rca.1
 
 copyrightcheck:
