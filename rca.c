@@ -23,7 +23,6 @@ char *release = "v42";
  *
  *
  *    The current version now uses the mpdecimal math library, so
- *    except for the trig functions (not available in mpdecimal),
  *    precision is no longer limited by the native FP hardware and API.
  *
  *
@@ -180,9 +179,6 @@ int stack_mark;
 /* for catching infix bugs */
 int infix_stacklevel;
 
-int infix_mode;
-int debug_enabled;
-
 
 /* all user input is either a number or a command operator.
  * this is how operators are looked up, by name */
@@ -245,13 +241,27 @@ boolean echo_enabled = FALSE;
 /* if true, print the top of stack after any line that ends with an operator */
 boolean autoprint = TRUE;
 
-/* informative feedback, which is only printed if the command generating
- * it is followed by a newline */
-void p_printf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+/* work in degrees by default */
+boolean trig_degrees = TRUE;
+
+/* zerofill controls whether digits to the left of a value are left
+ * blank, or shown as zero.  applies in hex, octal, and binary modes. */
+boolean zerofill = FALSE;
+
+/* rightalign controls whether, when printing, we line up least
+ * significant digits (right) or most significant digits (left).  */
+boolean rightalignment = TRUE;
+
+/* if true, we're in full-time infix mode */
+boolean infix_mode = FALSE;
 
 /* if this is true, and the locale provides the separator and the
  * grouping information, we will decorate numbers, like "1,333,444" */
-boolean digitseparators = 1;
+boolean digitseparators = TRUE;
+
+/* if true, debug mode is enabled, which mostly just enables a couple more
+ * commands.  (seems hardly worth it now -- there used to be more.)  */
+boolean debug_enabled = FALSE;
 
 /* in the absence of an $RCA_DIGITS environment variable, the
  * definition of USERDIGITS sets the number of significant digits for
@@ -274,21 +284,22 @@ int max_digits = USERDIGITS;  // may be overridden by $RCA_DIGITS
  * we set (the input or ouput) to zero */
 #define TRIG_CALC_DIGITS    (max_digits+5)
 
-/* working precision -- how mpdecimal is initialized, and what the
+/* working precision -- how mpdecimal is initialized.  i.e., what the
  * calculator really uses */
 #define MPDECIMAL_DIGITS    (max_digits+10)
 
 /* there's one more level of precision, which doesn't show up here.
  * when calculating some initial values which remain constant through
- * the life of the calculator (in particular, pi), we use a context
- * with MPDECIMAL+10 digits of precision.
- * see the context initialization in mpd_stuff().
+ * the life of the calculator (pi, in particular), we use a context
+ * with MPDECIMAL+10 digits of precision.  see the context
+ * initialization in mpd_startup().
  */
 
-/* this is used as the size for various holding buffers for numbers
- * being prepared for display.  we add 50% (it's really only 33%) for
- * grouping separators, and 100 to be sure we have a minimum for
- * 64 bit integers, also with separators, displayed in various bases. */
+/* this buffer size is used for various holding buffers as numbers
+ * being prepared for display.  we add 50% for grouping separators
+ * (the actual need is really only about 33%), and another 100 to be
+ * sure we have a minimum for 64 bit integers, which also have
+ * separators, and are displayed in various bases.  */
 #define TEMP_BUFSIZE ((size_t)(max_digits + max_digits/2) + 100)
 
 /* float_digits may represent either the total displayed precision, or
@@ -296,14 +307,6 @@ int max_digits = USERDIGITS;  // may be overridden by $RCA_DIGITS
  * it will be capped at max_digits.  */
 int float_digits = 6;
 char *float_specifier = "automatic"; // or "engineering" or "fixed decimal"
-
-/* zerofill controls whether digits to the left of a value are left
- * blank, or shown as zero.  applies in hex, octal, and binary modes. */
-boolean zerofill = 0;
-
-/* rightalign controls whether, when printing, we line up least
- * significant digits (right) or most significant digits (left).  */
-boolean rightalignment = 1;
 
 /* these all help limit the word size to anything we want in integer mode.  */
 mpd_t *int_modulo;
@@ -337,44 +340,105 @@ int variable_write_enable;
 /* where program input is coming from currently */
 static char *input_ptr = NULL;
 
+/* read_token(), parse_token(), and putback_token() are the meat of
+ * the input stream, invoked both from main() and the shunting_yard(). */
+#define RPN 1
+#define INFIX 0
 int read_token(token *, int whichparse);
 int parse_token(char *p, token *t, char **nextp, int whichparse);
 void putback_token(token *t);
-#define RPN 1
-#define INFIX 0
 
-typedef void (*mpd_2_op_func_t)(mpd_t *, const mpd_t *, const mpd_t *,
-			mpd_context_t *);
+/* Similar operators are grouped, and are handled by common "shell"
+ * routines, in order to share common code.  There are 1 and 2
+ * mpdecimal operand operators, and 1 and 2 bitwise operand operators. */
 typedef void (*mpd_1_op_func_t)(mpd_t *, const mpd_t *, mpd_context_t *);
+typedef void (*mpd_2_op_func_t)(mpd_t *, const mpd_t *, const mpd_t *, mpd_context_t *);
+typedef void (*bitwise_2_op_func_t)(uint64_t *, uint64_t, uint64_t);
+typedef void (*bitwise_1_op_func_t)(uint64_t *, uint64_t);
 
-void trace_mpd(int level, char *msg, const mpd_t *t);
+void p_printf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+void error(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+void exitret(void);
 
-
-/* debugging assist:  "p mdb(foo)" is easy to type in gdb */
-char *
-mpd(mpd_t *m)
+void trace(int level, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+/* this is the tracing workhorse.  not much to it.  we match the
+ * category/ies of the message with those requested by the user.  */
+void
+trace(int level, const char *fmt, ...)
 {
-	return mpd_to_sci(m, 0);
+	if ((tracing & level) == 0)
+		return;
+
+	fflush(stdout);
+
+	va_list ap;
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+
 }
 
-int
-mpd_mag_lessthan(const mpd_t *x, int exp)
+/* mpdecimals have their own formatting API, so they get their own tracer */
+void
+trace_mpd(int level, char *msg, const mpd_t *t)
 {
-	if (mpd_isspecial(x))
-		return 0;
+	if ((tracing & level) == 0)
+		return;
 
-	if (mpd_iszero(x))
-		return 1;
+	fprintf(stderr, "%s: ", msg);
+	mpd_fprint(stderr, t);
+}
 
-	// if adj_exp < -34, magnitude is < 1e-34
-	if (mpd_adjexp(x) < exp)
-		return 1;
+// ------------------------ memory mgt, and errors
 
-	return 0;
+void
+memory_failure(void)
+{
+	perror("rca: memory allocation failure");
+	exit(3);
+}
+
+/* handle pointer check and exit, and use calloc() to get zero-fill. */
+void *
+safe_calloc(size_t size)
+{
+       void *p = calloc(1, size);
+
+       if (!p) memory_failure();
+
+       return p;
 }
 
 void
-mpd_stuff(void)
+error(const char *fmt, ...)
+{
+	fflush(stdout);
+
+	va_list ap;
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+
+	if (exit_on_error)
+		exit(4);
+}
+
+// ------------------------   misc. mpdecimal support
+
+/* debugging assist:  "p mdb(foo)" is convenient in gdb */
+char *
+mpd(mpd_t *m)
+{
+	static char *s;
+	if (s) free(s);
+	return s = mpd_to_sci(m, 0);
+}
+
+/* this initializes our use of the mpdecimal library.  it establishes
+ * our single global context, and also simplifies life by initializing
+ * a bunch of constants we'll use repeatedly later on. */
+void
+mpd_startup(void)
 {
 
 	char *rdp = getenv("RCA_DIGITS");
@@ -384,6 +448,8 @@ mpd_stuff(void)
 		if (*endp == '\0') {
 			if (digits < 2)
 				digits = 2;
+			/* no upper limit.
+			 * also, no guarantees on it working well. */
 			max_digits = (int)digits;
 			if (float_digits > max_digits)
 				float_digits = max_digits;
@@ -454,6 +520,25 @@ mpd_stuff(void)
 	ctx->prec -= 10;
 }
 
+/* compare magnitude of number against the given threshold exponent */
+int
+mpd_mag_lessthan(const mpd_t *x, int exp)
+{
+	if (mpd_isspecial(x))
+		return 0;
+
+	if (mpd_iszero(x))
+		return 1;
+
+	// if adj_exp < -34, magnitude is < 1e-34
+	if (mpd_adjexp(x) < exp)
+		return 1;
+
+	return 0;
+}
+
+/* useful for updating saved values.  free the old decimal, and copy
+ * in the new one.  caller is still responsible for their copy. */
 void
 mpd_free_before_copy(mpd_t **resultp, const mpd_t *a, mpd_context_t *ctx)
 {
@@ -462,90 +547,9 @@ mpd_free_before_copy(mpd_t **resultp, const mpd_t *a, mpd_context_t *ctx)
 	    mpd_del(*resultp);
 	    *resultp = 0;
 	}
-	if (!*resultp) *resultp = mpd_new(ctx);
+	*resultp = mpd_new(ctx);
 	// trace_mpd(EXEC, "copying", a);
 	mpd_copy(*resultp, a, ctx);
-}
-
-void
-set_lastx(mpd_t *a)
-{
-	trace_mpd(EXEC, "lx is now", a);
-	mpd_free_before_copy(&lastx, a, ctx);
-}
-
-unsigned long long
-ull_from_ll(long long s)
-{
-    unsigned long long u;
-    memcpy(&u, &s, sizeof(u));
-    return u;
-}
-
-void
-memory_failure(void)
-{
-	perror("rca: memory allocation failure");
-	exit(3);
-}
-
-/* handle pointer check and exit, and use calloc() to get zero-fill. */
-void *
-safe_calloc(size_t size)
-{
-       void *p = calloc(1, size);
-
-       if (!p) memory_failure();
-
-       return p;
-}
-
-void
-trace(int level, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
-void
-trace(int level, const char *fmt, ...)
-{
-	if ((tracing & level) == 0)
-		return;
-
-	fflush(stdout);
-
-	va_list ap;
-	va_start(ap, fmt);
-	vfprintf(stderr, fmt, ap);
-	va_end(ap);
-
-}
-
-void
-trace_mpd(int level, char *msg, const mpd_t *t)
-{
-	if ((tracing & level) == 0)
-		return;
-
-	// char flagbuf[256];
-	// mpd_snprint_flags(flagbuf, 256, t->flags);
-	// fprintf(stderr, "%s %s: ", msg, flagbuf);
-
-	fprintf(stderr, "%s: ", msg);
-	mpd_fprint(stderr, t);
-}
-
-
-void error(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
-
-void
-error(const char *fmt, ...)
-{
-	fflush(stdout);
-
-	va_list ap;
-	va_start(ap, fmt);
-	vfprintf(stderr, fmt, ap);
-	va_end(ap);
-
-	if (exit_on_error)
-		exit(4);
 }
 
 /* in integer mode we maintain the illusion of integer storage. */
@@ -564,35 +568,7 @@ mpd_to_integer(mpd_t *r, mpd_t *a)
 	return (mpd_cmp(r, a, ctx) != 0);
 }
 
-unsigned long long
-mpd_get_64_bits(mpd_t *n)
-{
-	uint32_t status;
-	ull_t u;
-	ll_t ln;
-
-	/* we only use this routine if we already known the value
-	 * should fit in 64 bits.  if it's negative, mpdecimal won't
-	 * let us have it as unsigned.  but if it's bigger than the
-	 * MAX integer, it won't let us have it as integer.  so we try
-	 * both ways.  */
-	status = 0;
-	ln = mpd_qget_i64(n, &status);
-	if (status == 0) {
-		u = ull_from_ll(ln);
-		return u;
-	}
-
-	status = 0;
-	u = mpd_qget_u64(n, &status);
-	if (status == 0)
-		return u;
-
-	error("damn\n");
-	fprintf(stderr, "status is 0x%x\n", status);
-	return 0;
-}
-
+// ------------------------   basic stack operations
 
 void
 mpush(mpd_t *a)
@@ -659,74 +635,112 @@ mpop(mpd_t **a)
 	return TRUE;
 }
 
-opreturn
-toggler(boolean *control, char *descrip, char *yes, char *no)
+// ------------------------   "lastx" management
+
+void
+set_lastx(mpd_t *a)
 {
-	mpd_t *m;
-	uint64_t u;
+	trace_mpd(EXEC, "lx is now", a);
+	mpd_free_before_copy(&lastx, a, ctx);
+}
 
-	if (!mpop(&m))
-		return BADOP;
+// during an infix evaluation, lastx needs to kept at its pre-infix value.
+boolean lastx_is_frozen = 0;
 
-	u = mpd_get_u64(m, ctx);
+void
+freeze_lastx(void)
+{
+	if (!lastx_is_frozen) {
+		mpd_t *x;
+		if (mpeek(&x)) {
+			mpd_free_before_copy(&frozen_lastx, x, ctx);
+		} else {
+			if (frozen_lastx)
+				mpd_del(frozen_lastx);
+			frozen_lastx = 0;
+		}
+		lastx_is_frozen = TRUE;
+		infix_stacklevel = stack_count;
+	}
+}
 
-	if (u != 0 && u != 1) {
-		mpush(m);
-		error(" error: toggle commands only take 0/1 as an argument\n");
-		return BADOP;
+void
+thaw_lastx(void)
+{
+	if (lastx_is_frozen) {
+		lastx_is_frozen = FALSE;
+		if (frozen_lastx) {
+			set_lastx(frozen_lastx);
+			mpd_del(frozen_lastx);
+		}
+		frozen_lastx = 0;
+		// infix must add either no or 1 value to the stack
+		int i = stack_count - infix_stacklevel;
+		if (i != 0 && i != 1)
+			error("BUG: stack changed by %d after infix\n",
+				stack_count - infix_stacklevel);
+		infix_stacklevel = -1;
+	}
+}
+
+opreturn
+push_lastx(void)
+{
+	if (lastx_is_frozen)
+		mpush_copy(frozen_lastx);
+	else
+		mpush_copy(lastx);
+
+	return GOODOP;
+}
+
+
+// ------------------------  bitwise operators, 2 operand
+
+/* this is purely to make sure casting doesn't mess with our bits */
+unsigned long long
+ull_from_ll(long long s)
+{
+    unsigned long long u;
+    memcpy(&u, &s, sizeof(u));
+    return u;
+}
+
+unsigned long long
+mpd_get_64_bits(mpd_t *n)
+{
+	uint32_t status;
+	ull_t u;
+	ll_t ln;
+
+	/* we only use this routine if we already known the value
+	 * should fit in 64 bits.  if it's negative, mpdecimal won't
+	 * let us have it as unsigned.  but if it's bigger than the
+	 * MAX integer, it won't let us have it as integer.  so we try
+	 * both ways.  */
+	status = 0;
+	ln = mpd_qget_i64(n, &status);
+	if (status == 0) {
+		u = ull_from_ll(ln);
+		return u;
 	}
 
-	*control = (u != 0);
+	status = 0;
+	u = mpd_qget_u64(n, &status);
+	if (status == 0)
+		return u;
 
-	if (descrip)
-		p_printf(" %s %s\n", descrip, u ? yes : no);
-
-	mpd_del(m);
-	return GOODOP;
+	error("damn\n");
+	fprintf(stderr, "status is 0x%x\n", status);
+	return 0;
 }
 
-opreturn
-infixmode(void)
-{
-	return toggler(&infix_mode,  "Full-time infix mode",
-		"enabled", "disabled");
-}
-
-opreturn
-enable_echo(void)
-{
-	/* no confirmation messages, which might defeat the silent purpose */
-	return toggler(&echo_enabled,  0, 0, 0);
-}
-
-opreturn
-enable_errexit(void)
-{
-	return toggler(&exit_on_error,  "Exiting on errors and warnings",
-		"enabled", "disabled");
-}
-
-opreturn
-debug(void)
-{
-	return toggler(&debug_enabled,  "Debug commands",
-		"enabled", "disabled");
-}
-
-opreturn
-assignment(void)
-{
-	/* This gets decremented with every RPN token executed.  If a
-	 * variable is the very next token, we'll write to it instead
-	 * of read.  */
-	variable_write_enable = 2;
-	trace(EXEC,( " enabling assignment\n"));
-	return GOODOP;
-}
 
 /* This is poorly named.  The goal it to report whether the two
  * arguments are both finite (i.e., useful), and if not, to propagate
- * the nan, or inf, in that order, as the final result of the operation.  */
+ * the nan, or inf, in that order, as the final result of the operation.
+ * It's only used for bitwise operators.
+ */
 int
 mpd_bothfinite(mpd_t *x, mpd_t *y)
 {
@@ -750,8 +764,6 @@ mpd_bothfinite(mpd_t *x, mpd_t *y)
 	}
 	return 1;
 }
-
-typedef void (*bitwise_2_op_func_t)(uint64_t *, uint64_t, uint64_t);
 
 opreturn
 bitwise_2_op_shell(char *which, bitwise_2_op_func_t f, int checkdistance)
@@ -795,144 +807,6 @@ bitwise_2_op_shell(char *which, bitwise_2_op_func_t f, int checkdistance)
 	mpd_del(mx);
 
 	return GOODOP;
-}
-
-typedef void (*bitwise_1_op_func_t)(uint64_t *, uint64_t);
-
-opreturn
-bitwise_1_op_shell(bitwise_1_op_func_t f)
-{
-	mpd_t *mx;
-	uint64_t x, r;
-
-	if (!mpop(&mx))
-		return BADOP;
-
-	if (!mpd_isfinite(mx)) {
-		mpush(mx);
-		return GOODOP;
-	}
-
-	set_lastx(mx);
-	mpd_to_integer(mx, mx);
-
-	x = mpd_get_64_bits(mx);
-
-	f(&r, x);
-
-	mpd_set_u64(mx, r, ctx);
-	mpd_to_integer(mx, mx);
-
-	mpush(mx);
-
-	return GOODOP;
-}
-
-opreturn
-mpd_2_op_shell(mpd_2_op_func_t f)
-{
-	mpd_t *x, *y;
-
-	if (!mpop(&x))
-		return BADOP;
-
-	if (!mpop(&y)) {
-		mpush(x);
-		return BADOP;
-	}
-
-	set_lastx(x);
-	f(y, y, x, ctx);
-	if (!floating_mode(mode))
-		mpd_to_integer(y, y);
-
-	mpd_del(x);
-	mpush(y);
-
-	return GOODOP;
-}
-
-opreturn
-mpd_1_op_shell(mpd_1_op_func_t f)
-{
-	mpd_t *x;
-	if (!mpop(&x))
-		return BADOP;
-
-	set_lastx(x);
-	f(x, x, ctx);
-	if (!floating_mode(mode))
-		mpd_to_integer(x, x);
-
-	mpush(x);
-
-	return GOODOP;
-}
-
-opreturn
-add(void)
-{
-	return mpd_2_op_shell(mpd_add);
-}
-
-opreturn
-subtract(void)
-{
-	return mpd_2_op_shell(mpd_sub);
-}
-
-
-opreturn
-multiply(void)
-{
-	return mpd_2_op_shell(mpd_mul);
-}
-
-opreturn
-divide(void)
-{
-	return mpd_2_op_shell(mpd_div);
-}
-
-void
-mpd_mod(mpd_t *m, const mpd_t *iy, const mpd_t *ix, mpd_context_t *ctx)
-{
-	static mpd_t *x, *y, *q, *t;
-	if (!x) {
-		x = mpd_new(ctx);
-		y = mpd_new(ctx);
-		q = mpd_new(ctx);
-		t = mpd_new(ctx);
-	}
-	mpd_copy(x, ix, ctx);
-	mpd_copy(y, iy, ctx);
-
-	trace_mpd(EXEC, "y is ", y);
-	trace_mpd(EXEC, "x is ", x);
-
-	mpd_div(q, y, x, ctx);  // divide
-	mpd_trunc(t, q, ctx);   // truncate
-	mpd_mul(t, t, x, ctx);  // multiply the truncated value by divisor
-	mpd_sub(m, y, t, ctx);  // subtract from original dividend
-
-}
-
-opreturn
-modulo(void)
-{
-	return mpd_2_op_shell(mpd_mod);
-}
-
-opreturn
-y_to_the_x(void)
-{
-	return mpd_2_op_shell(mpd_pow);
-}
-
-opreturn
-e_to_the_x(void)
-{
-	return mpd_1_op_shell(mpd_exp);
 }
 
 
@@ -1092,6 +966,37 @@ clearbit(void)
 	return bitwise_2_op_shell("clear bit", clearbit_worker, 1);
 }
 
+// ------------------------  bitwise operators, 1 operand
+
+opreturn
+bitwise_1_op_shell(bitwise_1_op_func_t f)
+{
+	mpd_t *mx;
+	uint64_t x, r;
+
+	if (!mpop(&mx))
+		return BADOP;
+
+	if (!mpd_isfinite(mx)) {
+		mpush(mx);
+		return GOODOP;
+	}
+
+	set_lastx(mx);
+	mpd_to_integer(mx, mx);
+
+	x = mpd_get_64_bits(mx);
+
+	f(&r, x);
+
+	mpd_set_u64(mx, r, ctx);
+	mpd_to_integer(mx, mx);
+
+	mpush(mx);
+
+	return GOODOP;
+}
+
 void
 bitwise_not_worker(uint64_t *r, uint64_t x)
 {
@@ -1135,12 +1040,114 @@ bitcount(void)
 	return bitwise_1_op_shell(bitcount_worker);
 }
 
+// ------------------------  2 operand operators
+
+/* 2 operand functions */
+
 opreturn
-chsign(void)
+mpd_2_op_shell(mpd_2_op_func_t f)
 {
-	return mpd_1_op_shell(mpd_copy_negate);
+	mpd_t *x, *y;
+
+	if (!mpop(&x))
+		return BADOP;
+
+	if (!mpop(&y)) {
+		mpush(x);
+		return BADOP;
+	}
+
+	set_lastx(x);
+	f(y, y, x, ctx);
+	if (!floating_mode(mode))
+		mpd_to_integer(y, y);
+
+	mpd_del(x);
+	mpush(y);
+
+	return GOODOP;
 }
 
+opreturn
+add(void)
+{
+	return mpd_2_op_shell(mpd_add);
+}
+
+opreturn
+subtract(void)
+{
+	return mpd_2_op_shell(mpd_sub);
+}
+
+
+opreturn
+multiply(void)
+{
+	return mpd_2_op_shell(mpd_mul);
+}
+
+opreturn
+divide(void)
+{
+	return mpd_2_op_shell(mpd_div);
+}
+
+void
+mpd_mod(mpd_t *m, const mpd_t *iy, const mpd_t *ix, mpd_context_t *ctx)
+{
+	static mpd_t *x, *y, *q, *t;
+	if (!x) {
+		x = mpd_new(ctx);
+		y = mpd_new(ctx);
+		q = mpd_new(ctx);
+		t = mpd_new(ctx);
+	}
+	mpd_copy(x, ix, ctx);
+	mpd_copy(y, iy, ctx);
+
+	trace_mpd(EXEC, "y is ", y);
+	trace_mpd(EXEC, "x is ", x);
+
+	mpd_div(q, y, x, ctx);  // divide
+	mpd_trunc(t, q, ctx);   // truncate
+	mpd_mul(t, t, x, ctx);  // multiply the truncated value by divisor
+	mpd_sub(m, y, t, ctx);  // subtract from original dividend
+
+}
+
+opreturn
+modulo(void)
+{
+	return mpd_2_op_shell(mpd_mod);
+}
+
+opreturn
+y_to_the_x(void)
+{
+	return mpd_2_op_shell(mpd_pow);
+}
+
+
+// ------------------------  1 operand operators
+/* 1 operand functions */
+
+opreturn
+mpd_1_op_shell(mpd_1_op_func_t f)
+{
+	mpd_t *x;
+	if (!mpop(&x))
+		return BADOP;
+
+	set_lastx(x);
+	f(x, x, ctx);
+	if (!floating_mode(mode))
+		mpd_to_integer(x, x);
+
+	mpush(x);
+
+	return GOODOP;
+}
 
 opreturn
 nop(void)
@@ -1149,9 +1156,9 @@ nop(void)
 }
 
 opreturn
-rpnswitch(void)
+chsign(void)
 {
-	return GOODOP;
+	return mpd_1_op_shell(mpd_copy_negate);
 }
 
 opreturn
@@ -1181,20 +1188,71 @@ squarert(void)
 }
 
 opreturn
-trig_no_sense(void)
+e_to_the_x(void)
 {
-	error(" error: trig functions make no sense in integer mode");
-	return BADOP;
+	return mpd_1_op_shell(mpd_exp);
 }
-
-boolean trig_degrees = 1;  // work in degrees by default
 
 opreturn
-use_degrees(void)
+log_base2(void)
 {
-	return toggler(&trig_degrees, "trig functions will now use",
-		"degrees", "radians");
+	mpd_t *x;
+	static mpd_t *ln2;
+
+	if (!ln2) { // initialization
+		ln2 = mpd_new(ctx);
+		mpd_add(ln2, one, one, ctx);
+		mpd_ln(ln2, ln2, ctx);
+	}
+
+	if (!mpop(&x))
+		return BADOP;
+
+	set_lastx(x);
+	mpd_ln(x, x, ctx);
+	mpd_div(x, x, ln2, ctx);
+	mpush(x);
+
+	return GOODOP;
 }
+
+opreturn
+log_natural(void)
+{
+	return mpd_1_op_shell(mpd_ln);
+}
+
+opreturn
+log_base10(void)
+{
+	return mpd_1_op_shell(mpd_log10);
+}
+
+opreturn
+fraction(void)
+{
+	mpd_t *x, *t;
+	if (!mpop(&x))
+		return BADOP;
+
+	t = mpd_new(ctx);
+
+	set_lastx(x);
+	mpd_trunc(t, x, ctx);
+	mpd_sub(x, x, t, ctx);
+	mpush(x);
+	mpd_del(t);
+
+	return GOODOP;
+}
+
+opreturn
+integer(void)
+{
+	return mpd_1_op_shell(mpd_trunc);
+}
+
+// ------------------------   trig operators and support
 
 void
 mpd_radians_to_degrees(mpd_t *r, const mpd_t *a, mpd_context_t *ctx)
@@ -1309,10 +1367,6 @@ mpd_cos(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 
 		// t = t * nt
 		mpd_mul(t, t, nt, ctx);
-
-		// trace(EXEC, "i_n: %d\n", i_n);
-		// trace_mpd(EXEC, "t: ", t);
-		// trace_mpd(EXEC, "c: ", c);
 
 		if (mpd_mag_lessthan(t, -TRIG_CALC_DIGITS))
 			break;
@@ -1618,6 +1672,13 @@ mpd_asin(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 }
 
 opreturn
+trig_no_sense(void)
+{
+	error(" error: trig functions make no sense in integer mode");
+	return BADOP;
+}
+
+opreturn
 sine(void)
 {
 	if (!floating_mode(mode))
@@ -1680,64 +1741,8 @@ atangent2(void)
 	return mpd_2_op_shell(mpd_atan2);
 }
 
-opreturn
-log_base2(void)
-{
-	mpd_t *x;
-	static mpd_t *ln2;
+// ------------------------   logical comparisons
 
-	if (!ln2) { // initialization
-		ln2 = mpd_new(ctx);
-		mpd_add(ln2, one, one, ctx);
-		mpd_ln(ln2, ln2, ctx);
-	}
-
-	if (!mpop(&x))
-		return BADOP;
-
-	set_lastx(x);
-	mpd_ln(x, x, ctx);
-	mpd_div(x, x, ln2, ctx);
-	mpush(x);
-
-	return GOODOP;
-}
-
-opreturn
-log_natural(void)
-{
-	return mpd_1_op_shell(mpd_ln);
-}
-
-opreturn
-log_base10(void)
-{
-	return mpd_1_op_shell(mpd_log10);
-}
-
-opreturn
-fraction(void)
-{
-	mpd_t *x, *t;
-	if (!mpop(&x))
-		return BADOP;
-
-	t = mpd_new(ctx);
-
-	set_lastx(x);
-	mpd_trunc(t, x, ctx);
-	mpd_sub(x, x, t, ctx);
-	mpush(x);
-	mpd_del(t);
-
-	return GOODOP;
-}
-
-opreturn
-integer(void)
-{
-	return mpd_1_op_shell(mpd_trunc);
-}
 
 opreturn
 logical_compare_worker(int *xz, int *yz)
@@ -1789,6 +1794,25 @@ logical_or(void)
 	return GOODOP;
 }
 
+opreturn
+logical_not(void)
+{
+	mpd_t *x;
+
+	if (!mpop(&x))
+		return BADOP;
+
+	set_lastx(x);
+
+	mpush_copy( mpd_iszero(x) ? one : zero);
+
+	mpd_del(x);
+
+	return GOODOP;
+}
+
+// ------------------------   numeric comparisons
+
 #define EQ  1
 #define NEQ 2
 #define LT  3
@@ -1797,7 +1821,7 @@ logical_or(void)
 #define GE  6
 
 opreturn
-compare_worker(int c)
+numeric_compare_worker(int c)
 {
 	mpd_t *x, *y;
 
@@ -1833,55 +1857,40 @@ compare_worker(int c)
 opreturn
 is_eq(void)
 {
-	return compare_worker(EQ);
+	return numeric_compare_worker(EQ);
 }
 
 opreturn
 is_neq(void)
 {
-	return compare_worker(NEQ);
+	return numeric_compare_worker(NEQ);
 }
 
 opreturn
 is_lt(void)
 {
-	return compare_worker(LT);
+	return numeric_compare_worker(LT);
 }
 
 opreturn
 is_le(void)
 {
-	return compare_worker(LE);
+	return numeric_compare_worker(LE);
 }
 
 opreturn
 is_gt(void)
 {
-	return compare_worker(GT);
+	return numeric_compare_worker(GT);
 }
 
 opreturn
 is_ge(void)
 {
-	return compare_worker(GE);
+	return numeric_compare_worker(GE);
 }
 
-opreturn
-logical_not(void)
-{
-	mpd_t *x;
-
-	if (!mpop(&x))
-		return BADOP;
-
-	set_lastx(x);
-
-	mpush_copy( mpd_iszero(x) ? one : zero);
-
-	mpd_del(x);
-
-	return GOODOP;
-}
+// ------------------------    stack manipulation
 
 opreturn
 clear(void)
@@ -1907,7 +1916,7 @@ rolldown(void)			// aka "pop"
 	mpd_t *b;
 	if (!mpop(&b))
 		return BADOP;
-	mpd_free_before_copy(&lastx, b, ctx);
+	set_lastx(b);
 	mpd_del(b);
 	return GOODOP;
 }
@@ -1927,56 +1936,6 @@ enter(void)
 	return BADOP;
 }
 
-// during an infix evaluation, lastx needs to kept at its pre-infix value.
-boolean lastx_is_frozen = 0;
-
-void
-freeze_lastx(void)
-{
-	if (!lastx_is_frozen) {
-		mpd_t *x;
-		if (mpeek(&x)) {
-			mpd_free_before_copy(&frozen_lastx, x, ctx);
-		} else {
-			if (frozen_lastx)
-				mpd_del(frozen_lastx);
-			frozen_lastx = 0;
-		}
-		lastx_is_frozen = TRUE;
-		infix_stacklevel = stack_count;
-	}
-}
-
-void
-thaw_lastx(void)
-{
-	if (lastx_is_frozen) {
-		lastx_is_frozen = FALSE;
-		if (frozen_lastx) {
-			set_lastx(frozen_lastx);
-			mpd_del(frozen_lastx);
-		}
-		frozen_lastx = 0;
-		// infix must add either no or 1 value to the stack
-		int i = stack_count - infix_stacklevel;
-		if (i != 0 && i != 1)
-			error("BUG: stack changed by %d after infix\n",
-				stack_count - infix_stacklevel);
-		infix_stacklevel = -1;
-	}
-}
-
-opreturn
-repush(void)			// aka "lastx"
-{
-	if (lastx_is_frozen)
-		mpush_copy(frozen_lastx);
-	else
-		mpush_copy(lastx);
-
-	return GOODOP;
-}
-
 opreturn
 exchange(void)
 {
@@ -1992,6 +1951,8 @@ exchange(void)
 	}
 	return BADOP;
 }
+
+// ------------------------   memory buffer i/o
 
 
 /* descriptor for an open_memstream() FILE pointer */
@@ -2056,6 +2017,8 @@ pending_show(void)
 	}
 }
 
+/* used for any informative feedback, which is only printed if the
+ * command generating it is followed by a newline */
 void
 p_printf(const char *fmt, ...)  // short for pending_printf()
 {
@@ -2070,19 +2033,6 @@ p_printf(const char *fmt, ...)  // short for pending_printf()
 	// ensure it's always null-terminated
 	fputc('\0', pp.fp);
 	fseek(pp.fp, -1, SEEK_CUR);
-}
-
-void
-safe_snprintf(char *str, int size, char *id, const char *fmt, ...)
-{
-	int r;
-	va_list ap;
-
-	va_start(ap, fmt);
-	r = vsnprintf(str, (size_t)size, fmt, ap);
-	va_end(ap);
-	if (r < 0 || r >= size)
-		error(" BUG: snprintf buffer overrun at %s\n", id);
 }
 
 struct memfile mp;
@@ -2103,91 +2053,19 @@ m_file_finish(void)
 
 }
 
-char *
-putbinary(unsigned long long u)
+// ------------------------    printing and formats
+
+void
+safe_snprintf(char *str, int size, char *id, const char *fmt, ...)
 {
-	int i;
-	int zf = zerofill; // leading_zeros;
+	int r;
+	va_list ap;
 
-	u &= (ull_t)int_mask;
-
-	m_file_start();
-
-	fprintf(mp.fp, " 0b");
-	for (i = int_width-1; i >= 0; i--) {
-		if (u & (1L << i)) {
-			fputc('1', mp.fp);
-			zf = 1;
-		} else if (zf || i == 0) {
-			fputc('0', mp.fp);
-		}
-		if (i && (i % 8 == 0)) {
-			if (digitseparators && zf)
-				fputs(thousands_sep, mp.fp);
-		}
-	}
-
-	m_file_finish();
-
-	return mp.bufp;
-}
-
-char *
-puthex(unsigned long long u)
-{
-	int i;
-	int nibbles = ((int_width + 3) / 4);
-	int zf = zerofill; // leading_zeros;
-
-	u &= (ull_t)int_mask;
-
-	m_file_start();
-
-	fprintf(mp.fp," 0x");
-	for (i = nibbles-1; i >= 0; i--) {
-		int nibble = (u >> (4 * i)) & 0xf;
-		if (nibble || zf || i == 0) {
-		    fputc("0123456789abcdef"[nibble], mp.fp);
-		    zf = 1;
-		}
-		if (i && (i % 4 == 0)) {
-		    if (digitseparators && zf)
-			    fputs(thousands_sep, mp.fp);
-		}
-	}
-
-	m_file_finish();
-
-	return mp.bufp;
-}
-
-char *
-putoct(unsigned long long u)
-{
-	int i;
-	int triplets = ((int_width + 2) / 3);
-	int zf = zerofill; // leading_zeros;
-
-	u &= (ull_t)int_mask;
-
-	m_file_start();
-
-	fprintf(mp.fp," 0o");
-	for (i = triplets-1; i >= 0; i--) {
-		int triplet = (u >> (3 * i)) & 7;
-		if (triplet || zf || i == 0) {
-		    fputc("01234567"[triplet], mp.fp);
-		    zf = 1;
-		}
-		if (i && (i % 3 == 0)) {
-		    if (digitseparators && zf)
-			    fputs(thousands_sep, mp.fp);
-		}
-	}
-
-	m_file_finish();
-
-	return mp.bufp;
+	va_start(ap, fmt);
+	r = vsnprintf(str, (size_t)size, fmt, ap);
+	va_end(ap);
+	if (r < 0 || r >= size)
+		error(" BUG: snprintf buffer overrun at %s\n", id);
 }
 
 void
@@ -2325,6 +2203,93 @@ putsigned(long long ln)
 	return mp.bufp;
 }
 
+char *
+putbinary(unsigned long long u)
+{
+	int i;
+	int zf = zerofill; // leading_zeros;
+
+	u &= (ull_t)int_mask;
+
+	m_file_start();
+
+	fprintf(mp.fp, " 0b");
+	for (i = int_width-1; i >= 0; i--) {
+		if (u & (1L << i)) {
+			fputc('1', mp.fp);
+			zf = 1;
+		} else if (zf || i == 0) {
+			fputc('0', mp.fp);
+		}
+		if (i && (i % 8 == 0)) {
+			if (digitseparators && zf)
+				fputs(thousands_sep, mp.fp);
+		}
+	}
+
+	m_file_finish();
+
+	return mp.bufp;
+}
+
+char *
+puthex(unsigned long long u)
+{
+	int i;
+	int nibbles = ((int_width + 3) / 4);
+	int zf = zerofill; // leading_zeros;
+
+	u &= (ull_t)int_mask;
+
+	m_file_start();
+
+	fprintf(mp.fp," 0x");
+	for (i = nibbles-1; i >= 0; i--) {
+		int nibble = (u >> (4 * i)) & 0xf;
+		if (nibble || zf || i == 0) {
+		    fputc("0123456789abcdef"[nibble], mp.fp);
+		    zf = 1;
+		}
+		if (i && (i % 4 == 0)) {
+		    if (digitseparators && zf)
+			    fputs(thousands_sep, mp.fp);
+		}
+	}
+
+	m_file_finish();
+
+	return mp.bufp;
+}
+
+char *
+putoct(unsigned long long u)
+{
+	int i;
+	int triplets = ((int_width + 2) / 3);
+	int zf = zerofill; // leading_zeros;
+
+	u &= (ull_t)int_mask;
+
+	m_file_start();
+
+	fprintf(mp.fp," 0o");
+	for (i = triplets-1; i >= 0; i--) {
+		int triplet = (u >> (3 * i)) & 7;
+		if (triplet || zf || i == 0) {
+		    fputc("01234567"[triplet], mp.fp);
+		    zf = 1;
+		}
+		if (i && (i % 3 == 0)) {
+		    if (digitseparators && zf)
+			    fputs(thousands_sep, mp.fp);
+		}
+	}
+
+	m_file_finish();
+
+	return mp.bufp;
+}
+
 
 void
 show_int_truncation(boolean changed, mpd_t *old, char *mark)
@@ -2346,12 +2311,6 @@ show_int_truncation(boolean changed, mpd_t *old, char *mark)
 		error(" # was %s\n", s);
 		free(s);
 	}
-}
-
-boolean
-match_dp(char *p)
-{
-	return (strncmp(p, decimal_pt, decimal_pt_len) == 0);
 }
 
 /* adjust the %e (scientific) format string to put it in engineering
@@ -2812,6 +2771,8 @@ printfloat(void)
 	return GOODOP;
 }
 
+// ------------------------  state and debug output
+
 opreturn
 printstate(void)
 {
@@ -2843,6 +2804,8 @@ printstate(void)
 
 	return GOODOP;
 }
+
+// ------------------------   modes and mode switching
 
 static char *
 mode2name(void)
@@ -2939,24 +2902,7 @@ modefloat(void)
 	return GOODOP;
 }
 
-opreturn
-separators(void)
-{
-	if (!thousands_sep[0] || grouping[0] == CHAR_MAX) {
-		mpd_t *discard;
-		mpop(&discard);
-		mpd_del(discard);
-		p_printf(" No separator support in locale, "
-			"numeric separators are disabled\n");
-		digitseparators = 0;
-		return GOODOP;
-	}
-
-	if (!toggler(&digitseparators, "Numeric separators now", "on", "off"))
-		return BADOP;
-
-	return GOODOP;
-}
+// ------------------------    display format control
 
 void
 float_mode_messages(int both)
@@ -3102,20 +3048,7 @@ width(void)
 	return GOODOP;
 }
 
-
-opreturn
-zerof(void)
-{
-	return toggler(&zerofill, "Zero fill of hex/octal/binary output is now",
-		"on", "off");
-}
-
-opreturn
-rightalign(void)
-{
-	return toggler(&rightalignment, "Right alignment of integer modes is now",
-		"on", "off");
-}
+// ------------------------   special values and constants
 
 opreturn
 store(void)
@@ -3149,6 +3082,8 @@ push_e(void)
 	mpush_copy(e);
 	return GOODOP;
 }
+
+// ------------------------   variadic operators
 
 opreturn
 mark(void)
@@ -3341,6 +3276,8 @@ stddev(void)
 	return sum_worker(3);
 }
 
+// ------------------------     unit conversions
+
 opreturn
 unit_worker( int muldiv, char *factor, char *offset)
 {
@@ -3516,7 +3453,9 @@ units_mpg_l100km(void)
 	return GOODOP;
 }
 
-/* this is almost certainly a lossy conversion */
+// ------------------------      dd/dms conversions
+
+/* NB:  this is a lossy conversion */
 int
 mpd_to_ldouble(ldouble *dp, mpd_t *m)
 {
@@ -3610,6 +3549,8 @@ units_dms_dd(void)
 
 	return GOODOP;
 }
+
+// ------------------------    infix token and token stack utility routines
 
 token *out_stack, *oper_stack, *infix_rpn_queue;
 
@@ -3779,18 +3720,7 @@ trace_stack_dump(int lev, token **tstackp)
 	fprintf(stderr, "\n");
 }
 
-token open_paren_token, chsign_token;
-
-void
-create_infix_support_tokens()
-{
-	/* we'll need a couple of standalone pre-parsed tokens later
-	 * on, specifically for dealing with infix processing.  */
-
-	parse_token("(", &open_paren_token, NULL, INFIX);
-
-	parse_token("chs", &chsign_token, NULL, INFIX);
-}
+// ------------------------    infix support
 
 void
 expression_error(token *pt, token *t)
@@ -3840,6 +3770,13 @@ semicolon(void)
 	return GOODOP;
 }
 
+opreturn
+rpnswitch(void)
+{
+	return GOODOP;
+}
+
+
 boolean
 prev_tok_was_operand(token *pt)
 {
@@ -3886,11 +3823,19 @@ shunt(token *t)
 opreturn
 shunting_yard(int command)
 {
+	static token open_paren_token, chsign_token;
 	static token sytok, prevtok;
 	token *t = &sytok;	// permanent pointers to sytok and prevtok
 	token *pt = &prevtok;
 	token *tp; // used for tpeek()
 	opreturn open_paren(void);
+	opreturn assignment(void);
+
+	if (!open_paren_token.oper) {
+		/* we need a couple of pre-parsed tokens */
+		parse_token("(", &open_paren_token, NULL, INFIX);
+		parse_token("chs", &chsign_token, NULL, INFIX);
+	}
 
 	int nesting;
 
@@ -4174,74 +4119,23 @@ shunting_yard(int command)
 #undef tp_op
 }
 
-
 opreturn
 open_paren(void)
 {
 	return shunting_yard(1);
 }
 
+// ------------------------    variables
 
 opreturn
-autop(void)
+assignment(void)
 {
-	return toggler(&autoprint, "Autoprinting is now", "on", "off");
-}
-
-/* debug support */
-opreturn
-tracetoggle(void)
-{
-	mpd_t *m;
-	uint64_t u;
-
-	if (!mpop(&m))
-		return BADOP;
-
-	u = mpd_get_u64(m, ctx);
-	mpd_del(m);
-
-	// tracing is a bitmap of desired "feature" trace
-	tracing = (int)u;
-
-	p_printf(" internal tracing now set to %d", tracing);
-	for (int i = 0; tracenames[i]; i++) {
-		if (tracing & (1 << i))
-			p_printf("  %s(%d)", tracenames[i], (1 << i));
-	}
-	p_printf("\n");
-
+	/* This gets decremented with every RPN token executed.  If a
+	 * variable is the very next token, we'll write to it instead
+	 * of read.  */
+	variable_write_enable = 2;
+	trace(EXEC,( " enabling assignment\n"));
 	return GOODOP;
-}
-
-void
-exitret(void)
-{
-	if (!stack)
-		exit(2);  // exit 2 on empty stack
-
-	mpd_t *m;
-	uint64_t u;
-
-	mpop(&m);
-
-	u = mpd_get_u64(m, ctx);
-	mpd_del(m);
-
-	exit(u == 0);  // flip exit status, per unix convention
-
-}
-
-opreturn
-quit(void)
-{
-	if (autoprint) {
-		print_top(mode);
-		pending_show();
-	}
-
-	exitret();
-	return GOODOP; // not reached
 }
 
 typedef struct {
@@ -4344,6 +4238,366 @@ dynamic_var(token *t)
 		mpush_copy(v->mpd);
 	}
 	return 1;
+}
+
+// ------------------------   configuration toggles
+
+opreturn
+toggler(boolean *control, char *descrip, char *yes, char *no)
+{
+	mpd_t *m;
+	uint64_t u;
+
+	if (!mpop(&m))
+		return BADOP;
+
+	u = mpd_get_u64(m, ctx);
+
+	if (u != 0 && u != 1) {
+		mpush(m);
+		error(" error: toggle commands only take 0/1 as an argument\n");
+		return BADOP;
+	}
+
+	*control = (u != 0);
+
+	if (descrip)
+		p_printf(" %s %s\n", descrip, u ? yes : no);
+
+	mpd_del(m);
+	return GOODOP;
+}
+
+opreturn
+use_degrees(void)
+{
+	return toggler(&trig_degrees, "trig functions will now use",
+		"degrees", "radians");
+}
+
+opreturn
+separators(void)
+{
+	if (!thousands_sep[0] || grouping[0] == CHAR_MAX) {
+		mpd_t *discard;
+		mpop(&discard);
+		mpd_del(discard);
+		p_printf(" No separator support in locale, "
+			"numeric separators are disabled\n");
+		digitseparators = 0;
+		return GOODOP;
+	}
+
+	if (!toggler(&digitseparators, "Numeric separators now", "on", "off"))
+		return BADOP;
+
+	return GOODOP;
+}
+
+opreturn
+zerof(void)
+{
+	return toggler(&zerofill, "Zero fill of hex/octal/binary output is now",
+		"on", "off");
+}
+
+opreturn
+rightalign(void)
+{
+	return toggler(&rightalignment, "Right alignment of integer modes is now",
+		"on", "off");
+}
+
+opreturn
+infixmode(void)
+{
+	return toggler(&infix_mode,  "Full-time infix mode",
+		"enabled", "disabled");
+}
+
+opreturn
+enable_echo(void)
+{
+	/* no confirmation messages, which might defeat the silent purpose */
+	return toggler(&echo_enabled,  0, 0, 0);
+}
+
+opreturn
+enable_errexit(void)
+{
+	return toggler(&exit_on_error,  "Exiting on errors and warnings",
+		"enabled", "disabled");
+}
+
+opreturn
+autop(void)
+{
+	return toggler(&autoprint, "Autoprinting is now", "on", "off");
+}
+
+opreturn
+debug(void)
+{
+	return toggler(&debug_enabled,  "Debug commands",
+		"enabled", "disabled");
+}
+
+opreturn
+tracelevel(void)
+{
+	mpd_t *m;
+	uint64_t u;
+
+	if (!mpop(&m))
+		return BADOP;
+
+	u = mpd_get_u64(m, ctx);
+	mpd_del(m);
+
+	// tracing is a bitmap of desired "feature" trace
+	tracing = (int)u;
+
+	p_printf(" internal tracing now set to %d", tracing);
+	for (int i = 0; tracenames[i]; i++) {
+		if (tracing & (1 << i))
+			p_printf("  %s(%d)", tracenames[i], (1 << i));
+	}
+	p_printf("\n");
+
+	return GOODOP;
+}
+
+// ------------------------     user input support
+
+#if defined(USE_EDITLINE) || defined(USE_READLINE)
+
+/* This is for command completion */
+char *
+command_generator(const char *prefix, int state)
+{
+	static size_t len;
+	static struct oper *op;
+
+	/* If this is the first time called, initialize our state. */
+	if (!state) {
+		op = opers;
+		len = strlen(prefix);
+	}
+
+	/* Return the next name in the list that matches our prefix. */
+	while (1) {
+		if (!op->name)		// end of list
+			break;
+		if (!op->func || strncmp(op->name, prefix, len) != 0) {
+			op++;
+			continue;
+		}
+		return strdup((op++)->name);
+	}
+
+	return 0;
+}
+
+/* Attempted completion function. */
+char **
+command_completion(const char* prefix, int start, int end)
+{
+	(void)start;  // suppress "unused" warnings
+	(void)end;
+
+	return rl_completion_matches(prefix, command_generator);
+}
+
+/* get an input line from the command line editor.  returns NULL if
+ * EOF, or if not reading a tty.  input_buf (i.e., *ibp) is untouched
+ * in that case.  */
+int
+editor_line(char **ibp)
+{
+	char *input_buf = *ibp;
+	if (!isatty(0))
+		return 0;
+
+	static char readline_init_done = 0;
+
+	if (!readline_init_done) {
+		rl_readline_name = "rca";
+		rl_basic_word_break_characters = " \t\n";
+		rl_attempted_completion_function = command_completion;
+		using_history();
+		readline_init_done = 1;
+	}
+
+	/* if we used the buffer as input, add it to history.  doing
+	 * this here records any command line input, possibly stored
+	 * in the buffer above, on the first call to fetch_line() */
+	if (input_buf && *input_buf)
+		add_history(input_buf);
+
+	if (input_buf) free(input_buf);
+
+	if ((input_buf = readline("")) == NULL)  // got EOF
+		exitret();
+
+#if READLINE_NO_ECHO_BARE_NL
+	/* a bug in readline() doesn't echo bare newlines to a tty if
+	 * the program has no prompt.  so we do it here.  this is
+	 * needed in some sub-versions of readline 8.2 */
+	if (*input_buf == '\0')
+		putchar('\n');
+#endif
+
+	*ibp = input_buf;
+
+	return 1;
+}
+
+#else // no editline or readline
+
+/* this editor function forces a fallback to reading stdin directly, below */
+int
+editor_line(char **ibp)
+{
+	(void)ibp;
+	return 0;
+}
+
+#endif
+
+char *
+strremoveall(char *haystack, const char *needle)
+{
+	size_t len = strlen(needle);
+
+	if (len > 0) {
+		char *p = haystack;
+
+		while ((p = strstr(p, needle)) != NULL)
+			memmove(p, p + len, strlen(p + len) + 1);
+	}
+	return haystack;
+}
+
+void
+no_comments(char *cp)
+{
+	char *ncp;
+
+	/* Eliminate comments */
+	if ((ncp = strchr(cp, '#')) != NULL)
+		*ncp = '\0';
+
+	/* Eliminate the thousands separator from numbers, like
+	 * "1,345,011".  This removes them from the entire line, which
+	 * would be a problem except:  the only simple ascii
+	 * separators ever used in locales are '.' and ','.  We don't
+	 * ',' use anywhere else.  Removing '.' is safe, because if
+	 * the separator is '.', then the decimal point isn't.  All
+	 * the other separators are unicode sequences, which we also
+	 * don't use.  So the command line won't be harmed by this
+	 * removal.  Some locales use a space as a separator, but it's
+	 * a "hard" space, represented as unicode.  */
+	if (thousands_sep[0])
+		strremoveall(cp, thousands_sep);
+
+	/* Same for currency symbols.  They're mostly unicode
+	 * sequences or "$", which are safe to remove.  But some are
+	 * plain ascii, or punctuation we need.  We checked earlier to
+	 * be sure the currency symbol doesn't match in any of our
+	 * commands.  */
+	if (currency[0])
+		strremoveall(cp, currency);
+}
+
+/* on return from fetch_line(), the global input_ptr is a string
+ * containing commands to be executed, wherever they may have
+ * come from (i.e., command line, environment, user input) */
+int
+fetch_line(void)
+{
+	static int arg = 1;
+	static char *input_buf;
+	static size_t blen;
+	static boolean tried_rca_init;
+	char *rca_init;
+
+	/* get commands from $RCA_INIT */
+	if (!tried_rca_init) {
+		tried_rca_init = TRUE;
+		rca_init = getenv("RCA_INIT");
+		if (rca_init) {
+			blen = strlen(rca_init) + 1;
+			input_buf = safe_calloc(blen);
+			strcpy(input_buf, rca_init);
+			no_comments(input_buf);
+			input_ptr = input_buf;
+			pending_suppress();
+			return 1;
+		}
+	}
+
+	pending_allow();
+
+	/* get commands from the command line.  since only numbers can
+	 * start with '-', we let any other use of a hyphen bring up a
+	 * usage message.  (this isn't perfectly robust, but good
+	 * enough) */
+	if (arg < g_argc) {
+
+		if (g_argv[1][0] == '-' && !(isdigit(g_argv[1][1])))
+			usage();
+
+		if (input_buf) free(input_buf);
+
+		blen = 0;
+		for (arg = 1; arg < g_argc; arg++)
+			blen += strlen(g_argv[arg]) + 2;
+
+		if (blen) {
+			input_buf = safe_calloc(blen);
+
+			*input_buf = '\0';
+			for (arg = 1; arg < g_argc; arg++) {
+				strcat(input_buf, g_argv[arg]);
+				strcat(input_buf, " ");
+			}
+
+			no_comments(input_buf);
+			input_ptr = input_buf;
+			return 1;
+		}
+	}
+
+	/* get an input line from editline or readline */
+	if (!editor_line(&input_buf)) {
+
+		/* the command line editor didn't provide a line, so
+		 * either we're running without an editor, or stdin
+		 * isn't a tty.  */
+
+		if (getline(&input_buf, &blen, stdin) < 0)  // EOF
+			exitret();
+
+		if (input_buf[strlen(input_buf) - 1] == '\n')
+			input_buf[strlen(input_buf) - 1] = '\0';
+
+		/* we might want stdin mixed with the output if we're
+		 * redirecting from a file or pipe.  */
+		if (echo_enabled)
+			puts(input_buf);
+	}
+
+	no_comments(input_buf);
+
+	input_ptr = input_buf;
+
+	return 1;
+}
+
+boolean
+match_dp(char *p)
+{
+	return (strncmp(p, decimal_pt, decimal_pt_len) == 0);
 }
 
 size_t stralnum(char *s, char **endptr)
@@ -4531,229 +4785,6 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 	return 1;
 }
 
-char *
-strremoveall(char *haystack, const char *needle)
-{
-	size_t len = strlen(needle);
-
-	if (len > 0) {
-		char *p = haystack;
-
-		while ((p = strstr(p, needle)) != NULL)
-			memmove(p, p + len, strlen(p + len) + 1);
-	}
-	return haystack;
-}
-
-void
-no_comments(char *cp)
-{
-	char *ncp;
-
-	/* Eliminate comments */
-	if ((ncp = strchr(cp, '#')) != NULL)
-		*ncp = '\0';
-
-	/* Eliminate the thousands separator from numbers, like
-	 * "1,345,011".  This removes them from the entire line, which
-	 * would be a problem except:  the only simple ascii
-	 * separators ever used in locales are '.' and ','.  We don't
-	 * ',' use anywhere else.  Removing '.' is safe, because if
-	 * the separator is '.', then the decimal point isn't.  All
-	 * the other separators are unicode sequences, which we also
-	 * don't use.  So the command line won't be harmed by this
-	 * removal.  Some locales use a space as a separator, but it's
-	 * a "hard" space, represented as unicode.  */
-	if (thousands_sep[0])
-		strremoveall(cp, thousands_sep);
-
-	/* Same for currency symbols.  They're mostly unicode
-	 * sequences or "$", which are safe to remove.  But some are
-	 * plain ascii, or punctuation we need.  We checked earlier to
-	 * be sure the currency symbol doesn't match in any of our
-	 * commands.  */
-	if (currency[0])
-		strremoveall(cp, currency);
-}
-
-#if defined(USE_EDITLINE) || defined(USE_READLINE)
-/* This supports command completion */
-char *
-command_generator(const char *prefix, int state)
-{
-	static size_t len;
-	static struct oper *op;
-
-	/* If this is the first time called, initialize our state. */
-	if (!state) {
-		op = opers;
-		len = strlen(prefix);
-	}
-
-	/* Return the next name in the list that matches our prefix. */
-	while (1) {
-		if (!op->name)		// end of list
-			break;
-		if (!op->func || strncmp(op->name, prefix, len) != 0) {
-			op++;
-			continue;
-		}
-		return strdup((op++)->name);
-	}
-
-	return 0;
-}
-
-/* Attempted completion function. */
-char **
-command_completion(const char* prefix, int start, int end)
-{
-	(void)start;  // suppress "unused" warnings
-	(void)end;
-
-	return rl_completion_matches(prefix, command_generator);
-}
-
-/* get an input line from the command line editor.  returns NULL if
- * EOF, or if not reading a tty.  input_buf (i.e., *ibp) is untouched
- * in that case.  */
-int
-editor_line(char **ibp)
-{
-	char *input_buf = *ibp;
-	if (!isatty(0))
-		return 0;
-
-	static char readline_init_done = 0;
-
-	if (!readline_init_done) {
-		rl_readline_name = "rca";
-		rl_basic_word_break_characters = " \t\n";
-		rl_attempted_completion_function = command_completion;
-		using_history();
-		readline_init_done = 1;
-	}
-
-	/* if we used the buffer as input, add it to history.  doing
-	 * this here records any command line input, possibly stored
-	 * in the buffer above, on the first call to fetch_line() */
-	if (input_buf && *input_buf)
-		add_history(input_buf);
-
-	if (input_buf) free(input_buf);
-
-	if ((input_buf = readline("")) == NULL)  // got EOF
-		exitret();
-
-#if READLINE_NO_ECHO_BARE_NL
-	/* a bug in readline() doesn't echo bare newlines to a tty if
-	 * the program has no prompt.  so we do it here.  this is
-	 * needed in some sub-versions of readline 8.2 */
-	if (*input_buf == '\0')
-		putchar('\n');
-#endif
-
-	*ibp = input_buf;
-
-	return 1;
-}
-
-#else // no editline or readline
-
-int
-editor_line(char **ibp)
-{
-	(void)ibp;
-	return 0;
-}
-
-#endif
-
-/* on return from fetch_line(), the global input_ptr is a string
- * containing commands to be executed, wherever they may have
- * come from (i.e., command line, environment, user input) */
-int
-fetch_line(void)
-{
-	static int arg = 1;
-	static char *input_buf;
-	static size_t blen;
-	static boolean tried_rca_init;
-	char *rca_init;
-
-	/* get commands from $RCA_INIT */
-	if (!tried_rca_init) {
-		tried_rca_init = TRUE;
-		rca_init = getenv("RCA_INIT");
-		if (rca_init) {
-			blen = strlen(rca_init) + 1;
-			input_buf = safe_calloc(blen);
-			strcpy(input_buf, rca_init);
-			no_comments(input_buf);
-			input_ptr = input_buf;
-			pending_suppress();
-			return 1;
-		}
-	}
-
-	pending_allow();
-
-	/* get commands from the command line.  since only numbers can
-	 * start with '-', we let any other use of a hyphen bring up a
-	 * usage message.  (this isn't perfectly robust, but good
-	 * enough) */
-	if (arg < g_argc) {
-
-		if (g_argv[1][0] == '-' && !(isdigit(g_argv[1][1])))
-			usage();
-
-		if (input_buf) free(input_buf);
-
-		blen = 0;
-		for (arg = 1; arg < g_argc; arg++)
-			blen += strlen(g_argv[arg]) + 2;
-
-		if (blen) {
-			input_buf = safe_calloc(blen);
-
-			*input_buf = '\0';
-			for (arg = 1; arg < g_argc; arg++) {
-				strcat(input_buf, g_argv[arg]);
-				strcat(input_buf, " ");
-			}
-
-			no_comments(input_buf);
-			input_ptr = input_buf;
-			return 1;
-		}
-	}
-
-	/* get an input line from editline or readline */
-	if (!editor_line(&input_buf)) {
-
-		/* the command line editor didn't provide a line, so
-		 * either we're running without an editor, or stdin
-		 * isn't a tty.  */
-
-		if (getline(&input_buf, &blen, stdin) < 0)  // EOF
-			exitret();
-
-		if (input_buf[strlen(input_buf) - 1] == '\n')
-			input_buf[strlen(input_buf) - 1] = '\0';
-
-		/* we might want stdin mixed with the output if we're
-		 * redirecting from a file or pipe.  */
-		if (echo_enabled)
-			puts(input_buf);
-	}
-
-	no_comments(input_buf);
-
-	input_ptr = input_buf;
-
-	return 1;
-}
-
 
 token putback;
 
@@ -4764,8 +4795,8 @@ putback_token(token *t)
 	trace(EXEC,("pushing back: ")); trace_show_tok(EXEC, t);
 }
 
-/* read_token() makes sure we have input available to parse, and sets
- * things up for parse_token() to do the work.  */
+/* read_token() makes sure we have input available to parse, and calls
+ * parse_token() to do the work.  */
 int
 read_token(token *t, int parsing_rpn)
 {
@@ -4807,6 +4838,7 @@ read_token(token *t, int parsing_rpn)
 	return 1;
 }
 
+// ------------------------  calculator infrastructure
 
 /* the opers[] and config[] tables don't initialize everything explicitly */
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
@@ -5261,6 +5293,33 @@ locale_init(void)
 
 }
 
+void
+exitret(void)
+{
+	mpd_t *m;
+	uint64_t u;
+
+	if (!mpeek(&m))
+		exit(2);  // exit 2 on empty stack
+
+	u = mpd_get_u64(m, ctx);
+
+	exit(u == 0);  // flip exit status, per unix convention
+
+}
+
+opreturn
+quit(void)
+{
+	if (autoprint) {
+		print_top(mode);
+		pending_show();
+	}
+
+	exitret();
+	return GOODOP; // not reached
+}
+
 // *INDENT-OFF*.
 struct oper opers[] = {
 //       +-------------------------------- section header if no function ptr
@@ -5354,8 +5413,8 @@ struct oper opers[] = {
 	{"rcl", recall,		"Save to or push from off-stack storage", Sym },
 	{"pi", push_pi,		0, Sym },
 	{"e", push_e,		"Push constant pi or e", Sym },
-	{"lastx", repush,	0, Sym },
-	{"lx", repush,		"Push previous value of x", Sym },
+	{"lastx", push_lastx,	0, Sym },
+	{"lx", push_lastx,	"Push previous value of x", Sym },
 	{"_<name>", nop,	"Push variable" },  // function unused
 	{"=", assignment,	"Assign variable.  RPN: \"3 = _v\"   infix: \"(_v = 3)\"", 2, 6 },
 	{"variables", showvars, 0 },
@@ -5423,7 +5482,7 @@ struct oper opers[] = {
 	{"infix", infixmode,	"Toggle running mainly in infix, or in rpn" },
 	{""},
     {"Debug support:", 0, 0, 0, 0, 'D'}, // hidden until "1 debug"
-	{"tracing", tracetoggle,"Set tracing level", 0, 0, 'D'},
+	{"tracing", tracelevel,	"Set tracing level", 0, 0, 'D'},
 	{"commands", commands,	"Show raw command table", 0, 0, 'D'},
 	{"", 0, 0, 0, 0, 'D'},
     {"Housekeeping:"},
@@ -5493,7 +5552,7 @@ main(int argc, char *argv[])
 	token *pt = &prevtok;
 
 	pt->type = UNKNOWN;
-	mpd_stuff();
+	mpd_startup();
 
 	char *pn = strrchr(argv[0], '/');
 	progname = pn ? (pn + 1) : argv[0];
@@ -5505,8 +5564,6 @@ main(int argc, char *argv[])
 	locale_init();
 
 	setup_integer_width(0);
-
-	create_infix_support_tokens();
 
 	config_read_defaults();
 
