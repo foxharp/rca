@@ -1620,42 +1620,63 @@ mpd_asin(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 opreturn
 sine(void)
 {
+	if (!floating_mode(mode))
+		return trig_no_sense();
+
 	return mpd_1_op_shell(mpd_sin);
 }
 
 opreturn
 cosine(void)
 {
+	if (!floating_mode(mode))
+		return trig_no_sense();
+
 	return mpd_1_op_shell(mpd_cos);
 }
 
 opreturn
 tangent(void)
 {
+	if (!floating_mode(mode))
+		return trig_no_sense();
+
 	return mpd_1_op_shell(mpd_tan);
 }
 
 opreturn
 asine(void)
 {
+	if (!floating_mode(mode))
+		return trig_no_sense();
+
 	return mpd_1_op_shell(mpd_asin);
 }
 
 opreturn
 acosine(void)
 {
+	if (!floating_mode(mode))
+		return trig_no_sense();
+
 	return mpd_1_op_shell(mpd_acos);
 }
 
 opreturn
 atangent(void)
 {
+	if (!floating_mode(mode))
+		return trig_no_sense();
+
 	return mpd_1_op_shell(mpd_atan);
 }
 
 opreturn
 atangent2(void)
 {
+	if (!floating_mode(mode))
+		return trig_no_sense();
+
 	return mpd_2_op_shell(mpd_atan2);
 }
 
@@ -2331,12 +2352,6 @@ boolean
 match_dp(char *p)
 {
 	return (strncmp(p, decimal_pt, decimal_pt_len) == 0);
-}
-
-int
-min(int a, int b)
-{
-	return (a < b) ? a : b;
 }
 
 /* adjust the %e (scientific) format string to put it in engineering
@@ -3611,12 +3626,6 @@ stackname(token **tstackp)
 	else
 		n = "unknown stack";
 	return n;
-}
-
-token *
-talloc(void)
-{
-	return (struct token *)safe_calloc(sizeof(struct token));
 }
 
 void
