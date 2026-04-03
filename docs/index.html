@@ -9,10 +9,24 @@
 </style>
 <div class="markdown-heading"><h1 class="heading-element">
 <em>rca</em>: a rich/RPN calculator</h1><a id="user-content-rca-a-richrpn-calculator" class="anchor" aria-label="Permalink: rca: a rich/RPN calculator" href="#rca-a-richrpn-calculator"><span aria-hidden="true" class="octicon octicon-link"></span></a></div>
-<p><em>rca</em> is simple, yet extremely versatile:</p>
+<p><em>rca</em> is a convenient, non-programmable, command-line calculator, for
+typical one-off professional and everyday problems.
+It uses the mpdecimal math library for more reliable accuracy
+than native floating point.  <em>rca</em> is similar to both the <em>bc</em> and
+<em>dc</em> Unix commands, but unlike them, it can seamlessly evaluate both
+RPN and infix.  It's less technical, and perhaps less rigorous, than
+either, but hopefully it's also more user-accessible.  <em>rca</em> is
+written in C, and is maintained in a single source file.</p>
+<p><em>rca</em> is very versatile.  Examples follow, but the
+<a href="https://foxharp.github.io/rca/rca-man.html" rel="nofollow">man page</a>
+and rca's
+<a href="https://foxharp.github.io/rca/rca-help.html" rel="nofollow">help text</a>
+have all the details.</p>
+<p><em>rca</em> is hosted at <a href="https://github.com/foxharp/rca">github</a>.</p>
 <ul>
 <li>
-<p>It's a reverse polish notation calculator in the HP tradition.</p>
+<p>At its heart, <em>rca</em> is a reverse polish notation calculator in the
+HP tradition.</p>
 <pre><code>    34 11 *
                                  374
     sto
@@ -29,7 +43,7 @@
 RPN input, or in a full-time infix mode (not shown here).</p>
 <pre><code>    ((lastx + pi) * 2)
                                2,998.28
-    3 /
+    (8 - 5) /
                                  999.428
 </code></pre>
 </li>
@@ -47,17 +61,29 @@ RPN input, or in a full-time infix mode (not shown here).</p>
 <pre><code>    30 sin 2 ^ 30 cos 2 ^ + sqrt
                                    1.000
 </code></pre>
-<p>or</p>
+<p>or, using infix:</p>
 <pre><code>    (sqrt (sin(30) ** 2 + cos(30) ** 2))
                                    1.000
+</code></pre>
+<p>and with lots of digits:</p>
+<pre><code>    30 digits 0 degrees
+     trig functions will now use radians
+    pi
+                                   3.14159265358979323846264338328
+    4 /
+                                   0.78539816339744830961566084582
+    sin
+                                   0.707106781186547524400844362105
+    2 ^
+                                   0.5
 </code></pre>
 </li>
 <li>
 <p>It has the word width selection, bitwise operators, and multiple bases
 of a programmer's calculator.</p>
-<pre><code>    32 bits H
+<pre><code>    32 bits  H
      Mode is hex (H).  Integer math with 32 bits.
-    1 zerofill
+    1 zf
      Zero fill of hex/octal/binary output is now on
     5
                          0x0000,0005
@@ -66,7 +92,7 @@ of a programmer's calculator.</p>
     0x80010000 |
                          0x8001,0500
     b
-                              0b10000000,00000001,00000101,00000000
+                         0b10000000,00000001,00000101,00000000
 </code></pre>
 </li>
 <li>
@@ -82,7 +108,21 @@ of a programmer's calculator.</p>
 </code></pre>
 </li>
 <li>
-<p>It can be trivially incorporated into shell scripts.</p>
+<p>It also has a selection of convenient unit conversions.</p>
+<pre><code>    3.5 i2mm
+                                  88.9
+    mm2i
+                                   3.5
+    1 oz2g
+                                  28.3495
+    2 m2ft
+                                   6.56168
+    30 mpg2l100km
+                                   7.84049
+</code></pre>
+</li>
+<li>
+<p>And it can be trivially incorporated into shell scripts.</p>
 <pre><code>    $ source rca_float
     $ foo=$(fe "22 / 7")
     $ echo $foo
@@ -91,19 +131,7 @@ of a programmer's calculator.</p>
     yes
 </code></pre>
 </li>
-<li>
-<p><em>rca</em> is written in C, and is maintained in a single source file.
-It uses the mpdecimal math library, for more reliable accuracy
-than native floating point.  It's a convenient, non-programmable,
-desktop calculator, for typical one-off professional and everyday
-problems.</p>
-</li>
 </ul>
-<p>The
-<a href="https://foxharp.github.io/rca/rca-man.html" rel="nofollow">man page</a>
-and rca's
-<a href="https://foxharp.github.io/rca/rca-help.html" rel="nofollow">help text</a>
-have all the details.</p>
-<p><em>rca</em> is hosted at <a href="https://github.com/foxharp/rca">github</a>.</p>
-<p>The license can be found in the source or viewed with <em>rca</em>'s
-"license" command.  (It's BSD-2-Clause.)</p>
+<hr>
+<p><em>rca</em>'s BSD license can be found in the source, at
+<a href="https://github.com/foxharp/rca">https://github.com/foxharp/rca</a>, or viewed with the "license" command.</p>

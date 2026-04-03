@@ -283,9 +283,9 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        command line arguments.  Initial conditions can be established by
        either method.  Any output from commands run via <span style="font-weight:bold;">$RCA_INIT </span>is
        discarded.  Also on startup, <span style="font-weight:bold;">rca </span>will use the <span style="font-weight:bold;">$RCA_DIGITS </span>variable
-       to set the maximum number of displayed digits.  That value is
-       clamped into the range 2 to 100.  The current built-in default is
-       30 digits.
+       to set the maximum number of displayed digits.  That value cannot
+       be set below 2, but there is no enforced maximum.  (Caveat
+       emptor.)  The current built-in default is 30 digits.
 
        Many of the commands that control <span style="font-weight:bold;">rca</span>'s operation and appearance
        have been described elsewhere, but a concise list may be useful:
@@ -610,7 +610,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        Paul Fox created <span style="font-weight:bold;">rca </span>(formerly called &quot;ca&quot;) very slowly over a
        span of decades, starting in 1993.
 
-                        version v41     Apr 1, 2026                <span style="font-style:italic;">rca</span>(1)
+                        version v42     Apr 3, 2026                <span style="font-style:italic;">rca</span>(1)
 </pre>
 </body>
 </html>
