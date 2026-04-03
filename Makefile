@@ -7,11 +7,13 @@
 # if you don't have either, then build without command-line editing:
 #	gcc -g -o rca rca.c -lmpdec -lm
 #
-# if you don't have the mpdecimal library
-# on debian/ubuntu:
+# if you don't have the mpdecimal library:
+# debian/ubuntu:
 # 	sudo apt install libmpdec libmpdec-dev
-# on fedora/redhat:
+# fedora/redhat:
 # 	sudo dnf install mpdecimal mpdecimal-devel
+# or download a tarball from its host site:
+#	https://www.bytereef.org/mpdecimal/download.html
 
 all: rca rca.1 copyrightcheck
 
