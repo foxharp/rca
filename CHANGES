@@ -1,3 +1,27 @@
+v42 changes (04/03/2026)
+
+    revised README.md, and clarified some of the build instructions
+    in the Makefile.
+
+    now dynamically size buffers used for printing, and calculate pi
+    on startup, rather than initializing from a string constant, both
+    allow rca to work for any number of digits.  also, make the Taylor
+    iteration limit dependent on max_digits
+
+    remove the cap on max_digits, as set by $RCA_DIGITS
+
+    introduce a safe_snprintf() wrapper
+
+    made "working" digit margins bigger, and tuned the atan algorithm
+    cutoffs
+
+    now use a context with more precision while initializing all of
+    the constants (including pi)
+
+    brought debian packaging metadata up to date
+
+    added a state-of-the-branches summary, to both the mpdecimal
+    and main branches.
 
 
 v41 changes (04/01/2026)
