@@ -282,7 +282,14 @@ int max_digits = USERDIGITS;  // may be overridden by $RCA_DIGITS
  * when calculating some initial values which remain constant through
  * the life of the calculator (in particular, pi), we use a context
  * with MPDECIMAL+10 digits of precision.
+ * see the context initialization in mpd_stuff().
  */
+
+/* this is used as the size for various holding buffers for numbers
+ * being prepared for display.  we add 50% (it's really only 33%) for
+ * grouping separators, and 100 to be sure we have a minimum for
+ * 64 bit integers, also with separators, displayed in various bases. */
+#define TEMP_BUFSIZE ((size_t)(max_digits + max_digits/2) + 100)
 
 /* float_digits may represent either the total displayed precision, or
  * the number of digits after the decimal, depending on float_specifier.
@@ -297,13 +304,6 @@ boolean zerofill = 0;
 /* rightalign controls whether, when printing, we line up least
  * significant digits (right) or most significant digits (left).  */
 boolean rightalignment = 1;
-
-/* the max number of characters needed to hold our floating point
- * values, including sign, exponent, etc, is under 50 chars.  binary
- * format takes around 80 chars for a 64 bit long long.  this constant
- * is used as the size for various holding buffers for numbers being
- * prepared for display.  */
-#define TEMP_BUFSIZE 512
 
 /* these all help limit the word size to anything we want in integer mode.  */
 mpd_t *int_modulo;
@@ -2256,16 +2256,18 @@ add_digit_grouping(char *iobuf)
 char *
 putunsigned(unsigned long long u)
 {
-	char buf[TEMP_BUFSIZE];
+	static char *tbuf;
+	if (!tbuf) tbuf = safe_calloc(TEMP_BUFSIZE);
+
 	m_file_start();
 
 	u &= (ull_t)int_mask;
 
 	trace(EXEC, "putunsigned: hex is 0x%llx\n", u);
 
-	snprintf(buf, sizeof(buf), " %llu", u);
-	add_digit_grouping(buf);
-	fputs(buf, mp.fp);
+	snprintf(tbuf, TEMP_BUFSIZE, " %llu", u);
+	add_digit_grouping(tbuf);
+	fputs(tbuf, mp.fp);
 
 	m_file_finish();
 
@@ -2275,12 +2277,14 @@ putunsigned(unsigned long long u)
 char *
 putsigned(long long ln)
 {
-	char buf[TEMP_BUFSIZE];
+	static char *tbuf;
+	if (!tbuf) tbuf = safe_calloc(TEMP_BUFSIZE);
+
 	m_file_start();
 
-	snprintf(buf, sizeof(buf), " %lld", ln);
-	add_digit_grouping(buf);
-	fputs(buf, mp.fp);
+	snprintf(tbuf, TEMP_BUFSIZE, " %lld", ln);
+	add_digit_grouping(tbuf);
+	fputs(tbuf, mp.fp);
 
 	m_file_finish();
 
@@ -2467,8 +2471,9 @@ zero_pad_exponent(char *s)
 char *
 print_floating(mpd_t *m)
 {
+	static char *tbuf;
+	if (!tbuf) tbuf = safe_calloc(TEMP_BUFSIZE);
 	char fmt[30];
-	char buf[TEMP_BUFSIZE];
 
 	m_file_start();
 	fputc(' ', mp.fp);
@@ -2510,13 +2515,13 @@ print_floating(mpd_t *m)
 		}
 
 		char *s = mpd_format(m, fmt, ctx);
-		snprintf(buf, sizeof(buf), "%s", s);
+		snprintf(tbuf, TEMP_BUFSIZE, "%s", s);
 		free(s);
 
-		trim_g_trailing_zeros(buf);
-		zero_pad_exponent(buf);
-		add_digit_grouping(buf);
-		fputs(buf, mp.fp);
+		trim_g_trailing_zeros(tbuf);
+		zero_pad_exponent(tbuf);
+		add_digit_grouping(tbuf);
+		fputs(tbuf, mp.fp);
 
 	} else if (float_specifier[0] == 'f') { // 'f'ixed
 
@@ -2525,11 +2530,11 @@ print_floating(mpd_t *m)
 
 		// use it to get fixed notation
 		char *s = mpd_format(m, fmt, ctx);
-		snprintf(buf, sizeof(buf), "%s", s);
+		snprintf(tbuf, TEMP_BUFSIZE, "%s", s);
 		free(s);
 
-		add_digit_grouping(buf);
-		fputs(buf, mp.fp);
+		add_digit_grouping(tbuf);
+		fputs(tbuf, mp.fp);
 
 	} else if (float_specifier[0] == 'e') { // "eng"
 
@@ -2539,15 +2544,15 @@ print_floating(mpd_t *m)
 
 		// use it to get scientific notation
 		char *s = mpd_format(m, fmt, ctx);
-		snprintf(buf, sizeof(buf), "%s", s);
+		snprintf(tbuf, TEMP_BUFSIZE, "%s", s);
 		free(s);
 
 		// convert it to engineering format
-		if (!convert_eng_format(buf)) {
+		if (!convert_eng_format(tbuf)) {
 			error(" BUG: parse error in engineering format\n");
 		} else {
-			add_digit_grouping(buf);
-			fputs(buf, mp.fp);
+			add_digit_grouping(tbuf);
+			fputs(tbuf, mp.fp);
 		}
 	}
 
