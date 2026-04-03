@@ -18,28 +18,18 @@ width can be adjusted to emulate the arithmetic of any class of CPU.
 can also be easily incorporated into shell scripts to provide floating point
 support.
 
-Whitespace in
+Arithmetic is done using an arbitrary precision decimal floating point
+library.  The default precision is 30 digits, which can be modified at
+startup via the environment.
+
+A complete list of operators and commands can be obtained with the
+.B help
+command.  Whitespace in
 .BR rca 's
 input is often optional, though some cases will cause ambiguity.
 A
 .B #
 character starts a comment.  The rest of the line is ignored.
-
-The value at the top of the stack can be shown with the
-.B p
-command, and the entire stack with
-.BR P .
-When
-.B rca
-prints the stack, the top of stack will be printed last, i.e., closest
-to the bottom of the screen.
-
-Autoprinting will print the value at the top of the stack after most
-input lines.  This is on by default; it can be toggled off with
-.B 0 autoprint
-(or
-.B 0
-.BR ap ).
 
 Depending on how
 .B rca
@@ -77,11 +67,7 @@ etc).  There are also unit conversions available
 .BR oz2g ,
 .BR f2c ,
 and more).
-A complete list of operators can be obtained with the
-.B help
-(or
-.BR ? )
-command.  The top two elements on the stack, in HP tradition, are
+The top two elements on the stack, in HP tradition, are
 sometimes referred to in the documentation as
 .I x
 and
@@ -92,6 +78,22 @@ but not literally within the program itself with one exception:  the
 .BR lx )
 operator returns the value that was at the top of stack just previous to the
 most recently executed operator.
+
+The value at the top of the stack can be shown with the
+.B p
+command, and the entire stack with
+.BR P .
+When
+.B rca
+prints the stack, the "top" of the stack will be printed last, i.e.,
+closest to the bottom of the screen.
+
+Autoprinting will print the value at the top of the stack after most
+input lines.  This is on by default; it can be toggled off with
+.B 0 autoprint
+(or
+.B 0
+.BR ap ).
 
 .SH INFIX NOTATION
 Infix expressions in
