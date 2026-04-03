@@ -1,9 +1,17 @@
 
 # if you don't have make, or this makefile doesn't work for you,
 # the simple commands you want are one of these:
+#	gcc -g -o rca -D USE_EDITLINE rca.c -lmpdec -lm -leditline
+# if you don't have editline, then try:
 #	gcc -g -o rca -D USE_READLINE rca.c -lmpdec -lm -lreadline
-# or, without command-line editing:
+# if you don't have either, then build without command-line editing:
 #	gcc -g -o rca rca.c -lmpdec -lm
+#
+# if you don't have the mpdecimal library
+# on debian/ubuntu:
+# 	sudo apt install libmpdec libmpdec-dev
+# on fedora/redhat:
+# 	sudo dnf install mpdecimal mpdecimal-devel
 
 all: rca rca.1 copyrightcheck
 
@@ -17,14 +25,17 @@ CFLAGS += -Wall -Wextra -Wfloat-conversion -Wconversion  \
     -Warray-bounds=2 -Wformat-security -Wsign-conversion \
     -Wshift-overflow=2 -Wstrict-overflow=2 -pedantic -ffunction-sections
 
+# normally, if mpdecimal is system-installed, it's just:
 # LIBS += -lmpdec
-# building against local install, want static link for libmpdec:
+
+# but if building against a local install, then you probably want
+# a static link for libmpdec:
 LIBS += -L/usr/local/mpdecimal/lib -Wl,-Bstatic -lmpdec -Wl,-Bdynamic
 CFLAGS += -I /usr/local/mpdecimal/include
 
 LIBS += -lm
 
-# means of finding unused functions:
+# these are a means of finding unused functions:
 # CFLAGS +=  -Wl,--gc-sections -Wl,--print-gc-sections
 
 rca: rca.c
