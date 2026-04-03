@@ -19,9 +19,10 @@ The current plan is that further development will happen on the
 mpdecimal branch.
 
 One complication is that somehow libmpdec got dropped from Debian,
-briefly, after python started using its own version (I think).  It's
-back in "testing" on trixie now, and presumably will migrate up into
-stable in due time.
+for a release or two, so it's also missing from Ubuntu for a release
+or two.  It's available on Debian again as of Debian 13 (trixie) as
+libmpdec-dev.  It's also on Ubuntu 25, though I'm not sure of the
+name.
 
-I've been developing against version 4.0.1, from
-	https://www.bytereef.org/mpdecimal/download.html.
+Since I'm on Ubuntu 24, I've been developing against version 4.0.1,
+from https://www.bytereef.org/mpdecimal/download.html.
