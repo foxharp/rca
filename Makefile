@@ -9,7 +9,7 @@
 #
 # if you don't have the mpdecimal library:
 # debian/ubuntu:
-# 	sudo apt install libmpdec libmpdec-dev
+# 	sudo apt install libmpdec-dev   (will pull in libmpdec4 or earlier)
 # fedora/redhat:
 # 	sudo dnf install mpdecimal mpdecimal-devel
 # or download a tarball from its host site:
