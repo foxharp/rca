@@ -384,9 +384,9 @@ mpd_stuff(void)
 		if (*endp == '\0') {
 			if (digits < 2)
 				digits = 2;
-			if (digits > 100)
-				digits = 100;
 			max_digits = (int)digits;
+			if (float_digits > max_digits)
+				float_digits = max_digits;
 		}
 	}
 
@@ -1293,7 +1293,7 @@ mpd_cos(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 
 	mpd_copy(n, one, ctx);  // n = 1;
 	mpd_copy(two_n, two, ctx);
-	int iterlim = 500;
+	int iterlim = 10 * max_digits;
 	int i_n = 1; // "i_n" and "n" mirror one another (when n isn't being
 			// used as a temp variable)
 
@@ -1461,7 +1461,7 @@ mpd_atan(mpd_t *m, const mpd_t *ix, mpd_context_t *ctx)
 	// series is:
 	// Tn = (Tn-1) * (-x^^2 * (2n - 1)/(2n + 1))
 
-	int iterlim = 500;
+	int iterlim = 10 * max_digits;
 	int i_n = 1;
 	mpd_copy(n, one, ctx);
 	mpd_copy(two_n, two, ctx);

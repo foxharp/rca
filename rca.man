@@ -474,8 +474,9 @@ is discarded.  Also on startup,
 .B rca
 will use the
 .B $RCA_DIGITS
-variable to set the maximum number of displayed digits.  That value is
-clamped into the range 2 to 100.  The current built-in default is 30 digits.
+variable to set the maximum number of displayed digits.  That value
+cannot be set below 2, but there is no enforced maximum.  (Caveat
+emptor.)  The current built-in default is 30 digits.
 
 Many of the commands that control
 .BR rca 's
