@@ -532,8 +532,8 @@ trace_mpd(int level, char *msg, const mpd_t *t)
 }
 
 
-void
-error(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+void error(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+
 void
 error(const char *fmt, ...)
 {
@@ -2051,6 +2051,19 @@ p_printf(const char *fmt, ...)  // short for pending_printf()
 	fseek(pp.fp, -1, SEEK_CUR);
 }
 
+void
+safe_snprintf(char *str, int size, char *id, const char *fmt, ...)
+{
+	int r;
+	va_list ap;
+
+	va_start(ap, fmt);
+	r = vsnprintf(str, (size_t)size, fmt, ap);
+	va_end(ap);
+	if (r < 0 || r >= size)
+		error(" BUG: snprintf buffer overrun at %s\n", id);
+}
+
 struct memfile mp;
 
 void
@@ -2265,7 +2278,7 @@ putunsigned(unsigned long long u)
 
 	trace(EXEC, "putunsigned: hex is 0x%llx\n", u);
 
-	snprintf(tbuf, TEMP_BUFSIZE, " %llu", u);
+	safe_snprintf(tbuf, TEMP_BUFSIZE, "putunsigned", " %llu", u);
 	add_digit_grouping(tbuf);
 	fputs(tbuf, mp.fp);
 
@@ -2282,7 +2295,7 @@ putsigned(long long ln)
 
 	m_file_start();
 
-	snprintf(tbuf, TEMP_BUFSIZE, " %lld", ln);
+	safe_snprintf(tbuf, TEMP_BUFSIZE, "putsigned", " %lld", ln);
 	add_digit_grouping(tbuf);
 	fputs(tbuf, mp.fp);
 
@@ -2515,7 +2528,7 @@ print_floating(mpd_t *m)
 		}
 
 		char *s = mpd_format(m, fmt, ctx);
-		snprintf(tbuf, TEMP_BUFSIZE, "%s", s);
+		safe_snprintf(tbuf, TEMP_BUFSIZE, "'auto' format", "%s", s);
 		free(s);
 
 		trim_g_trailing_zeros(tbuf);
@@ -2530,7 +2543,7 @@ print_floating(mpd_t *m)
 
 		// use it to get fixed notation
 		char *s = mpd_format(m, fmt, ctx);
-		snprintf(tbuf, TEMP_BUFSIZE, "%s", s);
+		safe_snprintf(tbuf, TEMP_BUFSIZE, "'fixed' format", "%s", s);
 		free(s);
 
 		add_digit_grouping(tbuf);
@@ -2544,7 +2557,7 @@ print_floating(mpd_t *m)
 
 		// use it to get scientific notation
 		char *s = mpd_format(m, fmt, ctx);
-		snprintf(tbuf, TEMP_BUFSIZE, "%s", s);
+		safe_snprintf(tbuf, TEMP_BUFSIZE, "'eng' format", "%s", s);
 		free(s);
 
 		// convert it to engineering format
