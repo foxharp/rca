@@ -259,8 +259,8 @@ boolean infix_mode = FALSE;
  * grouping information, we will decorate numbers, like "1,333,444" */
 boolean digitseparators = TRUE;
 
-/* if true, debug mode is enabled, which mostly just enables a couple more
- * commands.  (seems hardly worth it now -- there used to be more.)  */
+/* if true, debug mode is enabled, which enables a couple more
+ * commands, and some more output in one or two places.  */
 boolean debug_enabled = FALSE;
 
 /* in the absence of an $RCA_DIGITS environment variable, the
@@ -425,15 +425,6 @@ error(const char *fmt, ...)
 
 // ------------------------   misc. mpdecimal support
 
-/* debugging assist:  "p mdb(foo)" is convenient in gdb */
-char *
-mpd(mpd_t *m)
-{
-	static char *s;
-	if (s) free(s);
-	return s = mpd_to_sci(m, 0);
-}
-
 /* this initializes our use of the mpdecimal library.  it establishes
  * our single global context, and also simplifies life by initializing
  * a bunch of constants we'll use repeatedly later on. */
@@ -566,6 +557,16 @@ mpd_to_integer(mpd_t *r, mpd_t *a)
 	mpd_divmod(q, r, t, int_modulo, ctx); // modulo word-length
 
 	return (mpd_cmp(r, a, ctx) != 0);
+}
+
+/* used by rawprintstack, but also as a debug assist:  "p mdb(foo)" is
+ * very convenient to use in gdb */
+char *
+mpd(mpd_t *m)
+{
+	static char *s;
+	if (s) free(s);
+	return s = mpd_to_sci(m, 0);
 }
 
 // ------------------------   basic stack operations
@@ -2307,9 +2308,7 @@ show_int_truncation(boolean changed, mpd_t *old, char *mark)
 	} else {
 		/* this prints the full mpdecimal precision (not limited by
 		 * max_digits), so user can copy/paste the full precision. */
-		char *s = mpd_to_sci(old, 0);
-		error(" # was %s\n", s);
-		free(s);
+		error(" # was %s\n", mpd(old));
 	}
 }
 
@@ -2468,7 +2467,7 @@ print_floating(mpd_t *m)
 	if (!mpd_isfinite(m)) {
 		/* I just prefer the libc "nan" and "inf" to the mixed
 		 * case "NaN" and "Infinity" strings mpdecimal provides */
-		char *s; // = mpd_to_sci(m, 0);
+		char *s;
 		if (m->flags & (MPD_INF)) {
 			if (m->flags & MPD_POS)	s = "+inf" ;
 			else if (m->flags & MPD_NEG) s = "-inf";
@@ -2773,6 +2772,33 @@ printfloat(void)
 
 // ------------------------  state and debug output
 
+// worker for printstate()
+void
+rawprintstack(int n, struct num *s, int is_stack)
+{
+	if (!s) {
+		p_printf("%16s\n", "<empty>");
+		return;
+	}
+
+	if (is_stack) {
+		if (s->next)
+			rawprintstack(n-1, s->next, is_stack);
+	}
+
+	char *pre = "        ";
+	if (is_stack) {
+		if (n == stack_count)
+			pre = "  top ->";
+		if (n == stack_mark) // mark takes precedence if set
+			pre = " mark ->";
+	}
+	p_printf("%s %s", pre, mpd(s->mpd));
+	p_printf("\n");
+	if (!is_stack && s->next)
+		rawprintstack(n-1, s->next, is_stack);
+}
+
 opreturn
 printstate(void)
 {
@@ -2799,6 +2825,18 @@ printstate(void)
 		thousands_sep[0]? thousands_sep : "<none>",
 		currency[0] ? currency : "<none>");
 	p_printf("\n");
+
+	if (debug_enabled) {
+		struct num *s = stack;
+		p_printf("\n Full precision stack:\n");
+		p_printf("  stack count %d, depth of the stack mark is %d\n",
+			stack_count, stack_count - stack_mark);
+		rawprintstack(stack_count, s, 1);
+
+		s = snapstack;
+		p_printf("\n Full precision snapshot:\n");
+		rawprintstack(stack_count, s, 0);
+	}
 
 	p_printf(" rca descriptor: mp%d\n", max_digits);
 
@@ -3666,7 +3704,6 @@ sprint_token(char *s, size_t slen, token *t)
 
 	switch (t->type) {
 	case NUMERIC:
-		// snprintf(s, slen, "'%s'", mpd_to_sci(t->mpd, 0));
 		snprintf(s, slen, "'%s'", t->valstr);
 		break;
 	case SYMBOLIC:
