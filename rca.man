@@ -346,25 +346,29 @@ the
 and
 .B autoprint
 commands.
-Regardless of the default format, individual values can be
+Regardless of the current mode, individual values can also be
 viewed in any format, from any mode, by using
 .BR f ,
 .BR d ,
-.BR u ,
 .BR h ,
 .BR o ,
-and
 .BR b ,
+.BR u ,
+or
+.BR m ,
 which correspond to the similarly named modes.
 When using these display commands, the value will be printed as if
 you had entered the corresponding (uppercase) mode, including any
-masking due to word width.
-(The
-.RB ' u '
-command prints as unsigned decimal. There is no corresponding
-"unsigned decimal', i.e.,
-.RB ' U '
-mode.)
+masking due to word width.  (There is no
+.B U
+or
+.B M
+mode, but the
+.B u
+and
+.B m
+commands can be used to print as unsigned decimal, or as floating
+point, using the maximum available number of digits.)
 
 By default the width of
 .BR rca 's

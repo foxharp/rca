@@ -227,10 +227,11 @@ typedef struct token {
 #define VARIABLE 'V'
 
 
-/* 5 major modes:  float, decimal, hex, octal, and binary.
- * all but float is an integer mode. */
-int mode = 'F';		// can be one of 'F', 'D', 'H', 'O', 'B'
-boolean floating_mode(int m) { return (m == 'F'); }
+/* 5 major modes:  float, decimal, hex, octal, and binary.  all but
+ * float is an integer mode.  'U' or 'M' can be used for display purposes
+ * (print as unsigned, or with max number of digits), but they're not modes.  */
+int mode = 'F';	     // can be one of 'F', 'D', 'H', 'O', 'B', 'U', or 'M'
+boolean floating_mode(int m) { return (m == 'F' || m == 'M'); }
 
 /* if true, exit(4) on error, warning, or access to empty operand stack */
 boolean exit_on_error = FALSE;
@@ -2455,11 +2456,15 @@ zero_pad_exponent(char *s)
 }
 
 char *
-print_floating(mpd_t *m)
+print_floating(mpd_t *m, int format)
 {
 	static char *tbuf;
 	if (!tbuf) tbuf = safe_calloc(TEMP_BUFSIZE);
 	char fmt[30];
+	int digs = float_digits;
+
+	if (format == 'M')
+		digs = max_digits;
 
 	m_file_start();
 	fputc(' ', mp.fp);
@@ -2484,7 +2489,7 @@ print_floating(mpd_t *m)
 		fputs("0", mp.fp);
 	} else if (float_specifier[0] == 'a') { // 'a'uto
 
-		int precision = (float_digits < 1) ? 1 : float_digits;
+		int precision = (digs < 1) ? 1 : digs;
 		int exp = (int)mpd_adjexp(m);
 
 		/* we jump through hoops to get our output to look
@@ -2512,7 +2517,7 @@ print_floating(mpd_t *m)
 	} else if (float_specifier[0] == 'f') { // 'f'ixed
 
 		// first construct the format string
-		snprintf(fmt, sizeof fmt, ".%df", float_digits);
+		snprintf(fmt, sizeof fmt, ".%df", digs);
 
 		// use it to get fixed notation
 		char *s = mpd_format(m, fmt, ctx);
@@ -2525,8 +2530,8 @@ print_floating(mpd_t *m)
 	} else if (float_specifier[0] == 'e') { // "eng"
 
 		// first construct the format string
-		int fdigs = (float_digits < 3) ? 3 : float_digits;
-		snprintf(fmt, sizeof fmt, ".%de", fdigs - 1);
+		if (digs < 3) digs = 3;
+		snprintf(fmt, sizeof fmt, ".%de", digs - 1);
 
 		// use it to get scientific notation
 		char *s = mpd_format(m, fmt, ctx);
@@ -2594,7 +2599,7 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 
 	if (!mpd_isfinite(m) || floating_mode(format)) {
 		char *pf;
-		pf = print_floating(m);
+		pf = print_floating(m, format);
 		align = floating_alignment(pf);
 		p_printf("%*s%s\n", align, pf, mark);
 		return;
@@ -2643,7 +2648,6 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 		p_printf("%*s", align, putunsigned(u));
 		break;
 	case 'D':
-	case 'F':
 		changed = mpd_to_integer(n, m);
 		u = mpd_get_64_bits(n);
 		align = calc_align(0);
@@ -2663,16 +2667,7 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 		} else {
 			ln &= int_mask;
 		}
-		if (format == 'D')
-			p_printf("%*s", align, putsigned(ln));
-		else {
-			char *pf;
-			mpd_set_i64(n, ln, ctx);
-
-			pf = print_floating(m);
-			align = floating_alignment(pf);
-			p_printf("%*s%s\n", align, pf, mark);
-		}
+		p_printf("%*s", align, putsigned(ln));
 		break;
 	default:
 		error(" bug: default case in print_n()\n");
@@ -2767,6 +2762,13 @@ opreturn
 printfloat(void)
 {
 	print_top('F');
+	return GOODOP;
+}
+
+opreturn
+printmax(void)
+{
+	print_top('M');
 	return GOODOP;
 }
 
@@ -5247,11 +5249,18 @@ help(void)
 				}
 				strcat(cbuf, op->name);
 				if (op->help) {
-					if (op->help[0])
+					char h[100];
+					if (op->help[0]) {
+						/* very single purpose:  for
+						 * inserting max_digits into
+						 * one specific help item */
+						safe_snprintf(h, sizeof(h),
+						   "help", op->help, max_digits);
 						fprintf(fout, "%21s     %s\n",
-							cbuf, op->help);
-					else
+							cbuf, h);
+					} else {
 						fprintf(fout, "%21s\n", cbuf);
+					}
 
 					cbuf[0] = '\0';
 				}
@@ -5486,11 +5495,12 @@ struct oper opers[] = {
 	{"P", printall,		"Print whole stack according to mode" },
 	{"p", printone,		"Print x according to mode" },
 	{"f", printfloat,	0 },
-	{"d", printdec,		0 },
-	{"u", printuns,		"Print x as float, decimal, unsigned decimal," },
+	{"m", printmax,		0 },
+	{"d", printdec,		"Print x as float, max float (%d digits), decimal," },
+	{"u", printuns,		0 },
 	{"h", printhex,		0 },
 	{"o", printoct,		0 },
-	{"b", printbin,		"     hex, octal, or binary" },
+	{"b", printbin,		"  unsigned, hex, octal, or binary" },
 	{"automatic", automatic, 0, Auto },
 	{"auto", automatic,	"Select general purpose floating display format", Auto },
 	{"engineering", engineering, 0, Auto },
