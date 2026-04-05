@@ -905,6 +905,10 @@ maximum precision.  The internal representation
 .I only
 the printed output (or the comparison) is affected.
 
+Rounding in rca is always "half-up".  That is, when rounding a value
+exactly halfway between the two rounding choices, rounding goes away
+from zero.
+
 .SH EXIT STATUS
 .B rca
 will normally exit with status 0 or 1.  To satisfy normal shell
