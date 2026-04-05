@@ -85,7 +85,7 @@ command, and the entire stack with
 .BR P .
 When
 .B rca
-prints the stack, the "top" of the stack will be printed last, i.e.,
+prints the stack, the "top" of the stack is printed last, i.e.,
 closest to the bottom of the screen.
 
 Autoprinting will print the value at the top of the stack after most
@@ -120,7 +120,7 @@ Full-time infix mode is turned on/off with the
 toggle command.  When infix mode is enabled (using
 .B 1
 .BR infix ),
-all input will be taken as infix expressions. No outer
+all input is taken as infix expressions. No outer
 enclosing parentheses are required.  More than one expression per line
 can be separated by
 .RB ' ; '.
@@ -163,8 +163,8 @@ and all of the comparison, logical, and bitwise operators.  Infix
 expressions result in a value pushed onto the stack:
 .B (-3 + 5)
 will push the value 2.  With single operand operators, the
-operand will always follow the operator.  For two operand operators,
-one operand will be to either side of the operator.  Exponentiation
+operand always follows the operator.  For two operand operators,
+one operand is placed to either side.  Exponentiation
 would be written as
 .B ( 3 ** 2
 .BR ) ,
@@ -211,7 +211,7 @@ discards the top stack element, like
 .BR pop .
 .P
 If an error occurs during evaluation of an infix expression,
-evaluation will cease, and the stack will be left as it was at the
+evaluation will cease, and the stack is left as it was at the
 point of the error.
 .SH OPERATING MODES
 .B rca
@@ -230,22 +230,62 @@ command, and integer, using one of
 
 Math is always performed using signed arithmetic in all modes, and
 most math is done using multi-precision floating point "decimal"
-operands.  The system's floating point unit is not used.  The various
-integer modes differ only in how values are displayed by default.
-They all differ from floating point in that in integer mode, all stack
-values are masked to the currently set word width, and fractional parts
-are discarded.
+operands.  The system's floating point unit is not used.
+In integer mode, all stack values are masked to the currently set word
+width, and fractional parts are discarded.
+The various integer modes differ only in how values are displayed by default.
+
+The default printing format, as determined by the current calculator
+mode (i.e.,
+.BR F ,
+.BR D ,
+.BR H ,
+.BR O ,
+.BR B ),
+is used by
+the
+.BR p ,
+.BR P ,
+and
+.B autoprint
+commands.
+Regardless of the current mode, individual values can also be
+viewed in any format, from any mode, by using
+.BR f ,
+.BR d ,
+.BR h ,
+.BR o ,
+.BR b ,
+.BR u ,
+or
+.BR m ,
+which correspond to the similarly named modes.
+When using these display commands, the value is printed as if
+you had entered the corresponding (uppercase) mode, including any
+masking due to word width.  (There is no
+.B U
+or
+.B M
+mode, but the
+.B u
+and
+.B m
+commands can be used to print as unsigned decimal, or as floating
+point, using the maximum available number of digits.)
+
+The only way to see the entire stack in a different base is to switch
+to that mode.
 
 The input base of a number is independent of the calculator mode, and
 is controlled entirely by how it is entered:  10, 0xa, 0o12, 0b1010 and
-1e01 are all the same value.  The calculator mode has no affect how
+1e01 are all the same value.  The calculator mode gives no preference to how
 input is done:  for example, hex values must include the "0x" prefix
 even in
 .B H
-mode, and may also be used when in float mode.  Note that octal
+mode, and "0x" may also be used when in float mode.  Note that octal
 .I must
-be entered using the "0o" prefix, which is also how octal will be
-printed.  The more traditional "0" prefix will be interpreted as decimal.
+be entered using the "0o" prefix, which is also how octal is
+printed.  Input using the more traditional "0" prefix is interpreted as decimal.
 
 .SS Floating point
 In floating point mode (i.e.,
@@ -275,9 +315,9 @@ With
 .B automatic
 (or
 .BR auto ),
-output is flexible:  scientific notation (e.g., 1e09) will be used
+output is flexible:  scientific notation (e.g., 1e09) is used
 when the exponent would be less than -4, or greater than the chosen
-number of digits (see below).  Otherwise the output will be a simple
+number of digits (see below).  Otherwise the output is a simple
 decimal number.
 .P
 .B engineering
@@ -339,36 +379,6 @@ also choose the default printing format:
 (octal), or
 .B B
 (binary).
-The default printing format is used by
-the
-.BR p ,
-.BR P ,
-and
-.B autoprint
-commands.
-Regardless of the current mode, individual values can also be
-viewed in any format, from any mode, by using
-.BR f ,
-.BR d ,
-.BR h ,
-.BR o ,
-.BR b ,
-.BR u ,
-or
-.BR m ,
-which correspond to the similarly named modes.
-When using these display commands, the value will be printed as if
-you had entered the corresponding (uppercase) mode, including any
-masking due to word width.  (There is no
-.B U
-or
-.B M
-mode, but the
-.B u
-and
-.B m
-commands can be used to print as unsigned decimal, or as floating
-point, using the maximum available number of digits.)
 
 By default the width of
 .BR rca 's
@@ -380,11 +390,11 @@ few as 2 bits using the
 command.  Requesting a width of -1 will choose the maximum width,
 which is 64 bits on all supported platforms.
 
-Values will be masked to the current word width for both
+Values are masked to the current word width for both
 use and display, whether they are input by the user or result from an
-operation.  Arithmetic on all values will be signed.  If floating
+operation.  Arithmetic on all values is signed.  If floating
 operations are used on width-restricted integers, the width
-restriction will be ignored for the operation, but masking will happen
+restriction is ignored for the operation, but masking will happen
 when storing the result.
 
 .SS Numeric separators
@@ -395,12 +405,12 @@ numbers it prints.  These separators can be toggled on or off with
 .B sep
 (or
 .BR separators ).
-Separators will be applied to all integer bases and floating formats,
+Separators are applied to all integer bases and floating formats,
 as in "3,141,593" and "0o13,767,730".  The separators are strictly
 cosmetic, and based solely on the printed digits.  No bitwise
 splitting (e.g., into bytes) is implied.
 
-On input, the locale's currency symbol and thousands separator will be
+On input, the locale's currency symbol and thousands separator are
 ignored, as a convenience for doing arithmetic on copy/pasted data.
 
 See the LOCALE section, below, for more detail.
@@ -549,7 +559,7 @@ point.  (Startup:  enabled)
 .B zerofill
 (or
 .BR zf )
-toggles whether or not hex, octal, and binary integers will be
+toggles whether or not hex, octal, and binary integers are
 left-padded out to the chosen word width with zeros.  (Startup: disabled)
 .P
 .B autoprint
@@ -600,9 +610,9 @@ The
 or
 .B ?
 command gives a complete list of operators/commands.
-If $PAGER is set in the environment, the shell command it names will
-be used to display the help text.  (The command must read the text
-from standard input.)  Otherwise the text will be sent directly to stdout.
+If $PAGER is set in the environment, the shell command it names is
+used to display the help text.  (The command must read the text
+from standard input.)  Otherwise the text is sent directly to stdout.
 
 The
 .B state
@@ -681,7 +691,7 @@ cannot be greater than the depth of the stack.
 sets the mark at the current top of stack,
 causing only subsequent pushes to be included by a later variadic.
 .B -1 mark
-will clear the mark.  If set, the position of the mark will be shown
+will clear the mark.  If set, the position of the mark is shown
 when the full stack is printed.
 .P
 .B snapshot
@@ -833,20 +843,20 @@ or to quit.
 .SH LOCALE
 The locale is consulted for just three things:  the decimal point,
 the thousands separator and grouping specification, and the currency
-symbol.  If using the minimal C/POSIX locale, defaults will be
-provided:  the thousands separator will be set to ',' (at every 3
+symbol.  If using the minimal C/POSIX locale, defaults are
+provided:  the thousands separator is set to ',' (at every 3
 digits), and the currency symbol to '$'.
 .P
 The locale always chooses the decimal point.  Usually this is '.', but
 is also commonly ','.
 .P
-The thousands separator will be stripped from all input, and
+The thousands separator is stripped from all input, and
 on output will optionally be used for numeric grouping.
 .P
-The currency symbol will be checked to see if its value occurs
+The currency symbol is checked to see if its value occurs
 anywhere in the name of any
 .B rca
-command or operator.  If not, it will be stripped from all input.
+command or operator.  If not, it is stripped from all input.
 
 .SH DATA TYPES, OVERFLOW, ACCURACY
 All stack values in
@@ -873,7 +883,7 @@ has been enabled.
 
 Some floating point operations give results which are invalid: "nan"
 (i.e., "not a number"), or "+inf" or "-inf" (i.e., infinity).  When
-converting to integer mode, these values will be preserved, along with
+converting to integer mode, these values are preserved, along with
 their semantics:  any computation involving nan will return nan, and
 any conditionals involving nan will return false.
 .B rca
@@ -898,7 +908,7 @@ the printed output (or the comparison) is affected.
 .SH EXIT STATUS
 .B rca
 will normally exit with status 0 or 1.  To satisfy normal shell
-boolean logic semantics, the exit status will be 0 if the top of stack
+boolean logic semantics, the exit status is 0 if the top of stack
 is non-zero, and 1 if the top of stack is 0.
 A normal exit with an empty stack causes an exit status of 2.
 Unrecoverable internal errors (e.g., failed memory allocation) cause
