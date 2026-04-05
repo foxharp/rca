@@ -1864,6 +1864,13 @@ numeric_compare_worker(int c)
 
 	set_lastx(x);
 
+	if (mpd_isnan(x) || mpd_isnan(y)) {
+		mpd_del(x);
+		mpd_del(y);
+		mpush_copy(zero);
+		return GOODOP;
+	}
+
 	mpd_rescale(x, x, -COMPARISON_DIGITS, ctx);
 	mpd_rescale(y, y, -COMPARISON_DIGITS, ctx);
 
