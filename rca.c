@@ -155,7 +155,7 @@ typedef unsigned long long ull_t;
 int g_argc;
 char **g_argv;
 
-const mpd_t *pi, *two_pi, *pi_over_2, *e,
+const mpd_t *pi, *two_pi, *pi_over_2, *e, *NaN, *Inf,
 	*zero, *one, *two, *point3, *ninety, *oneeighty;
 
 /* internal representation of operands on the stack.
@@ -471,6 +471,12 @@ mpd_startup(void)
 
 	oneeighty = mpd_new(ctx);
 	mpd_set_string((mpd_t *)oneeighty, "180", ctx);
+
+	NaN = mpd_new(ctx);
+	mpd_set_string((mpd_t *)NaN, "NaN", ctx);
+
+	Inf = mpd_new(ctx);
+	mpd_set_string((mpd_t *)Inf, "Infinity", ctx);
 
 	e = mpd_new(ctx);
 	mpd_exp((mpd_t *)e, one, ctx);
@@ -3157,6 +3163,20 @@ push_e(void)
 	return GOODOP;
 }
 
+opreturn
+push_nan(void)
+{
+	mpush_copy(NaN);
+	return GOODOP;
+}
+
+opreturn
+push_inf(void)
+{
+	mpush_copy(Inf);
+	return GOODOP;
+}
+
 // ------------------------   variadic operators
 
 opreturn
@@ -5566,6 +5586,8 @@ struct oper opers[] = {
     {"Debug support:", 0, 0, 0, 0, 'D'}, // hidden until "1 debug"
 	{"tracing", tracelevel,	"Set tracing level", 0, 0, 'D'},
 	{"commands", commands,	"Show raw command table", 0, 0, 'D'},
+	{"nan", push_nan,	0, Sym, 0, 'D'},
+	{"inf", push_inf,	"Push invalid value nan, or inf", Sym, 0, 'D'},
 	{"", 0, 0, 0, 0, 'D'},
     {"Housekeeping:"},
 	{"?", help,		0 },
