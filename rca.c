@@ -1101,6 +1101,28 @@ divide(void)
 }
 
 void
+mpd_percent(mpd_t *m, const mpd_t *iy, const mpd_t *ix, mpd_context_t *ctx)
+{
+	static mpd_t *x, *y, *hundred;
+	if (!x) {
+		x = mpd_new(ctx);
+		y = mpd_new(ctx);
+		hundred = mpd_new(ctx);
+		mpd_set_string((mpd_t *)hundred, "100", ctx);
+	}
+	mpd_copy(x, ix, ctx);
+	mpd_copy(y, iy, ctx);
+	mpd_mul(m, y, x, ctx);
+	mpd_div(m, m, hundred, ctx);
+}
+
+opreturn
+percent(void)
+{
+	return mpd_2_op_shell(mpd_percent);
+}
+
+void
 mpd_mod(mpd_t *m, const mpd_t *iy, const mpd_t *ix, mpd_context_t *ctx)
 {
 	static mpd_t *x, *y, *q, *t;
@@ -5392,6 +5414,7 @@ struct oper opers[] = {
 	{"x", multiply,		"Multiply x and y", 2, 26 },
 	{"/", divide,		0, 2, 26 },
 	{"%", modulo,		"Divide and modulo of y by x", 2, 26 },
+	{"pct", percent,	"x percent of y", 2, 26 },
 	{"^", y_to_the_x,	0, 2, 28, 'R'},
 	{"**", y_to_the_x,	"Raise y to the x'th power", 2, 28, 'R'},
 	{">>", rshift,		0, 2, 22 },
