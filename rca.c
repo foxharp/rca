@@ -554,6 +554,11 @@ mpd_to_integer(mpd_t *r, mpd_t *a)
 		q = mpd_new(ctx);
 	}
 
+	if (!mpd_isfinite(a)) {
+		mpd_copy(r, a, ctx);
+		return 0;
+	}
+
 	mpd_trunc(t, a, ctx); // remove fractional part
 	mpd_divmod(q, r, t, int_modulo, ctx); // modulo word-length
 

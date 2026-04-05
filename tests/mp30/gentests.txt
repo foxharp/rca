@@ -740,9 +740,9 @@ auto
 clear D
  Mode is signed decimal (D).  Integer math with 2 bits.
 1 0 /
- nan
+ inf
 -1 0 /
- nan
+ -inf
 1 0 %
  nan
 -1 0 %
