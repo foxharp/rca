@@ -668,13 +668,8 @@ freeze_lastx(void)
 {
 	if (!lastx_is_frozen) {
 		mpd_t *x;
-		if (mpeek(&x)) {
+		if (mpeek(&x))
 			mpd_free_before_copy(&frozen_lastx, x, ctx);
-		} else {
-			if (frozen_lastx)
-				mpd_del(frozen_lastx);
-			frozen_lastx = 0;
-		}
 		lastx_is_frozen = TRUE;
 		infix_stacklevel = stack_count;
 	}
@@ -685,11 +680,9 @@ thaw_lastx(void)
 {
 	if (lastx_is_frozen) {
 		lastx_is_frozen = FALSE;
-		if (frozen_lastx) {
+		if (frozen_lastx)
 			set_lastx(frozen_lastx);
-			mpd_del(frozen_lastx);
-		}
-		frozen_lastx = 0;
+		mpd_copy(frozen_lastx, zero, ctx);
 		// infix must add either no or 1 value to the stack
 		int i = stack_count - infix_stacklevel;
 		if (i != 0 && i != 1)
