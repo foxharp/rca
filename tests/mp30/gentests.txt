@@ -30,9 +30,9 @@ pi
 P
  5.75
  3.14159
-%
+mod
  2.60841
-11 4 %
+11 4 mod
  3
 1-
  2
@@ -448,7 +448,7 @@ clear
  -3
 (6 / 2 * 3 )
  9
-(8 % 3 + 2 )
+(8 mod 3 + 2 )
  4
 (3/4/2)
  0.375
@@ -733,9 +733,9 @@ auto
  inf
 -1 0 /
  -inf
-1 0 %
+1 0 mod
  nan
--1 0 %
+-1 0 mod
  nan
 clear D
  Mode is signed decimal (D).  Integer math with 2 bits.
@@ -743,9 +743,9 @@ clear D
  inf
 -1 0 /
  -inf
-1 0 %
+1 0 mod
  nan
--1 0 %
+-1 0 mod
  nan
 clear F
  Mode is float (F).  Showing 6 digits of total precision in automatic format.
@@ -762,7 +762,7 @@ clear
  nan
 (sqrt(-1))
  nan
-(3 % 0)
+(3 mod 0)
  nan
 
 # "last x" tests
@@ -992,15 +992,15 @@ clear
  error: bad expression sequence, at '(' and ')'
 ( (1)  5)
  error: bad expression sequence, at ')' and '5'
-clear (7 / (pi %5) (1)/ ((2 *2)+3)/ 4))
+clear (7 / (pi mod 5) (1)/ ((2 *2)+3)/ 4))
  error: bad expression sequence, at ')' and '('
-clear (7 / (pi (% (1)/ ((2 *2)+3)/ 4)))
+clear (7 / (pi (mod (1)/ ((2 *2)+3)/ 4)))
  error: bad expression sequence, at 'pi' and '('
 clear (7 / ((2 *2)) 4)
  error: bad expression sequence, at ')' and '4'
 clear (7 / e (1))
  error: bad expression sequence, at 'e' and '('
-clear (7 / e ((5 % pi) - chs 2) 3)
+clear (7 / e ((5 mod pi) - chs 2) 3)
  error: bad expression sequence, at 'e' and '('
 clear (exp 5 chs 3)
  error: bad expression sequence, at '5' and 'chs'
@@ -1357,3 +1357,14 @@ clear 15 digits
  -87.4374412668769
 -1 asin
  -90
+# percentage operators
+50 17 +%
+ 58.5
+50 17 -%
+ 41.5
+50 exch
+ 41.5
+%?
+ -17
+200 exch +%
+ 166

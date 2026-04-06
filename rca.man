@@ -650,17 +650,18 @@ left to right.  (This list has no meaning for RPN.)
  \fR      \fB      l2q d2r r2d dd2dms dms2dd mpg2l100km
  \fR 3  R \fB  ^ **
  \fR 4    \fB  atan2
- \fR 5    \fB  * x / %
- \fR 6    \fB  + -
- \fR 7    \fB  >> << ror rol
- \fR 8    \fB  & clearb
- \fR 9    \fB  xor
- \fR 10   \fB  | setb
- \fR 11   \fB  < > <= >=
- \fR 12   \fB  == !=
- \fR 13   \fB  &&
- \fR 14   \fB  ||
- \fR 15   \fB  =
+ \fR 5    \fB  * x / mod
+ \fR 6    \fB  % +% -% %?
+ \fR 7    \fB  + -
+ \fR 8    \fB  >> << ror rol
+ \fR 9    \fB  & clearb
+ \fR 10   \fB  xor
+ \fR 11   \fB  | setb
+ \fR 12   \fB  < > <= >=
+ \fR 13   \fB  == !=
+ \fR 14   \fB  &&
+ \fR 15   \fB  ||
+ \fR 16   \fB  =
  \fR
 
 
@@ -766,11 +767,25 @@ of 1 (true):
 .RE
 
 .P
-.B modulo
-is a floating point operation, not integer.
+.B mod
+(modulo) is a floating point operation, not integer.
 .P
 .B frac
 applied to negative values will give a negative result.
+.P
+There are several two-operand percentage operators:
+.B %
+gives x % of y (or vice versa, of course, since it's commutative).
+.B +%
+and
+.B -%
+give y plus or minus x percent of y.  So
+.B 50 17 +%
+results in 58.5.
+.B %?
+gives the inverse of those, i.e., the delta percentage:
+.B 50 58.5 %?
+results in 17.
 .P
 In an infix expression, operators with two arguments expect
 them to the left and right.  This is intuitive for

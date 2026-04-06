@@ -1102,26 +1102,74 @@ divide(void)
 	return mpd_2_op_shell(mpd_div);
 }
 
-void
-mpd_percent(mpd_t *m, const mpd_t *iy, const mpd_t *ix, mpd_context_t *ctx)
+opreturn
+percent_worker(int which)
 {
-	static mpd_t *x, *y, *hundred;
-	if (!x) {
-		x = mpd_new(ctx);
-		y = mpd_new(ctx);
+	static mpd_t *hundred;
+	if (!hundred) {
 		hundred = mpd_new(ctx);
 		mpd_set_string((mpd_t *)hundred, "100", ctx);
 	}
-	mpd_copy(x, ix, ctx);
-	mpd_copy(y, iy, ctx);
-	mpd_mul(m, y, x, ctx);
-	mpd_div(m, m, hundred, ctx);
-}
 
+	mpd_t *x, *y;
+
+	mpd_t *r = mpd_new(ctx);
+
+	if (!mpop(&x))
+		return BADOP;
+
+	if (!mpop(&y)) {
+		mpush(x);
+		return BADOP;
+	}
+
+	set_lastx(x);
+
+	if (which == '?') {			// ((x - y) / y) * 100
+		mpd_sub(r, x, y, ctx);
+		mpd_div(r, r, y, ctx);
+		mpd_mul(r, r, hundred, ctx);
+	} else {
+		mpd_mul(r, y, x, ctx);
+		mpd_div(r, r, hundred, ctx);	// r = y * x / 100
+		if (which == '+') {
+			mpd_add(r, y, r, ctx);	// r = y + r
+		} else if (which == '-') {
+			mpd_sub(r, y, r, ctx);	// r = y - r
+		}
+	}
+
+	if (!floating_mode(mode))
+		mpd_to_integer(r, r);
+
+	mpd_del(x);
+	mpd_del(y);
+	mpush(r);
+
+	return GOODOP;
+}
 opreturn
 percent(void)
 {
-	return mpd_2_op_shell(mpd_percent);
+	return percent_worker(0);
+}
+
+opreturn
+pluspercent(void)
+{
+	return percent_worker('+');
+}
+
+opreturn
+minuspercent(void)
+{
+	return percent_worker('-');
+}
+
+opreturn
+deltapercent(void)
+{
+	return percent_worker('?');
 }
 
 void
@@ -4751,7 +4799,10 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 			if (*p == '-')
 				sign = -1;
 			p++;
+			/* fall through for more parsing */
 		} else if (isspace(*(p+1)) || *(p+1) == 0) { // standalone?
+			goto is_oper;
+		} else if (*(p+1) == '%') { // +% and -%
 			goto is_oper;
 		} else {
 			goto unknown;
@@ -4846,7 +4897,10 @@ parse_token(char *p, token *t, char **nextp, int whichparse)
 				(p[0] == '!' && p[1] == '=') ||      //   !=
 				(p[0] == '&' && p[1] == '&') ||      //   &&
 				(p[0] == '|' && p[1] == '|') ||      //   ||
-				(p[0] == '*' && p[1] == '*')) {      //   **
+				(p[0] == '*' && p[1] == '*') ||      //   **
+				(p[0] == '+' && p[1] == '%') ||      //   +%
+				(p[0] == '-' && p[1] == '%') ||      //   -%
+				(p[0] == '%' && p[1] == '?')) {      //   %?
 				n = 2;
 			} else {
 				n = 1;
@@ -5469,10 +5523,13 @@ struct oper opers[] = {
 	{"*", multiply,		0, 2, 26 },
 	{"x", multiply,		"Multiply x and y", 2, 26 },
 	{"/", divide,		0, 2, 26 },
-	{"%", modulo,		"Divide and modulo of y by x", 2, 26 },
-	{"pct", percent,	"x percent of y", 2, 26 },
+	{"mod", modulo,		"Divide and modulo of y by x", 2, 26 },
 	{"^", y_to_the_x,	0, 2, 28, 'R'},
 	{"**", y_to_the_x,	"Raise y to the x'th power", 2, 28, 'R'},
+	{"%", percent,		0, 2, 25},
+	{"+%", pluspercent,	0, 2, 25},
+	{"-%", minuspercent,	"x percent of y, and y +/- that value", 2, 25},
+	{"%?", deltapercent,	"what percent of y is x?", 2, 25},
 	{">>", rshift,		0, 2, 22 },
 	{"<<", lshift,		"Shift y right/left by x bits (logical shift)", 2, 22 },
 	{"ror", rotateright,	0, 2, 22 },
