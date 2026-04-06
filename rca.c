@@ -2496,14 +2496,14 @@ zero_pad_exponent(char *s)
 }
 
 char *
-print_floating(mpd_t *m, int format)
+print_floating(mpd_t *m, int printmode)
 {
 	static char *tbuf;
 	if (!tbuf) tbuf = safe_calloc(TEMP_BUFSIZE);
 	char fmt[30];
 	int digs = float_digits;
 
-	if (format == 'M')
+	if (printmode == 'M')
 		digs = max_digits;
 
 	m_file_start();
@@ -2628,7 +2628,7 @@ floating_alignment(char *s)
 }
 
 void
-print_n(mpd_t *m, int format, boolean conv, char *mark)
+print_n(mpd_t *m, int printmode, boolean conv, char *mark)
 {
 	int64_t ln;
 	uint64_t u;
@@ -2637,9 +2637,9 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 
 	if (!mark) mark = "";
 
-	if (!mpd_isfinite(m) || floating_mode(format)) {
+	if (!mpd_isfinite(m) || floating_mode(printmode)) {
 		char *pf;
-		pf = print_floating(m, format);
+		pf = print_floating(m, printmode);
 		align = floating_alignment(pf);
 		p_printf("%*s%s\n", align, pf, mark);
 		return;
@@ -2662,7 +2662,7 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 	 * conversion alongside the converted value.  */
 
 	mpd_t *n = mpd_new(ctx);
-	switch (format) {
+	switch (printmode) {
 	case 'H':
 		changed = mpd_to_integer(n, m);
 		u = mpd_get_64_bits(n);
@@ -2723,10 +2723,10 @@ print_n(mpd_t *m, int format, boolean conv, char *mark)
 }
 
 void
-print_top(int format)
+print_top(int printmode)
 {
 	if (stack)
-		print_n(stack->mpd, format, 0, 0);
+		print_n(stack->mpd, printmode, 0, 0);
 }
 
 void
@@ -2992,7 +2992,7 @@ float_mode_messages(int both)
 					float_specifier);
 
 	if (mode != 'F')
-		p_printf(" In integer mode, this setting only "
+		p_printf(" Currently in integer mode: this setting only "
 					"affects the f command.\n");
 }
 
