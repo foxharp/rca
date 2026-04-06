@@ -230,8 +230,8 @@ typedef struct token {
 /* 5 major modes:  float, decimal, hex, octal, and binary.  all but
  * float is an integer mode.  'U' or 'M' can be used for display purposes
  * (print as unsigned, or with max number of digits), but they're not modes.  */
-int mode = 'F';	     // can be one of 'F', 'D', 'H', 'O', 'B', 'U', or 'M'
-boolean floating_mode(int m) { return (m == 'F' || m == 'M'); }
+int mode = 'F';	     // can be one of 'F', 'C', 'D', 'H', 'O', 'B', 'U', or 'M'
+boolean floating_mode(int m) { return (m == 'F' || m == 'C' || m == 'M'); }
 
 /* if true, exit(4) on error, warning, or access to empty operand stack */
 boolean exit_on_error = FALSE;
@@ -327,6 +327,7 @@ char *grouping;    // how digits should be grouped (not always by 3!)
 char *currency;   // locale currency_symbol
 char *locale;	    // locale name, returned from setlocale()
 char *locale_modified = "";  // indicates if we've changed the locale info
+int frac_digits;  // fractional digits for currency */
 
 /* the most recent top-of-stack */
 mpd_t *lastx;
@@ -592,6 +593,8 @@ mpush(mpd_t *a)
 		mpd_to_integer(a, a);
 
 	p = (struct num *)safe_calloc(sizeof(struct num));
+	if (mode == 'C')
+		mpd_rescale(a, a, -frac_digits, ctx);
 	p->mpd = a;
 	if (a == lastx) abort();
 	p->next = stack;
@@ -2502,9 +2505,14 @@ print_floating(mpd_t *m, int printmode)
 	if (!tbuf) tbuf = safe_calloc(TEMP_BUFSIZE);
 	char fmt[30];
 	int digs = float_digits;
+	int spec = float_specifier[0];
 
 	if (printmode == 'M')
 		digs = max_digits;
+	else if (printmode == 'C') {
+		spec = 'f'; // fixed
+		digs = frac_digits;
+	}
 
 	m_file_start();
 	fputc(' ', mp.fp);
@@ -2527,7 +2535,7 @@ print_floating(mpd_t *m, int printmode)
 		fputs("0", mp.fp);
 	} else if (mpd_mag_lessthan(m, -COMPARISON_DIGITS )) {
 		fputs("0", mp.fp);
-	} else if (float_specifier[0] == 'a') { // 'a'uto
+	} else if (spec == 'a') { // 'a'uto
 
 		int precision = (digs < 1) ? 1 : digs;
 		int exp = (int)mpd_adjexp(m);
@@ -2549,12 +2557,13 @@ print_floating(mpd_t *m, int printmode)
 		safe_snprintf(tbuf, TEMP_BUFSIZE, "'auto' format", "%s", s);
 		free(s);
 
-		trim_g_trailing_zeros(tbuf);
+		if (printmode != 'M')
+			trim_g_trailing_zeros(tbuf);
 		zero_pad_exponent(tbuf);
 		add_digit_grouping(tbuf);
 		fputs(tbuf, mp.fp);
 
-	} else if (float_specifier[0] == 'f') { // 'f'ixed
+	} else if (spec == 'f') { // 'f'ixed
 
 		// first construct the format string
 		snprintf(fmt, sizeof fmt, ".%df", digs);
@@ -2567,7 +2576,7 @@ print_floating(mpd_t *m, int printmode)
 		add_digit_grouping(tbuf);
 		fputs(tbuf, mp.fp);
 
-	} else if (float_specifier[0] == 'e') { // "eng"
+	} else if (spec == 'e') { // "eng"
 
 		// first construct the format string
 		if (digs < 3) digs = 3;
@@ -2806,6 +2815,13 @@ printfloat(void)
 }
 
 opreturn
+printcurrency(void)
+{
+	print_top('C');
+	return GOODOP;
+}
+
+opreturn
 printmax(void)
 {
 	print_top('M');
@@ -2899,6 +2915,8 @@ mode2name(void)
 		return "hex";
 	case 'B':
 		return "binary";
+	case 'C':
+		return "currency";
 	case 'F':
 	default: // can't happen.  set it to default
 		mode = 'F';
@@ -2912,8 +2930,13 @@ showmode(void)
 
 	p_printf(" Mode is %s (%c). ", mode2name(), mode);
 
-	if (mode == 'F') {
-		if (float_specifier[0] == 'f') { // 'f'ixed
+	if (floating_mode(mode)) {
+		if (mode == 'C') {
+			p_printf(" Showing %u digits after the decimal"
+				" in fixed format.\n", frac_digits);
+			p_printf(" New values pushed to stack will be"
+				" rounded to %u decimal places\n", frac_digits);
+		} else if (float_specifier[0] == 'f') { // 'f'ixed
 			/* float_digits == 7 gives:  123.4560000  */
 			p_printf(" Showing %u digits after the decimal"
 				" in %s format.\n",
@@ -2974,6 +2997,15 @@ modedec(void)
 }
 
 opreturn
+modecurrency(void)
+{
+	mode = 'C';
+	showmode();
+	printstack(1,stack);
+	return GOODOP;
+}
+
+opreturn
 modefloat(void)
 {
 	mode = 'F';
@@ -2991,7 +3023,7 @@ float_mode_messages(int both)
 		p_printf(" Will show floating point in %s format.\n",
 					float_specifier);
 
-	if (mode != 'F')
+	if (!floating_mode(mode))
 		p_printf(" Currently in integer mode: this setting only "
 					"affects the f command.\n");
 }
@@ -5361,6 +5393,7 @@ locale_init(void)
 		thousands_sep = ",";
 		grouping = "\003";
 		currency= "$";
+		frac_digits = 2;
 		locale_modified = ", with added defaults";
 		return;
 	}
@@ -5369,6 +5402,10 @@ locale_init(void)
 	grouping = lc->grouping;		// digit grouping
 
 	currency = lc->currency_symbol;
+
+	frac_digits = lc->frac_digits;
+	if (frac_digits == CHAR_MAX)
+		frac_digits = 2;
 
 	/* make sure any non-$ currency symbol string doesn't conflict
 	 * with any command name, because we're going to simply delete
@@ -5550,12 +5587,13 @@ struct oper opers[] = {
 	{"P", printall,		"Print whole stack according to mode" },
 	{"p", printone,		"Print x according to mode" },
 	{"f", printfloat,	0 },
-	{"m", printmax,		0 },
-	{"d", printdec,		"Print x as float, max float (%d digits), decimal," },
+	{"c", printcurrency,	0 },
+	{"m", printmax,		"Print x as float, currency, max float (%d digits)," },
+	{"d", printdec,		0 },
 	{"u", printuns,		0 },
 	{"h", printhex,		0 },
 	{"o", printoct,		0 },
-	{"b", printbin,		"  unsigned, hex, octal, or binary" },
+	{"b", printbin,		"   decimal, unsigned, hex, octal, or binary" },
 	{"automatic", automatic, 0, Auto },
 	{"auto", automatic,	"Select general purpose floating display format", Auto },
 	{"engineering", engineering, 0, Auto },
@@ -5565,10 +5603,11 @@ struct oper opers[] = {
 	{""},
     {"Modes:"},
 	{"F", modefloat,	0 },
+	{"C", modecurrency,	"Switch to floating or currency mode" },
 	{"D", modedec,		0 },
 	{"H", modehex,		0 },
 	{"O", modeoct,		0 },
-	{"B", modebin,		"Switch to floating, decimal, hex, octal, binary mode" },
+	{"B", modebin,		"Switch to decimal, hex, octal, binary mode" },
 	{"width", width,	0, Auto },
 	{"bits", width,		"Set effective word size for integer modes", Auto },
 	{"zerofill", zerof,	0, Auto },
@@ -5632,7 +5671,7 @@ do_autoprint(token *pt)
 		break;
 
 	case NUMERIC:
-		if ((mode == 'F' || mode == 'D') && pt->imode == 'D')
+		if ((floating_mode(mode) || mode == 'D') && pt->imode == 'D')
 			return;
 		if (pt->imode == mode)
 			return;
