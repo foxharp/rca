@@ -1971,8 +1971,7 @@ enter(void)
 {
 	mpd_t *x;
 
-	if (mpop(&x)) {
-		mpush(x);
+	if (mpeek(&x)) {
 		mpd_t *n = mpd_new(ctx);
 		mpd_copy(n, x, ctx);
 		mpush(n);
