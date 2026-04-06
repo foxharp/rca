@@ -226,14 +226,27 @@ command, and integer, using one of
 .B O
 (octal), or
 .B B
-(binary).
+(binary).  "Currency" mode,
+selected with
+.BR C ,
+is a floating point mode tuned for working with a fixed number of
+decimal places.
 
 Math is always performed using signed arithmetic in all modes, and
 most math is done using multi-precision floating point "decimal"
 operands.  The system's floating point unit is not used.
+
 In integer mode, all stack values are masked to the currently set word
 width, and fractional parts are discarded.
 The various integer modes differ only in how values are displayed by default.
+
+In currency mode, all new stack values are rounded to 2 decimal places
+before being pushed to the stack, and are displayed in a fixed, 2
+decimal place format.  Existing stack values are not modified.  The
+'2' comes from the current locale's "frac_digits" element, so may vary
+in different countries.  Rounding, as elsewhere in
+.BR rca ,
+is "half-up", not "half-even" as is often used in financial software.
 
 The default printing format, as determined by the current calculator
 mode (i.e.,
@@ -241,7 +254,8 @@ mode (i.e.,
 .BR D ,
 .BR H ,
 .BR O ,
-.BR B ),
+.BR B ,
+.BR C),
 is used by
 the
 .BR p ,
@@ -257,6 +271,7 @@ viewed in any format, from any mode, by using
 .BR o ,
 .BR b ,
 .BR u ,
+.BR c ,
 or
 .BR m ,
 which correspond to the similarly named modes.
@@ -841,11 +856,12 @@ or to quit.
 
 .RE
 .SH LOCALE
-The locale is consulted for just three things:  the decimal point,
-the thousands separator and grouping specification, and the currency
-symbol.  If using the minimal C/POSIX locale, defaults are
-provided:  the thousands separator is set to ',' (at every 3
-digits), and the currency symbol to '$'.
+The locale is consulted for just a few things:  the decimal point,
+the thousands separator and grouping specification, the currency
+symbol, and the number of fractional digits used for currency.  If
+using the minimal C/POSIX locale, defaults are provided:  the
+thousands separator is set to ',' (at every 3 digits), fractional
+digits are set to 2, and the currency symbol to '$'.
 .P
 The locale always chooses the decimal point.  Usually this is '.', but
 is also commonly ','.
