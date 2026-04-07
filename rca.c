@@ -3390,11 +3390,14 @@ restore(void)
 {
 	struct num *p = snapstack;
 	int i = 0;
+	mpd_t *n;
 
 	stack_mark = stack_count;
 
 	while (p) {
-		mpush(p->mpd);
+		n = mpd_new(ctx);
+		mpd_copy(n, p->mpd, ctx);
+		mpush(n);
 		p = p->next;
 		i++;
 	}
