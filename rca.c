@@ -330,8 +330,10 @@ char *locale_modified = "";  // indicates if we've changed the locale info
 int frac_digits;  // fractional digits for currency */
 
 /* the most recent top-of-stack */
+mpd_t *frozen_lastx;  // less dynamic copy, for infix mode
 mpd_t *lastx;
-mpd_t *frozen_lastx;
+mpd_t *frozen_lasty;
+mpd_t *lasty;
 
 /* for store/recall */
 mpd_t *offstack;
@@ -513,6 +515,12 @@ mpd_startup(void)
 	frozen_lastx = mpd_new(ctx);
 	mpd_copy(frozen_lastx, zero, ctx);
 
+	lasty = mpd_new(ctx);
+	mpd_copy(lasty, zero, ctx);
+
+	frozen_lasty = mpd_new(ctx);
+	mpd_copy(frozen_lasty, zero, ctx);
+
 	offstack = mpd_new(ctx);
 	mpd_copy(offstack, zero, ctx);
 
@@ -625,6 +633,20 @@ mpeek(mpd_t **f)
 }
 
 boolean
+mpeek2(mpd_t **f)
+{
+	if (!stack)
+		return FALSE;
+
+	if (!stack->next)
+		return FALSE;
+
+	*f = stack->next->mpd;
+
+	return TRUE;
+}
+
+boolean
 mpop(mpd_t **a)
 {
 
@@ -660,6 +682,13 @@ set_lastx(mpd_t *a)
 	mpd_free_before_copy(&lastx, a, ctx);
 }
 
+void
+set_lasty(mpd_t *a)
+{
+	trace_mpd(EXEC, "ly is now", a);
+	mpd_free_before_copy(&lasty, a, ctx);
+}
+
 // during an infix evaluation, lastx needs to kept at its pre-infix value.
 boolean lastx_is_frozen = 0;
 
@@ -670,6 +699,8 @@ freeze_lastx(void)
 		mpd_t *x;
 		if (mpeek(&x))
 			mpd_free_before_copy(&frozen_lastx, x, ctx);
+		if (mpeek2(&x))
+			mpd_free_before_copy(&frozen_lasty, x, ctx);
 		lastx_is_frozen = TRUE;
 		infix_stacklevel = stack_count;
 	}
@@ -682,7 +713,10 @@ thaw_lastx(void)
 		lastx_is_frozen = FALSE;
 		if (frozen_lastx)
 			set_lastx(frozen_lastx);
+		if (frozen_lasty)
+			set_lasty(frozen_lasty);
 		mpd_copy(frozen_lastx, zero, ctx);
+		mpd_copy(frozen_lasty, zero, ctx);
 		// infix must add either no or 1 value to the stack
 		int i = stack_count - infix_stacklevel;
 		if (i != 0 && i != 1)
@@ -699,6 +733,18 @@ push_lastx(void)
 		mpush_copy(frozen_lastx);
 	else
 		mpush_copy(lastx);
+
+	return GOODOP;
+}
+
+opreturn
+push_lasty(void)
+{
+	// in infix, ly == lx, at least for now
+	if (lastx_is_frozen)
+		mpush_copy(frozen_lasty);
+	else
+		mpush_copy(lasty);
 
 	return GOODOP;
 }
@@ -801,6 +847,7 @@ bitwise_2_op_shell(char *which, bitwise_2_op_func_t f, int checkdistance)
 	}
 
 	set_lastx(mx);
+	set_lasty(my);
 	mpd_to_integer(my, my);
 	mpd_to_integer(mx, mx);
 
@@ -1067,6 +1114,7 @@ mpd_2_op_shell(mpd_2_op_func_t f)
 	}
 
 	set_lastx(x);
+	set_lasty(y);
 	f(y, y, x, ctx);
 	if (!floating_mode(mode))
 		mpd_to_integer(y, y);
@@ -1124,6 +1172,7 @@ percent_worker(int which)
 	}
 
 	set_lastx(x);
+	set_lasty(y);
 
 	if (which == '?') {			// ((x - y) / y) * 100
 		mpd_sub(r, x, y, ctx);
@@ -1837,6 +1886,7 @@ logical_compare_worker(int *xz, int *yz)
 	}
 
 	set_lastx(x);
+	set_lasty(y);
 
 	*xz = mpd_iszero(x);
 	*yz = mpd_iszero(y);
@@ -1913,6 +1963,7 @@ numeric_compare_worker(int c)
 	}
 
 	set_lastx(x);
+	set_lasty(y);
 
 	if (mpd_isnan(x) || mpd_isnan(y)) {
 		mpd_del(x);
@@ -1987,6 +2038,8 @@ clear(void)
 		return GOODOP;
 
 	set_lastx(x);
+	if (mpeek2(&x))
+		set_lasty(x);
 
 	while(stack) {
 		mpop(&x);
@@ -5606,7 +5659,9 @@ struct oper opers[] = {
 	{"pi", push_pi,		0, Sym },
 	{"e", push_e,		"Push constant pi or e", Sym },
 	{"lastx", push_lastx,	0, Sym },
-	{"lx", push_lastx,	"Push previous value of x", Sym },
+	{"lasty", push_lasty,	0, Sym },
+	{"lx", push_lastx,	0, Sym },
+	{"ly", push_lasty,	"Push previous value of x or y", Sym },
 	{"_<name>", nop,	"Push variable" },  // function unused
 	{"=", assignment,	"Assign variable.  RPN: \"3 = _v\"   infix: \"(_v = 3)\"", 2, 6 },
 	{"variables", showvars, 0 },

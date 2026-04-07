@@ -72,12 +72,16 @@ sometimes referred to in the documentation as
 .I x
 and
 .IR y ,
-but not literally within the program itself with one exception:  the
+but not literally within the program itself with two exceptions:  the
 .B lastx
+and
+.B lasty
 (or
-.BR lx )
-operator returns the value that was at the top of stack just previous to the
-most recently executed operator.
+.B lx
+and
+.BR ly )
+operators return the value that was at the top and next-to-top of
+stack, just previous to the most recently executed operator.
 
 The value at the top of the stack can be shown with the
 .B p
@@ -176,15 +180,27 @@ yields the value 1, i.e. "true".
 .P
 The
 .B lastx
+and
+.B lasty
 (or
-.BR lx )
-operator can be used in an infix expression.  It returns the value of
+.B lx
+and
+.BR ly )
+operators can be used in an infix expression.  They return the value of
 .I x
-(i.e., the top of stack) prior to the expression being invoked.  This
-can be convenient for chained calculations:  if several infix
-expressions are evaluated in a row, the value of
+and
+.I y
+(i.e., the top two values on the stack) prior to the expression being
+invoked.  This can be convenient for chained calculations:  if several
+infix expressions are evaluated in a row, the value of
 .B lx
 in each will always be the the result of the previous.
+In turn,
+.B ly
+will be the result of the second previous expression.
+Also, after RPN:
+.B 3 4 * (lx + ly)
+will leave 12 and 7 on the stack.)
 .P
 Variables, named with a leading
 .RB ' _ '
