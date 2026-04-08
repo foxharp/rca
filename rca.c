@@ -527,6 +527,37 @@ mpd_startup(void)
 	ctx->prec -= 10;
 }
 
+unsigned long long
+mpd_get_64_bits(int *changed, mpd_t *n, mpd_t *m)
+{
+	if (!mpd_isfinite(m)) {
+		mpd_copy(n, m, ctx);
+		if (changed) *changed = 0;
+		return 0;
+	}
+
+	static mpd_t *r, *t, *q;
+	if (!r) {
+		r = mpd_new(ctx);
+		t = mpd_new(ctx);
+		q = mpd_new(ctx);
+	}
+
+	mpd_trunc(r, m, ctx); // remove fractional part
+	mpd_divmod(q, r, r, int_modulo, ctx); // modulo word-length
+
+	mpd_copy(t, r, ctx);
+
+	/* force the modulo positive, so mpd_get_u64() can deal with it */
+	mpd_add(r, r, int_modulo, ctx);
+	mpd_divmod(q, r, r, int_modulo, ctx); // modulo word-length
+
+	if (n) mpd_copy(n, t, ctx);
+	if (changed) *changed = (mpd_cmp(t, m, ctx) != 0);
+
+	return mpd_get_u64(r, ctx);
+}
+
 /* compare magnitude of number against the given threshold exponent */
 int
 mpd_mag_lessthan(const mpd_t *x, int exp)
@@ -559,27 +590,6 @@ mpd_free_before_copy(mpd_t **resultp, const mpd_t *a, mpd_context_t *ctx)
 	mpd_copy(*resultp, a, ctx);
 }
 
-/* in integer mode we maintain the illusion of integer storage. */
-boolean
-mpd_to_integer(mpd_t *r, mpd_t *a)
-{
-	static mpd_t *t, *q;
-	if (!t) {
-		t = mpd_new(ctx);
-		q = mpd_new(ctx);
-	}
-
-	if (!mpd_isfinite(a)) {
-		mpd_copy(r, a, ctx);
-		return 0;
-	}
-
-	mpd_trunc(t, a, ctx); // remove fractional part
-	mpd_divmod(q, r, t, int_modulo, ctx); // modulo word-length
-
-	return (mpd_cmp(r, a, ctx) != 0);
-}
-
 /* used by rawprintstack, but also as a debug assist:  "p mdb(foo)" is
  * very convenient to use in gdb */
 char *
@@ -591,6 +601,7 @@ mpd(mpd_t *m)
 }
 
 // ------------------------   basic stack operations
+unsigned long long mpd_get_64_bits(int *changed, mpd_t *n, mpd_t *m);
 
 void
 mpush(mpd_t *a)
@@ -598,7 +609,7 @@ mpush(mpd_t *a)
 	struct num *p;
 
 	if (!floating_mode(mode))
-		mpd_to_integer(a, a);
+		mpd_get_64_bits(0, a, a);
 
 	p = (struct num *)safe_calloc(sizeof(struct num));
 	if (mode == 'C')
@@ -752,44 +763,6 @@ push_lasty(void)
 
 // ------------------------  bitwise operators, 2 operand
 
-/* this is purely to make sure casting doesn't mess with our bits */
-unsigned long long
-ull_from_ll(long long s)
-{
-    unsigned long long u;
-    memcpy(&u, &s, sizeof(u));
-    return u;
-}
-
-unsigned long long
-mpd_get_64_bits(mpd_t *n)
-{
-	uint32_t status;
-	ull_t u;
-	ll_t ln;
-
-	/* we only use this routine if we already known the value
-	 * should fit in 64 bits.  if it's negative, mpdecimal won't
-	 * let us have it as unsigned.  but if it's bigger than the
-	 * MAX integer, it won't let us have it as integer.  so we try
-	 * both ways.  */
-	status = 0;
-	ln = mpd_qget_i64(n, &status);
-	if (status == 0) {
-		u = ull_from_ll(ln);
-		return u;
-	}
-
-	status = 0;
-	u = mpd_qget_u64(n, &status);
-	if (status == 0)
-		return u;
-
-	error("damn\n");
-	fprintf(stderr, "status is 0x%x\n", status);
-	return 0;
-}
-
 
 /* This is poorly named.  The goal it to report whether the two
  * arguments are both finite (i.e., useful), and if not, to propagate
@@ -848,16 +821,13 @@ bitwise_2_op_shell(char *which, bitwise_2_op_func_t f, int checkdistance)
 
 	set_lastx(mx);
 	set_lasty(my);
-	mpd_to_integer(my, my);
-	mpd_to_integer(mx, mx);
 
-	y = mpd_get_64_bits(my);
-	x = mpd_get_64_bits(mx);
+	y = mpd_get_64_bits(0, 0, my);
+	x = mpd_get_64_bits(0, 0, mx);
 
 	f(&r, y, x);
 
 	mpd_set_u64(my, r, ctx);
-	mpd_to_integer(my, my);
 
 	mpush(my);
 	mpd_del(mx);
@@ -1039,14 +1009,12 @@ bitwise_1_op_shell(bitwise_1_op_func_t f)
 	}
 
 	set_lastx(mx);
-	mpd_to_integer(mx, mx);
 
-	x = mpd_get_64_bits(mx);
+	x = mpd_get_64_bits(0, 0, mx);
 
 	f(&r, x);
 
 	mpd_set_u64(mx, r, ctx);
-	mpd_to_integer(mx, mx);
 
 	mpush(mx);
 
@@ -1117,7 +1085,7 @@ mpd_2_op_shell(mpd_2_op_func_t f)
 	set_lasty(y);
 	f(y, y, x, ctx);
 	if (!floating_mode(mode))
-		mpd_to_integer(y, y);
+		mpd_get_64_bits(0, y, y);
 
 	mpd_del(x);
 	mpush(y);
@@ -1189,7 +1157,7 @@ percent_worker(int which)
 	}
 
 	if (!floating_mode(mode))
-		mpd_to_integer(r, r);
+		mpd_get_64_bits(0, r, r);
 
 	mpd_del(x);
 	mpd_del(y);
@@ -1270,7 +1238,7 @@ mpd_1_op_shell(mpd_1_op_func_t f)
 	set_lastx(x);
 	f(x, x, ctx);
 	if (!floating_mode(mode))
-		mpd_to_integer(x, x);
+		mpd_get_64_bits(0, x, x);
 
 	mpush(x);
 
@@ -2735,7 +2703,7 @@ print_n(mpd_t *m, int printmode, boolean conv, char *mark)
 	int64_t ln;
 	uint64_t u;
 	int align;
-	boolean changed;
+	int changed = 0;
 
 	if (!mark) mark = "";
 
@@ -2766,32 +2734,27 @@ print_n(mpd_t *m, int printmode, boolean conv, char *mark)
 	mpd_t *n = mpd_new(ctx);
 	switch (printmode) {
 	case 'H':
-		changed = mpd_to_integer(n, m);
-		u = mpd_get_64_bits(n);
+		u = mpd_get_64_bits(&changed, n, m);
 		align = calc_align(0);
 		p_printf("%*s", align, puthex(u));
 		break;
 	case 'O':
-		changed = mpd_to_integer(n, m);
-		u = mpd_get_64_bits(n);
+		u = mpd_get_64_bits(&changed, n, m);
 		align = calc_align(0);
 		p_printf("%*s", align, putoct(u));
 		break;
 	case 'B':
-		changed = mpd_to_integer(n, m);
-		u = mpd_get_64_bits(n);
+		u = mpd_get_64_bits(&changed, n, m);
 		align = calc_align(0);
 		p_printf("%*s", align, putbinary(u));
 		break;
 	case 'U':
-		changed = mpd_to_integer(n, m);
-		u = mpd_get_64_bits(n);
+		u = mpd_get_64_bits(&changed, n, m);
 		align = calc_align(0);
 		p_printf("%*s", align, putunsigned(u));
 		break;
 	case 'D':
-		changed = mpd_to_integer(n, m);
-		u = mpd_get_64_bits(n);
+		u = mpd_get_64_bits(&changed, n, m);
 		align = calc_align(0);
 		/* shenanigans to make pos/neg numbers appear
 		 * properly.  our masked/shortened numbers
@@ -3237,8 +3200,7 @@ width(void)
 		// mask_stack();
 		struct num *s;
 		for (s = stack; s; s = s->next) {
-			mpd_to_integer(s->mpd, s->mpd);
-			uint64_t u = mpd_get_64_bits(s->mpd);
+			uint64_t u = mpd_get_64_bits(0, 0, s->mpd);
 			/* clear any old sign extension */
 			u &= (ull_t)old_int_mask;
 			/* set new sign extension based on the new sign bit */
