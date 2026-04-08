@@ -318,6 +318,10 @@ mode, and "0x" may also be used when in float mode.  Note that octal
 be entered using the "0o" prefix, which is also how octal is
 printed.  Input using the more traditional "0" prefix is interpreted as decimal.
 
+When entering numbers in non-decimal bases, limitations in the parser
+prevents those numbers from being bigger than will fit in 64 bits, or
+roughly 1.8e18.
+
 .SS Floating point
 In floating point mode (i.e.,
 .B F
@@ -416,10 +420,19 @@ By default the width of
 integers is the maximum supported, but it can be configured to as
 few as 2 bits using the
 .B width
-(or
-.BR bits )
-command.  Requesting a width of -1 will choose the maximum width,
+or
+.BR bits
+commands.  Requesting a width of -1 will choose the maximum width,
 which is 64 bits on all supported platforms.
+Be aware that the argument for the width command is itself subject
+to restrictions placed on integers.  If
+.B 2 bits
+is configured, undoing it requires either using
+.B -1 bits
+to set to the maximum, or leaving integer mode with
+.BR F
+before adjusting the width.  (The word width can also be raised
+incrementally.)
 
 Values are masked to the current word width for both
 use and display, whether they are input by the user or result from an
