@@ -1,3 +1,60 @@
+
+
+v43 changes (04/09/2026)
+
+    new commands:
+      - added percent operator, and friends.
+	percent is now '%', and modulo is now 'mod'.  required changes
+	in parse_token() to support "+%" and "-%".  (that's gonna need
+	more work at some point.)
+
+	operators (all 2 operand) are:
+	     %		r = y * x/100
+	    +%		r = y + (y * x/100)
+	    -%		r = y - (y * x/100)
+	    %?		r = 100 * (x - y)/y  (the inverse of the previous two)
+
+      - added "C", to select a currency floating point mode, and the
+	corresponding display-as command "c".  "C" forces 2 decimals
+	for both display, and for value storage on the stack.  the "2"
+	comes from the locale, from frac_digits, so might be 0 or 3 in
+	Japan or Kuwait, for example.
+
+      - added 'm' (or "max") command, which prints as float, using
+        max_digits
+
+      - add "lasty"/"ly" commands, similar to "lastx"/"lx"
+
+      - added built-in constants "inf" and "nan" (debug only)
+
+    new behavior:
+	"fixed" format now switches to "auto" when numbers get too big.
+
+    revised the conversions needed for integer mode.  negative modulo
+    values were causing mpd_get_u64() issues.
+
+    various bug fixes
+
+    man page:
+	- moved some things from the intro into the RPN section
+	- documented the half-up rounding policy
+	- documented the "2 bit" trap with the "bits" command, and the
+	  limit on entering numbers in non-decimal base format.
+	- rearranged some info about integer mode
+	- documented new commands
+
+    cosmetic changes:
+	major rearrangement of early function declarations, globals.
+	added comments, reordered many routines more logically, and
+	into categories.  rearranged the entries in the command table,
+	with hopefully better headings.
+
+    debug changes:
+	- reintroduced debug-only raw stack dump in "state" command
+	- added accounting to verify math on temp buffer sizing
+
+
+
 v42 changes (04/03/2026)
 
     revised README.md, and clarified some of the build instructions
