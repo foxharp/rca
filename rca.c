@@ -2606,8 +2606,11 @@ print_floating(mpd_t *m, int printmode)
 		fputs("0", mp.fp);
 	} else if (spec == 'a') { // 'a'uto
 
-		int precision = (digs < 1) ? 1 : digs;
-		int exp = (int)mpd_adjexp(m);
+		int precision, exp;
+
+	    autoformat:
+		precision = (digs < 1) ? 1 : digs;
+		exp = (int)mpd_adjexp(m);
 
 		/* we jump through hoops to get our output to look
 		 * like printf %g output, which uses some nice
@@ -2633,6 +2636,36 @@ print_floating(mpd_t *m, int printmode)
 		fputs(tbuf, mp.fp);
 
 	} else if (spec == 'f') { // 'f'ixed
+		/* fixed decimal format is kind of a pain.  too bad users
+		 * (including me!) like it sometimes. */
+
+		/* first, since fixed format doesn't use our digits
+		 * value to limit significant digits, we have to clamp
+		 * those to the user's max.  we do
+		 * calculations with 10 more digits than the user sees, and
+		 * we don't want them showing up here. */
+		mpd_context_t dispctx = *ctx;
+		dispctx.prec = max_digits;
+		mpd_plus(m, m, &dispctx);  // no-op, using desired context
+
+		/* then:  fixed format will happily show lots of
+		 * non-significant digits:  zeros to the left of the
+		 * decimal when the number gets very big or to the right
+		 * when very small.  we can't do much about either, but
+		 * there's another problem:  as the number grows in
+		 * magnitude, its buffer size grows without bounds, with
+		 * lots and lots of zeros between the "interesting" parts
+		 * and the decimal.  since those zeros aren't interesting,
+		 * when they start appearing we simply switch to "auto"
+		 * mode, which is much better suited for numbers that big.
+		 * in the other direction, as the number grows smaller,
+		 * there are lots of zeros, but the total width is clamped
+		 * by the selected number of digits, so it's okay.  */
+		if (m->digits + m->exp > max_digits)
+			goto autoformat;
+
+		if (m->exp <= 0 && -m->exp < digs)
+			digs = (int)-m->exp;
 
 		// first construct the format string
 		snprintf(fmt, sizeof fmt, ".%df", digs);

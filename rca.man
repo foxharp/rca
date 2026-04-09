@@ -366,11 +366,14 @@ like kilo, mega, nano, pico, etc.
 With
 .BR fixed ,
 .B rca
-never uses scientific notation, always presenting numbers as just a
-whole and fractional part.  This works well for values with small
-numbers of digits near decimal point, and is convenient for using
-the output in scripts, but gets awkward with extremely large
-or extremely small numbers.
+tries to always present numbers as just a whole part and a fractional
+part with a fixed number of digits.  This works well for values with
+small numbers of digits near decimal point, and is convenient for
+use in scripts, but gets awkward with extremely large or extremely
+small numbers.  For very large numbers,
+.B rca
+will switch to 'auto' format when non-significant 0 digits begin to
+appear to the left of the decimal point.
 .P
 The
 .B digits
