@@ -258,8 +258,8 @@ The various integer modes differ only in how values are displayed by default.
 
 In currency mode, all new stack values are rounded to 2 decimal places
 before being pushed to the stack, and are displayed in a fixed, 2
-decimal place format.  Existing stack values are not modified.  The
-'2' comes from the current locale's "frac_digits" element, so may vary
+decimal place format.  Existing stack values are not modified.  The '2'
+comes from the current locale's "frac_digits" element, so may vary
 in different countries.  Rounding, as elsewhere in
 .BR rca ,
 is "half-up", not "half-even" as is often used in financial software.
