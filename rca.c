@@ -302,6 +302,7 @@ int max_digits = USERDIGITS;  // may be overridden by $RCA_DIGITS
  * sure we have a minimum for 64 bit integers, which also have
  * separators, and are displayed in various bases.  */
 #define TEMP_BUFSIZE ((size_t)(max_digits + max_digits/2) + 100)
+long int temp_buf_hiwater;
 
 /* float_digits may represent either the total displayed precision, or
  * the number of digits after the decimal, depending on float_specifier.
@@ -601,7 +602,6 @@ mpd(mpd_t *m)
 }
 
 // ------------------------   basic stack operations
-unsigned long long mpd_get_64_bits(int *changed, mpd_t *n, mpd_t *m);
 
 void
 mpush(mpd_t *a)
@@ -615,7 +615,6 @@ mpush(mpd_t *a)
 	if (mode == 'C')
 		mpd_rescale(a, a, -frac_digits, ctx);
 	p->mpd = a;
-	if (a == lastx) abort();
 	p->next = stack;
 	stack = p;
 	stack_count++;
@@ -2269,6 +2268,15 @@ add_digit_grouping(char *iobuf)
 	}
 	strreverse(tbuf);
 	strcpy(iobuf, tbuf);
+
+	if (tptr - tbuf > temp_buf_hiwater)
+		temp_buf_hiwater = tptr - tbuf;
+
+	if (tptr - tbuf > (long)TEMP_BUFSIZE) {
+		error(" BUG: add_digit_grouping() buffer overrun, %lu\n",
+						tptr - tbuf);
+	}
+
 }
 
 char *
@@ -2950,6 +2958,10 @@ printstate(void)
 		s = snapstack;
 		p_printf("\n Full precision snapshot:\n");
 		rawprintstack(stack_count, s, 0);
+
+		p_printf("temp buffer fill: %ld (of %ld)\n",
+				temp_buf_hiwater, TEMP_BUFSIZE);
+
 	}
 
 	p_printf(" rca descriptor: mp%d\n", max_digits);
@@ -3154,7 +3166,7 @@ setup_integer_width(int bits)
 
 	// int_modulo used as tmp var here
 	mpd_set_i64(int_modulo, bits, ctx);
-	mpd_pow(int_modulo, two, int_modulo, ctx);   // 2 ^ (bits+1)
+	mpd_pow(int_modulo, two, int_modulo, ctx);   // 2 ^ bits
 
 	int_width = bits;
 	int_sign_bit = (1LL << (int_width - 1));
@@ -3843,8 +3855,7 @@ void
 sprint_token(char *s, size_t slen, token *t)
 {
 	if (!t) {
-	    abort();
-		snprintf(s, slen, "'null token ptr'");
+		error(" BUG: null token pointer in sprint_token\n");
 		return;
 	}
 
