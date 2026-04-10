@@ -2641,9 +2641,9 @@ print_floating(mpd_t *m, int printmode)
 
 		/* first, since fixed format doesn't use our digits
 		 * value to limit significant digits, we have to clamp
-		 * those to the user's max.  we do
-		 * calculations with 10 more digits than the user sees, and
-		 * we don't want them showing up here. */
+		 * those to the user's max.  we do calculations with
+		 * 10 more digits than the user sees, and we don't
+		 * want them showing up here.  */
 		mpd_context_t dispctx = *ctx;
 		dispctx.prec = max_digits;
 		mpd_plus(m, m, &dispctx);  // no-op, using desired context
@@ -5591,8 +5591,8 @@ struct oper opers[] = {
 	{"**", y_to_the_x,	"Raise y to the x'th power", 2, 28, 'R'},
 	{"%", percent,		0, 2, 25},
 	{"+%", pluspercent,	0, 2, 25},
-	{"-%", minuspercent,	"x%% of y, and y +/- x%% of y", 2, 25},
-	{"%?", deltapercent,    "what percent of y is x?", 2, 25},
+	{"-%", minuspercent,	"x%% of y, y + x%% of y, and y - x%% of y", 2, 25},
+	{"%?", deltapercent,    "x is what %% more than y?", 2, 25},
    {" (1 operand)"},
 	{"chs", chsign,		0, 1, 30, 'R' },
 	{"negate", chsign,	"Change sign of x (2's complement)", 1, 30, 'R' },

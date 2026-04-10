@@ -814,10 +814,12 @@ and
 give y plus or minus x percent of y.  So
 .B 50 17 +%
 results in 58.5.
+The
 .B %?
-gives the inverse of those, i.e., the delta percentage:
-.B 50 58.5 %?
-results in 17.
+operator gives the inverse of those, i.e., "x is what % more than y?" (the
+delta percentage).
+.B 50 41.5 %?
+results in -17.
 .P
 In an infix expression, operators with two arguments expect
 them to the left and right.  This is intuitive for
