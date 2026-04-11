@@ -2022,7 +2022,6 @@ rolldown(void)			// aka "pop"
 	mpd_t *b;
 	if (!mpop(&b))
 		return BADOP;
-	set_lastx(b);
 	mpd_del(b);
 	return GOODOP;
 }

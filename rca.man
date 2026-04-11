@@ -67,12 +67,13 @@ etc).  There are also unit conversions available
 .BR oz2g ,
 .BR f2c ,
 and more).
+.P
 The top two elements on the stack, in HP tradition, are
-sometimes referred to in the documentation as
+often referred to as
 .I x
 and
-.IR y ,
-but not literally within the program itself with two exceptions:  the
+.IR y .
+The
 .B lastx
 and
 .B lasty
@@ -80,8 +81,16 @@ and
 .B lx
 and
 .BR ly )
-operators return the value that was at the top and next-to-top of
-stack, just previous to the most recently executed operator.
+operators retrieve the values of
+.I x
+and
+.I y
+as they existed just previous to the most recently executed operator.
+By discarding the result, and restoring the operands, the sequences
+.B pop lx
+and
+.B pop ly lx
+can be used to undo the action of one- and two-operand operators.
 
 The value at the top of the stack can be shown with the
 .B p
