@@ -1,10 +1,16 @@
-rca (41-1) unstable; urgency=medium
+rca (44) UNRELEASED; urgency=medium
+
+  * Switch to 3.0 (native) source format
+
+ -- Paul Fox <pgf@foxharp.boston.ma.us>  Thu, 14 May 2026 13:05:19 -0400
+
+rca (41) UNRELEASED; urgency=medium
 
   * All mathematics now done using the mpdecimal multi-precision library, for better accuracy.
 
  -- Paul Fox <pgf@foxharp.boston.ma.us>  Wed, 01 Apr 2026 18:00:11 -0400
 
-rca (22-1) unstable; urgency=medium
+rca (22) UNRELEASED; urgency=medium
 
   * First packaged version of rca
 

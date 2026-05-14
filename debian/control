@@ -2,7 +2,7 @@ Source: rca
 Section: math
 Priority: optional
 Maintainer: Paul Fox <pgf@foxharp.boston.ma.us>
-Build-Depends:  debhelper (>= 12),
+Build-Depends:  debhelper (>= 13),
                 libedit-dev,
                 libmpdec-dev,
 		git
@@ -11,7 +11,7 @@ Homepage: https://foxharp.github.io/rca/
 
 Package: rca
 Architecture: any
-Depends: libedit2, libmpdec
+Depends: libedit2, libmpdec4, ${shlibs:Depends}, ${misc:Depends}
 Description: RPN and infix format scientific and programmer's calculator
  rca is a command-line calculator which can operate seamlessly in
  either RPN or infix mode.  It uses the mpdecimal library, with 30 digits
