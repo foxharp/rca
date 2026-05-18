@@ -1,4 +1,4 @@
-
+#!/bin/bash
 # This shell snippet gives simple access to rca's floating point
 # capability from a POSIX shell.  Use it with "source rca_cofloat".
 #
