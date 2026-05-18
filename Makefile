@@ -42,7 +42,7 @@ LIBS += -lm
 
 rca: rca.c
 	gver="$$(git describe --dirty=+ 2>/dev/null || echo '+?')"; \
-	gcc -g -o rca \
+	gcc -O2 -g -o rca \
 		$(CFLAGS) -DGITVERSION=\"$${gver}\" \
 		rca.c $(LIBS)
 

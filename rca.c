@@ -86,6 +86,20 @@ char licensetext[] = \
 # include <readline/history.h>
 #endif
 
+#ifdef __GNUC__
+
+#define DIAG_PUSH	_Pragma("GCC diagnostic push")
+#define DIAG_POP	_Pragma("GCC diagnostic pop")
+#define DIAG_IGNORE(w)	_Pragma(#w)
+
+#else
+
+#define DIAG_PUSH
+#define DIAG_POP
+#define DIAG_IGNORE(w)
+
+#endif
+
 #ifdef DO_VALGRIND_CHECKS
 
 #include <valgrind/memcheck.h>
@@ -2597,6 +2611,8 @@ print_floating(mpd_t *m, int printmode)
 			if (m->flags & MPD_POS)	s = "+nan" ;
 			else if (m->flags & MPD_NEG) s = "-nan";
 			else s = "nan";
+		} else {
+			s = "unk"; // "can't happen"
 		}
 		fprintf(mp.fp, "%s", s);
 	} else if (mpd_iszero(m)) {
@@ -3864,7 +3880,14 @@ tfree(token *t)
 		return;
 	}
 
+	/* we can suppress this warning because the check above keeps
+	 * us from freeing static tokens */
+DIAG_PUSH
+DIAG_IGNORE( GCC diagnostic ignored "-Wfree-nonheap-object" )
+
 	free(t);
+
+DIAG_POP
 }
 
 void
@@ -5072,8 +5095,9 @@ read_token(token *t, int parsing_rpn)
 
 // ------------------------  calculator infrastructure
 
-/* the opers[] and config[] tables don't initialize everything explicitly */
-#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+/* the config[] table doesn't initialize everything explicitly */
+DIAG_PUSH
+DIAG_IGNORE( GCC diagnostic ignored "-Wmissing-field-initializers" )
 
 
 #define c_int 0
@@ -5104,6 +5128,7 @@ struct config {
 	{ "tracing",		c_int, &tracing },
 	{ 0 }
 };
+DIAG_POP
 
 void
 config_read_defaults(void)
@@ -5564,6 +5589,10 @@ quit(void)
 	return GOODOP; // not reached
 }
 
+/* the opers[] table doesn't initialize everything explicitly */
+DIAG_PUSH
+DIAG_IGNORE( GCC diagnostic ignored "-Wmissing-field-initializers" )
+
 // *INDENT-OFF*.
 struct oper opers[] = {
 //       +-------------------------------- section header if no function ptr
@@ -5765,6 +5794,7 @@ struct oper opers[] = {
 	{NULL, NULL, 0},
 };
 // *INDENT-ON*.
+DIAG_POP
 
 void
 do_autoprint(token *pt)
