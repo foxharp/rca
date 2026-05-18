@@ -253,8 +253,9 @@ boolean exit_on_error = FALSE;
 /* true, to copy stdin to stdout when it comes from a file or pipe */
 boolean echo_enabled = FALSE;
 
-/* if true, print the top of stack after any line that ends with an operator */
-boolean autoprint = TRUE;
+/* if non-zero, print that many entries from the top of stack after
+ * any line that ends with an operator */
+int autoprint = 1;
 
 /* work in degrees by default */
 boolean trig_degrees = TRUE;
@@ -2844,6 +2845,21 @@ print_n(mpd_t *m, int printmode, boolean conv, char *mark)
 }
 
 void
+print_few_worker(int mode, struct num *s, int depth)
+{
+	if (s && depth) {
+		print_few_worker(mode, s->next, depth-1);
+		print_n(s->mpd, mode, 0, 0);
+	}
+}
+
+void
+print_few(void)
+{
+	print_few_worker(mode, stack, autoprint);
+}
+
+void
 print_top(int printmode)
 {
 	if (stack)
@@ -4579,12 +4595,6 @@ enable_errexit(void)
 }
 
 opreturn
-autop(void)
-{
-	return toggler(&autoprint, "Autoprinting is now", "on", "off");
-}
-
-opreturn
 debug(void)
 {
 	return toggler(&debug_enabled,  "Debug commands",
@@ -4612,6 +4622,25 @@ tracelevel(void)
 			p_printf("  %s(%d)", tracenames[i], (1 << i));
 	}
 	p_printf("\n");
+
+	return GOODOP;
+}
+
+opreturn
+autop(void)
+{
+	mpd_t *m;
+	uint64_t u;
+
+	if (!mpop(&m))
+		return BADOP;
+
+	u = mpd_get_u64(m, ctx);
+	mpd_del(m);
+
+	autoprint = (int)u;
+
+	p_printf(" autoprinting will now show %d stack entries\n", autoprint);
 
 	return GOODOP;
 }
@@ -5116,10 +5145,10 @@ struct config {
 	{ "auto,eng,fixed",	c_str, 0, &float_specifier },
 	{ "digits",		c_int, &float_digits },
 	{ "width",		c_int, &int_width },
+	{ "autoprint",		c_int, &autoprint },
 	{ "separators",		c_int, &digitseparators },
 	{ "rightalign",		c_int, &rightalignment },
 	{ "zerofill",		c_int, &zerofill },
-	{ "autoprint",		c_int, &autoprint },
 	{ "degrees",		c_int, &trig_degrees },
 	{ "infix",		c_int, &infix_mode },
 	{ "errorexit",		c_int, &exit_on_error },
@@ -5581,6 +5610,9 @@ opreturn
 quit(void)
 {
 	if (autoprint) {
+		/* could call print_few(), instead, like
+		 * do_autoprint() does, but the rest of the stack
+		 * doesn't matter much anymore.  */
 		print_top(mode);
 		pending_show();
 	}
@@ -5757,13 +5789,13 @@ struct oper opers[] = {
 	{"B", modebin,		"Switch to decimal, hex, octal, binary mode" },
 	{"width", width,	0, Auto },
 	{"bits", width,		"Set effective word size for integer modes", Auto },
+	{"autoprint", autop,	0 },
+	{"ap", autop,		"Set number of stack entries to be autoprinted" },
 	{"zerofill", zerof,	0, Auto },
 	{"zf", zerof,		"Toggle left-fill with zeros in H, O, and B modes", Auto },
 	{"rightalign", rightalign, 0, Auto },
 	{"ra", rightalign,	"Toggle right alignment of numbers", Auto },
 	{"degrees", use_degrees, "Toggle trig functions: degrees (1) or radians (0)" },
-	{"autoprint", autop,	0 },
-	{"ap", autop,		"Toggle autoprinting on/off with 0/1" },
 	{"separators", separators, 0, Auto },
 	{"sep", separators,	"Toggle numeric separators on/off (0/1)", Auto },
 	{"mode", modeinfo,	"Display current mode parameters" },
@@ -5832,7 +5864,7 @@ do_autoprint(token *pt)
 	if (tracing)  // separate any debug output from "real" output
 		putchar('\n');
 
-	print_top(mode);
+	print_few();
 }
 
 int

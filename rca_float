@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # This shell snippet gives simple access to rca's floating point
 # capability from a POSIX shell.  Use it with "source rca_float".
 #
@@ -16,7 +16,7 @@
 # choose a precision at least 1 or 2 digits more than the application
 # really needs.
 
-export RCA_INIT_DEFAULTS="4digits fixed 0separators 1errorexit"
+export RCA_INIT_DEFAULTS="4digits fixed 1autoprint 0separators 1errorexit"
 
 _rca_run()    # support routine
 {

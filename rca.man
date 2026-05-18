@@ -101,12 +101,17 @@ When
 prints the stack, the "top" of the stack is printed last, i.e.,
 closest to the bottom of the screen.
 
-Autoprinting will print the value at the top of the stack after most
-input lines.  This is on by default; it can be toggled off with
+After most input lines (usually those lines that end with an operator),
+autoprinting will print the top N items on the stack.  N is 1 by
+default; it can be changed with
 .B 0 autoprint
-(or
-.B 0
-.BR ap ).
+to disable, or
+.B 3
+.BR ap ,
+for example, to print more.
+.RB ( ap
+is a synonym for
+.BR autoprint .)
 
 .SH INFIX NOTATION
 Infix expressions in
@@ -599,6 +604,12 @@ chooses the size of integers, in bits.
 Selecting a size of -1 will select the maxiumum.
 (Startup: calculator maximum, likely 64).
 .P
+.B autoprint
+(or
+.BR ap )
+controls printing of the top of stack after newlines.  (Startup: 1, i.e.,
+just the top of stack)
+.P
 .B separators
 (or
 .BR sep )
@@ -617,12 +628,6 @@ point.  (Startup:  enabled)
 .BR zf )
 toggles whether or not hex, octal, and binary integers are
 left-padded out to the chosen word width with zeros.  (Startup: disabled)
-.P
-.B autoprint
-(or
-.BR ap )
-toggles printing of the top of stack after newlines.  (Startup:
-enabled)
 .P
 .B degrees
 toggles whether degrees are used by the trig functions, rather than

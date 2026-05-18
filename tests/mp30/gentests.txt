@@ -1049,10 +1049,10 @@ config
        auto,eng,fixed     * engineering
                digits       6
                 width       64
+            autoprint       1
            separators       1
            rightalign     * 0
              zerofill       0
-            autoprint       1
               degrees     * 0
                 infix       0
             errorexit       0
@@ -1066,10 +1066,10 @@ config
        auto,eng,fixed     * engineering
                digits       6
                 width       64
+            autoprint       1
            separators       1
            rightalign     * 0
              zerofill       0
-            autoprint       1
               degrees     * 0
                 infix       0
             errorexit       0

@@ -33,7 +33,7 @@
 # precision.
 
 # "-1 digits" means use full precision
-RCA_INIT_DEFAULTS="-1digits auto 0separators 1errorexit"
+RCA_INIT_DEFAULTS="-1digits auto 1autoprint 0separators 1errorexit"
 
 coproc _RCA { RCA_INIT="$RCA_INIT_DEFAULTS" stdbuf -o0 rca; }
 
