@@ -14,6 +14,9 @@
 # 	sudo dnf install mpdecimal mpdecimal-devel
 # or download a tarball from its host site:
 #	https://www.bytereef.org/mpdecimal/download.html
+#
+# Copyright (c) 2024-2026 Paul Fox <pgf@foxharp.boston.ma.us>
+# SPDX-License-Identifier: BSD-2-Clause
 
 all: rca rca.1 copyrightcheck
 

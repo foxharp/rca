@@ -2,6 +2,9 @@
 # This shell snippet gives simple access to rca's floating point
 # capability from a POSIX shell.  Use it with "source rca_cofloat".
 #
+# Copyright (c) 2024-2026 Paul Fox <pgf@foxharp.boston.ma.us>
+# SPDX-License-Identifier: BSD-2-Clause
+#
 # Two things distinguish this file, rca_cofloat, from rca_float:
 #
 #   1) rca requests are handled by a co-process spawned for the

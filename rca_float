@@ -2,6 +2,9 @@
 # This shell snippet gives simple access to rca's floating point
 # capability from a POSIX shell.  Use it with "source rca_float".
 #
+# Copyright (c) 2024-2026 Paul Fox <pgf@foxharp.boston.ma.us>
+# SPDX-License-Identifier: BSD-2-Clause
+#
 # After including this code, use lines like this to calculate:
 #       foo=$(fe "$bar * pi")
 # or like this for a conditional expression:

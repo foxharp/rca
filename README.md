@@ -132,3 +132,8 @@ _rca_ is hosted at [github](https://github.com/foxharp/rca).
 
 _rca_'s BSD license can be found in the source, at
 https://github.com/foxharp/rca, or viewed with the "license" command.
+
+<!--
+# Copyright (c) 2024-2026 Paul Fox <pgf@foxharp.boston.ma.us>
+# SPDX-License-Identifier: BSD-2-Clause
+-->

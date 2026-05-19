@@ -1081,3 +1081,6 @@ Paul Fox created
 .B rca
 (formerly called "ca") very slowly over a span of decades, starting in 1993.
 
+\" Copyright (c) 2024-2026 Paul Fox <pgf@foxharp.boston.ma.us>
+\" SPDX-License-Identifier: BSD-2-Clause
+
