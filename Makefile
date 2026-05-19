@@ -41,9 +41,10 @@ LIBS += -lm
 # CFLAGS +=  -Wl,--gc-sections -Wl,--print-gc-sections
 
 rca: rca.c
-	gver="$$(git describe --dirty=+ 2>/dev/null || echo '+?')"; \
+	gitversion="$$(git describe --dirty=+ 2>/dev/null)"; \
+	echo git version is $$gitversion; \
 	gcc -O2 -g -o rca \
-		$(CFLAGS) -DGITVERSION=\"$${gver}\" \
+		$(CFLAGS) -DGITVERSION=\"$${gitversion}\" \
 		rca.c $(LIBS)
 
 VALGRIND_CHECK := $(shell which valgrind >/dev/null && \
@@ -89,7 +90,7 @@ else
 endif
 
 
-rca.1: rca.man
+rca.1: rca.man rca
 	v="\"$$(./rca version q)\""; \
 	sed -e "s/VERSIONSTRING/$${v}/g" rca.man > rca.1
 
@@ -181,8 +182,8 @@ clean:
 install: all
 	mkdir -p $(DESTDIR)$(BINDIR)
 	mkdir -p $(DESTDIR)$(MAN1DIR)
-	$(INSTALL) -m 0755 rca $(DESTDIR)$(BINDIR)/rca
-	$(INSTALL) -m 0644 rca.1 $(DESTDIR)$(MAN1DIR)/rca.1
+	$(INSTALL) -s -m 0755 rca $(DESTDIR)$(BINDIR)/rca
+	$(INSTALL) -s -m 0644 rca.1 $(DESTDIR)$(MAN1DIR)/rca.1
 
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/rca
