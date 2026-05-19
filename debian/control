@@ -2,11 +2,11 @@ Source: rca
 Section: math
 Priority: optional
 Maintainer: Paul Fox <pgf@foxharp.boston.ma.us>
-Build-Depends:  debhelper (>= 13),
-                libedit-dev,
-                libmpdec-dev,
+Build-Depends: debhelper-compat (= 13),
+		libedit-dev,
+		libmpdec-dev,
 		git
-Standards-Version: 4.6.0
+Standards-Version: 4.7.0
 Homepage: https://foxharp.github.io/rca/
 
 Package: rca
@@ -24,7 +24,3 @@ Description: RPN and infix format scientific and programmer's calculator
  to make it useful as a programmer's calculator.
  .
  rca was inspired by the author's HP-35, HP-25c, and HP-16c calculators.
-
-
-
-
