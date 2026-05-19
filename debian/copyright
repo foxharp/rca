@@ -1,8 +1,15 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0
 Upstream-Name: rca
 Source: https://github.com/foxharp/rca
-Files: *
-Copyright: 2026 Paul Fox <pgf@foxharp.boston.ma.us>
+
+Files: rca.c
+Copyright: 1993-2026 Paul Fox <pgf@foxharp.boston.ma.us>
+License: BSD-2-Clause
+
+Files: rca.man Makefile README.md CHANGES rca_cofloat rca_float debian/* tests/mp30/*
+Copyright: 2025-2026 Paul Fox <pgf@foxharp.boston.ma.us>
+License: BSD-2-Clause
+
 License: BSD-2-Clause
                           RCA License
                           ------------
