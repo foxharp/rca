@@ -10,6 +10,8 @@
 # if you don't have the mpdecimal library:
 # debian/ubuntu:
 # 	sudo apt install libmpdec-dev   (will pull in libmpdec4 or earlier)
+#       (mpdecimal was dropped from Ubuntu 24, but is available via PPA at
+#	 https://deb.sury.org/, maintained by Ondřej Surý)
 # fedora/redhat:
 # 	sudo dnf install mpdecimal mpdecimal-devel
 # or download a tarball from its host site:
@@ -30,18 +32,11 @@ CFLAGS += -Wall -Wextra -Wfloat-conversion -Wconversion  \
     -Warray-bounds=2 -Wformat-security -Wsign-conversion \
     -Wshift-overflow=2 -Wstrict-overflow=2 -pedantic -ffunction-sections
 
-# normally, if mpdecimal is system-installed, it's just:
-# LIBS += -lmpdec
+LIBS += -lmpdec -lm
 
-# but if building against a local install, then you probably want
-# a static link for libmpdec:
-LIBS += -L/usr/local/mpdecimal/lib -Wl,-Bstatic -lmpdec -Wl,-Bdynamic
-CFLAGS += -I /usr/local/mpdecimal/include
-
-LIBS += -lm
-
-# these are a means of finding unused functions:
-# CFLAGS +=  -Wl,--gc-sections -Wl,--print-gc-sections
+# these are a means of finding unused functions, but you'll need to
+# turn off the optimizer, since it makes a lot of things "unused":
+# CFLAGS += -Wl,--gc-sections -Wl,--print-gc-sections
 
 rca: rca.c
 	gitversion="$$(git describe --dirty=+ 2>/dev/null)"; \
