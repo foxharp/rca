@@ -1,3 +1,32 @@
+v44 changes (05/20/2026)
+
+    Makefile:  removed the references to /usr/local for the mpdecimal
+    library.  I've installed mpdecimal from the deb.sury.org PPA
+    instead.
+
+    The files in the debian subdirectory now cleanly build source
+    and binary packages, which pass lintian checks.  Still haven't
+    decided about how, or whether, to package for debian.  Currently
+    it's set up as a "native" package.  That might change.
+
+    Added missing Copyright and license declarations to Makefile, scripts,
+    README, etc.
+
+    Autoprinting can now print more than just the top of stack.  The
+    "autoprint" command is no longer a boolean toggle:  the argument
+    is the number of stack entries to be shown when autoprinting.
+
+    Enabled -O2 for better diagnostics, and then added targeted warning
+    suppression in the code via #pragma lines.
+
+    Added missing #!  line to rca_cofloat, and changed rca_float from
+    #!/bin/sh to #!/bin/bash due to use of <<< operator.
+
+    The pop command no longer modifies the lastx value.  This lets
+    "pop ly lx" act as undo.
+
+    Corrected and improved man page and help for the new % commands.
+
 
 
 v43 changes (04/09/2026)
