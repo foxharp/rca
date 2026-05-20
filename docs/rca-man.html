@@ -51,21 +51,26 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        <span style="font-weight:bold;">cos</span>, <span style="font-weight:bold;">sqrt</span>, etc), bit-shifting and manipulation (<span style="font-weight:bold;">&lt;&lt;</span>, <span style="font-weight:bold;">&gt;&gt;</span>, <span style="font-weight:bold;">&amp;</span>, <span style="font-weight:bold;">|</span>,
        etc), logical operations (<span style="font-weight:bold;">&amp;&amp;</span>, <span style="font-weight:bold;">||</span>), and comparators (<span style="font-weight:bold;">==</span>, <span style="font-weight:bold;">!=, &lt;=,</span>
        etc).  There are also unit conversions available (<span style="font-weight:bold;">i2mm</span>, <span style="font-weight:bold;">oz2g</span>, <span style="font-weight:bold;">f2c</span>,
-       and more).  The top two elements on the stack, in HP tradition,
-       are sometimes referred to in the documentation as <span style="font-style:italic;">x</span> and <span style="font-style:italic;">y</span>, but not
-       literally within the program itself with two exceptions:  the
-       <span style="font-weight:bold;">lastx </span>and <span style="font-weight:bold;">lasty </span>(or <span style="font-weight:bold;">lx </span>and <span style="font-weight:bold;">ly</span>) operators return the value that was
-       at the top and next-to-top of stack, just previous to the most
-       recently executed operator.
+       and more).
+
+       The top two elements on the stack, in HP tradition, are often
+       referred to as <span style="font-style:italic;">x</span> and <span style="font-style:italic;">y</span>.  The <span style="font-weight:bold;">lastx </span>and <span style="font-weight:bold;">lasty </span>(or <span style="font-weight:bold;">lx </span>and <span style="font-weight:bold;">ly</span>)
+       operators retrieve the values of <span style="font-style:italic;">x</span> and <span style="font-style:italic;">y</span> as they existed just
+       previous to the most recently executed operator.  By discarding
+       the result, and restoring the operands, the sequences <span style="font-weight:bold;">pop lx </span>and
+       <span style="font-weight:bold;">pop ly lx </span>can be used to undo the action of one- and two-operand
+       operators.
 
        The value at the top of the stack can be shown with the <span style="font-weight:bold;">p </span>command,
        and the entire stack with <span style="font-weight:bold;">P</span>.  When <span style="font-weight:bold;">rca </span>prints the stack, the &quot;top&quot;
        of the stack is printed last, i.e., closest to the bottom of the
        screen.
 
-       Autoprinting will print the value at the top of the stack after
-       most input lines.  This is on by default; it can be toggled off
-       with <span style="font-weight:bold;">0 autoprint </span>(or <span style="font-weight:bold;">0 ap</span>).
+       After most input lines (usually those lines that end with an
+       operator), autoprinting will print the top N items on the stack.
+       N is 1 by default; it can be changed with <span style="font-weight:bold;">0 autoprint </span>to disable,
+       or <span style="font-weight:bold;">3 ap</span>, for example, to print more.  (<span style="font-weight:bold;">ap </span>is a synonym for
+       <span style="font-weight:bold;">autoprint</span>.)
 
 <span style="font-weight:bold;">INFIX NOTATION</span>
        Infix expressions in <span style="font-weight:bold;">rca </span>are translated to RPN by an
@@ -348,6 +353,9 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
               Selecting a size of -1 will select the maxiumum.  (Startup:
               calculator maximum, likely 64).
 
+              <span style="font-weight:bold;">autoprint </span>(or <span style="font-weight:bold;">ap</span>) controls printing of the top of stack
+              after newlines.  (Startup: 1, i.e., just the top of stack)
+
               <span style="font-weight:bold;">separators </span>(or <span style="font-weight:bold;">sep</span>) toggles whether output will include
               separators (usually ',', but see the LOCALE section) for
               readability.  (Startup: enabled)
@@ -360,9 +368,6 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
               <span style="font-weight:bold;">zerofill </span>(or <span style="font-weight:bold;">zf</span>) toggles whether or not hex, octal, and
               binary integers are left-padded out to the chosen word
               width with zeros.  (Startup: disabled)
-
-              <span style="font-weight:bold;">autoprint </span>(or <span style="font-weight:bold;">ap</span>) toggles printing of the top of stack
-              after newlines.  (Startup: enabled)
 
               <span style="font-weight:bold;">degrees </span>toggles whether degrees are used by the trig
               functions, rather than radians.  (Startup:  enabled)
@@ -486,9 +491,9 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
               There are several two-operand percentage operators: <span style="font-weight:bold;">% </span>gives
               x % of y (or vice versa, of course, since it's
               commutative).  <span style="font-weight:bold;">+% </span>and <span style="font-weight:bold;">-% </span>give y plus or minus x percent of
-              y.  So <span style="font-weight:bold;">50 17 +% </span>results in 58.5.  <span style="font-weight:bold;">%?  </span>gives the inverse of
-              those, i.e., the delta percentage: <span style="font-weight:bold;">50 58.5 %?  </span>results in
-              17.
+              y.  So <span style="font-weight:bold;">50 17 +% </span>results in 58.5.  The <span style="font-weight:bold;">%?  </span>operator gives
+              the inverse of those, i.e., &quot;x is what % more than y?&quot; (the
+              delta percentage).  <span style="font-weight:bold;">50 41.5 %?  </span>results in -17.
 
               In an infix expression, operators with two arguments expect
               them to the left and right.  This is intuitive for symbolic
@@ -657,7 +662,7 @@ white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;}
        Paul Fox created <span style="font-weight:bold;">rca </span>(formerly called &quot;ca&quot;) very slowly over a
        span of decades, starting in 1993.
 
-                        version v43     Apr 9, 2026                <span style="font-style:italic;">rca</span>(1)
+                       version v44     May 20, 2026                <span style="font-style:italic;">rca</span>(1)
 </pre>
 </body>
 </html>

@@ -25,8 +25,8 @@
               *, or x     Multiply x and y
                /, mod     Divide and modulo of y by x
              ^, or **     Raise y to the x'th power
-            %, +%, -%     x% of y, and y +/- x% of y
-                   %?     what percent of y is x?
+            %, +%, -%     x% of y, y + x% of y, and y - x% of y
+                   %?     x is what % more than y?
   (1 operand)
        chs, or negate     Change sign of x (2's complement)
           recip, sqrt     Reciprocal and square root of x
@@ -108,10 +108,10 @@
                  F, C     Switch to floating or currency mode
            D, H, O, B     Switch to decimal, hex, octal, binary mode
        width, or bits     Set effective word size for integer modes
+     autoprint, or ap     Set number of stack entries to be autoprinted
       zerofill, or zf     Toggle left-fill with zeros in H, O, and B modes
     rightalign, or ra     Toggle right alignment of numbers
               degrees     Toggle trig functions: degrees (1) or radians (0)
-     autoprint, or ap     Toggle autoprinting on/off with 0/1
    separators, or sep     Toggle numeric separators on/off (0/1)
                  mode     Display current mode parameters
                 infix     Toggle running mainly in infix, or in RPN
@@ -130,7 +130,7 @@
                     #     Comment. The rest of the line will be ignored.
 
 
-                                                   version v43     Apr 9, 2026
+                                                  version v44     May 20, 2026
 
  Tip:	Use &quot;rca help q | less&quot; to view this help
 </pre>
