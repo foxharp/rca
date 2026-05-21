@@ -101,9 +101,12 @@ When
 prints the stack, the "top" of the stack is printed last, i.e.,
 closest to the bottom of the screen.
 
-After most input lines (usually those lines that end with an operator),
-autoprinting will print the top N items on the stack.  N is 1 by
-default; it can be changed with
+Autoprinting causes some or all of the stack to be printed, after some input
+lines.  Roughly speaking, this occurs when the previous
+command may have changed the value or appearance of the top of stack.
+Entering a new value on the stack causes autoprinting only if
+the input base differs from the default.  Just the top of stack is
+normally shown; that can be changed with
 .B 0 autoprint
 to disable, or
 .B 3
@@ -607,8 +610,10 @@ Selecting a size of -1 will select the maxiumum.
 .B autoprint
 (or
 .BR ap )
-controls printing of the top of stack after newlines.  (Startup: 1, i.e.,
-just the top of stack)
+controls how many stack entries are shown after (most) lines of
+input.  Selecting -1 will show the entire stack, 0 will show none.
+(Startup: 1, i.e., just the top
+of stack is shown)
 .P
 .B separators
 (or

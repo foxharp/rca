@@ -4630,17 +4630,22 @@ opreturn
 autop(void)
 {
 	mpd_t *m;
-	uint64_t u;
+	int64_t n;
 
 	if (!mpop(&m))
 		return BADOP;
 
-	u = mpd_get_u64(m, ctx);
+	n = mpd_get_i64(m, ctx);
 	mpd_del(m);
 
-	autoprint = (int)u;
+	if (n < -1) n = -1;
 
-	p_printf(" autoprinting will now show %d stack entries\n", autoprint);
+	autoprint = (int)n;
+
+	if (n < 0)
+		p_printf(" autoprinting will now show entire stack\n");
+	else
+		p_printf(" autoprinting will now show %d stack entries\n", autoprint);
 
 	return GOODOP;
 }
