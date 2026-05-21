@@ -1,4 +1,20 @@
 
+May 21, 2026
+
+It was time to clean up, and get development back on "main".
+So I've renamed the old "main" to "float-legacy", and then I've
+copied "mpdecimal" to (a new branch named) "main".  And I've told
+github that "main" is now the default branch.
+
+It unlikely anyone has the old main checked out.  Some folks might
+have mpdecimal checked out, and they'll see no more updates.
+
+New visitors will get "main" by default.
+
+I hope this is the last time I need to visit this.
+
+
+
 April 1, 2026
 
 There are currently two branches in the _rca_ repo:
