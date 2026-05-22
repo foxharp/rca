@@ -169,33 +169,21 @@ versioncheck:
 		sed -n -e 's/<span .*//' \
 			-e 's/^ *\( version v[0-9]\+.*\)/\1/p'
 
-# rel-tarball:
-#	v=($$(./rca version q)); \
-#	git archive \
-#		-o "../rca_$${v[1]#v}.orig.tar.xz" "$${v[1]}"
+rel-tarball:  # create tar from vNN tag, derived from 1st line of rca.c
+	@rel=$$(sed -e '1s/.*"v\(.*\)";$$/\1/;q' rca.c); \
+	echo Creating "../rca_$$rel.orig.tar.xz" from tag "v$$rel"; \
+	git archive --format=tar HEAD | xz -9  > ../tmptarball.xz && \
+	    mv ../tmptarball.xz "../rca_$$rel.orig.tar.xz"
 
-# fetch the release name, possibly including "~testing", from
-# debian/changelog.  if it's a testing release, tarball comes from
-# head, else from the vNN release tag
-deb-tarball:
-	v=$$(dpkg-parsechangelog --show-field Version); \
-	v=$${v%-?}; \
-	case $$v in *~test*) commit=HEAD;; *) commit=v$$v;; esac; \
-	git archive -o "../rca_$$v.orig.tar.xz" "$$commit"
-
-# as above, but include uncommitted changes. only works for testing releases
-test-tarball:
-	v=$$(dpkg-parsechangelog --show-field Version); \
-	v=$${v%-?}; \
-	case $$v in *~test*) commit=HEAD;; *) return 1;; esac; \
-	git ls-files -z | grep -zv ^docs/ | \
-	tar -cJf "../rca_$$v.orig.tar.xz" --null -T -
-
+test-tarball:  # creates tar from HEAD, rather than tag.  name is the same!!!
+	@rel=$$(sed -e '1s/.*"v\(.*\)";$$/\1/;q' rca.c); \
+	echo Creating "../rca_$$rel.orig.tar.xz" from HEAD; \
+	git archive --format=tar HEAD | xz -9  > ../tmptarball.xz && \
+	    mv ../tmptarball.xz "../rca_$$rel.orig.tar.xz"
 
 
 clean:
-	rm -f rca rca rca.1 docs/index.html.new \
-		docs/rca-man.html.new docs/rca-help.html.new
+	rm -f rca rca rca.1 docs/*.new docs/branch_info.html
 	rm -fr tests/tmp
 
 # debian packaging uses this target, so be sure it always honors
