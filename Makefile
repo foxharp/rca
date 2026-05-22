@@ -169,28 +169,10 @@ versioncheck:
 		sed -n -e 's/<span .*//' \
 			-e 's/^ *\( version v[0-9]\+.*\)/\1/p'
 
-# rel-tarball:
-#	v=($$(./rca version q)); \
-#	git archive \
-#		-o "../rca_$${v[1]#v}.orig.tar.xz" "$${v[1]}"
-
-# fetch the release name, possibly including "~testing", from
-# debian/changelog.  if it's a testing release, tarball comes from
-# head, else from the vNN release tag
 deb-tarball:
-	v=$$(dpkg-parsechangelog --show-field Version); \
-	v=$${v%-?}; \
-	case $$v in *~test*) commit=HEAD;; *) commit=v$$v;; esac; \
-	git archive -o "../rca_$$v.orig.tar.xz" "$$commit"
-
-# as above, but include uncommitted changes. only works for testing releases
-test-tarball:
-	v=$$(dpkg-parsechangelog --show-field Version); \
-	v=$${v%-?}; \
-	case $$v in *~test*) commit=HEAD;; *) return 1;; esac; \
-	git ls-files -z | grep -zv ^docs/ | \
-	tar -cJf "../rca_$$v.orig.tar.xz" --null -T -
-
+	@rel=$$(sed -e '1s/.*"v\(.*\)";$$/\1/;q' rca.c); \
+	echo Creating "../rca_$$rel.orig.tar.xz" from tag "v$$rel"; \
+	git archive -o "../rca_$$rel.orig.tar.xz" "v$$rel"
 
 
 clean:
