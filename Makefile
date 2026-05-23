@@ -174,7 +174,7 @@ versioncheck:
 rel-tarball:  # create tar from vNN tag, derived from 1st line of rca.c
 	@rel=$$(sed -e '1s/.*"v\(.*\)";$$/\1/;q' rca.c); \
 	echo Creating "../rca_$$rel.orig.tar.xz" from tag "v$$rel"; \
-	git archive --format=tar HEAD | xz -9  > ../tmptarball.xz && \
+	git archive --format=tar "v$$rel" | xz -9  > ../tmptarball.xz && \
 	    mv ../tmptarball.xz "../rca_$$rel.orig.tar.xz"
 
 test-tarball:  # creates tar from HEAD, rather than tag.  name is the same!!!
