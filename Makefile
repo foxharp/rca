@@ -39,7 +39,9 @@ LIBS += -lmpdec -lm
 # CFLAGS += -Wl,--gc-sections -Wl,--print-gc-sections
 
 rca: rca.c
-	gitversion="$$(git describe --dirty=+ 2>/dev/null)"; \
+	gitversion="$$(git ls-files --error-unmatch rca.c >/dev/null 2>&1 && \
+		git describe --dirty=+ 2>/dev/null )"; \
+
 	gcc -O2 -g -o rca \
 		$(CFLAGS) -DGITVERSION=\"$${gitversion}\" \
 		rca.c $(LIBS)
