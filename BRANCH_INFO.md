@@ -2,11 +2,13 @@
 May 23, 2026
 
 New branch layout:
-    main            Ongoing RCA development source, using mpdecimal library
+```
+    main            Ongoing RCA development source, using mpdecimal library.
     float-legacy    Old floating point code.  Historic, at this point.
     mpdecimal       Will go away soon.  Some people may be still using it.
     debian          Just the ./debian subdirectory, for building packages.
                     This should arguably be a separate repo.
+```
 
 It's finally time to clean up, and get development back on "main".  So
 I've renamed the old "main" to "float-legacy", and I've copied the old
